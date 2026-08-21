@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openorchestrion.example/schemas/playback-intent.schema.json",
+  "title": "PlaybackIntent",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "mode": {"type": "string", "enum": ["station", "queue", "single", "modify_current"]},
+    "duration_minutes": {"type": ["integer", "null"], "minimum": 1, "maximum": 1440},
+    "genres": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "moods": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "themes": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "eras": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "composers": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "artists": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "instrumentation": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "performance_types": {
+      "type": "array",
+      "items": {"type": "string", "enum": ["SOLO_PIANO", "MULTI_INSTRUMENT", "PIANO_DUET", "TWO_PIANO", "DUELING_PIANO", "DISTRIBUTED"]},
+      "uniqueItems": true
+    },
+    "familiarity": {"type": ["string", "null"], "enum": ["low", "medium", "high", null]},
+    "energy": {"type": ["string", "null"], "enum": ["low", "medium", "high", null]},
+    "tempo_preference": {"type": ["string", "null"], "enum": ["slow", "medium", "fast", "mixed", null]},
+    "include_tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "exclude_tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "avoid_recent_repeats": {"type": "boolean"},
+    "repeat_window_days": {"type": ["integer", "null"], "minimum": 0, "maximum": 3650},
+    "device_preferences": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "routing_preferences": {"type": "object", "additionalProperties": {"type": "string"}},
+    "continuation_behavior": {"type": ["string", "null"], "enum": ["replace", "refine", "append", null]},
+    "interpretation": {"type": ["string", "null"], "maxLength": 500}
+  },
+  "required": ["mode", "genres", "moods", "themes", "eras", "composers", "artists", "instrumentation", "performance_types", "include_tags", "exclude_tags", "avoid_recent_repeats", "device_preferences", "routing_preferences"]
+}
