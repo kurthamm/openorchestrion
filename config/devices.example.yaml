@@ -1,0 +1,30 @@
+devices:
+  - id: casio-main
+    profile: casio-ct-x700
+    midi_port_match: "CT-X700"
+    role: ensemble
+    latency_offset_ms: 0.0
+
+  - id: yamaha-second
+    profile: yamaha-psr-ew310
+    midi_port_match: "PSR-EW310"
+    role: piano
+    latency_offset_ms: 0.0
+
+routing:
+  default_device: casio-main
+  instrument_family_preferences:
+    piano: yamaha-second
+    strings: yamaha-second
+    bass: casio-main
+    brass: casio-main
+    woodwinds: casio-main
+    percussion: casio-main
+
+  performance_types:
+    TWO_PIANO:
+      piano_1: casio-main
+      piano_2: yamaha-second
+    DUELING_PIANO:
+      piano_a: casio-main
+      piano_b: yamaha-second
