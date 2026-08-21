@@ -1,0 +1,32 @@
+{
+  "id": "casio-ct-x700",
+  "manufacturer": "Casio",
+  "model": "CT-X700",
+  "status": "documented",
+  "midi_receive": true,
+  "transport": "usb-midi",
+  "class_compliant_usb": true,
+  "general_midi": true,
+  "multitimbral_parts": 16,
+  "max_polyphony": 48,
+  "note_receive_min": 0,
+  "note_receive_max": 127,
+  "supports_velocity": true,
+  "supports_sustain_cc64": true,
+  "supports_program_change": true,
+  "supports_bank_select": true,
+  "percussion_channel_10": true,
+  "built_in_speakers": true,
+  "audio_outputs": [
+    "PHONES/OUTPUT stereo jack"
+  ],
+  "preferred_instrument_families": [],
+  "latency_offset_ms": 0.0,
+  "documentation": [
+    "https://www.casio.com/us/electronic-musical-instruments/product.CT-X700/",
+    "https://www.casio.com/intl/electronic-musical-instruments/support.CT-X700/",
+    "https://www.casio.com/content/dam/casio/global/support/manuals/electronic-musical-instruments/pdf/008-en/w/Web_CTX700-ES-1A_EN.pdf",
+    "https://www.casio.com/content/dam/casio/global/support/manuals/electronic-musical-instruments/pdf/008-en/c/CT-X700-midi-imple_EN.pdf"
+  ],
+  "notes": "OpenOrchestrion reference candidate. Physical Pi/Linux validation and measured latency are pending."
+}
