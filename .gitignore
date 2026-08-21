@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.log
+.DS_Store
+.idea/
+.vscode/
+# Local library/database content
+var/
+*.db
+*.sqlite
+*.sqlite3
+# Personal MIDI imports are intentionally not committed
+music/personal/
