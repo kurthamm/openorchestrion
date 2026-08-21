@@ -19,6 +19,10 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **FR-011** The local appliance UI shall prioritize immediate listening functions over administration complexity.
 - **FR-012** Full administration functions shall remain available through the household web UI, including library import, metadata editing, device profiles, routing, latency calibration, AI configuration, backup, logs, and diagnostics.
 - **FR-013** Loss or absence of the attached display shall not prevent playback or remote browser control.
+- **FR-014** The system should support installation as a PWA or equivalent app-like browser experience on phones/tablets.
+- **FR-015** The system should support friendly local discovery/name resolution such as `openorchestrion.local` where the deployment environment permits it.
+- **FR-016** A future guest-request mode should provide a limited song-request interface without exposing administrative configuration.
+- **FR-017** Optional physical appliance controls such as Play/Pause, Stop/Panic, or a rotary encoder shall invoke the same server command/state layer as web clients.
 
 ### AI Music Concierge
 
@@ -30,6 +34,10 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **FR-025** The core system shall remain usable when AI is disabled or unavailable.
 - **FR-026** The system should support pluggable hosted or local AI providers.
 - **FR-027** AI-assisted library enrichment shall distinguish inferred descriptive metadata from deterministic MIDI facts.
+- **FR-028** The system should support optional speech-to-text input feeding the same natural-language Music Concierge path.
+- **FR-029** AI/selection logic shall not fabricate tracks that are not present in the indexed library.
+- **FR-030** When soft preferences must be relaxed to produce a usable queue, the system should retain/expose the resulting interpretation or relaxation for diagnostics and optional user explanation.
+- **FR-031** AI-generated metadata shall retain provenance sufficient to distinguish the provider/model and confidence or review state from curated metadata.
 
 ### MIDI playback
 
@@ -42,6 +50,8 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **FR-046** The system shall provide a panic/all-notes-off function.
 - **FR-047** The system shall support pause/resume and queue transitions without leaving stuck notes.
 - **FR-048** The system should support tempo adjustment and transpose when safe/appropriate.
+- **FR-049** The system shall support an Original Arrangement rendering path that preserves compatible channel/program intent.
+- **FR-050** The system should support a Piano Only rendering mode when the source structure can be safely mapped to piano.
 
 ### Device management
 
@@ -50,6 +60,9 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **FR-062** Device profiles shall record relevant capabilities such as polyphony, multitimbral support, note receive range, controllers, program mapping, and latency offset.
 - **FR-063** Device-specific behavior shall be isolated behind profiles/adapters rather than hard-coded throughout the application.
 - **FR-064** The system shall detect loss of a MIDI endpoint and enter a safe state or apply configured fallback routing.
+- **FR-065** Hardware compatibility status shall distinguish at least `documented`, `community-tested`, and `project-validated` evidence levels.
+- **FR-066** Device profiles should retain manufacturer documentation references that substantiate claimed capabilities.
+- **FR-067** The reference validation process shall record stable USB/MIDI endpoint identity information where available.
 
 ### Multi-device / two-piano
 
@@ -60,6 +73,10 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **FR-084** The system shall support separated `PIANO_DUET` material when the MIDI structure permits it.
 - **FR-085** The system shall support purpose-built `DUELING_PIANO` routing/arrangements.
 - **FR-086** The routing engine should support instrument-family preferences and polyphony-load distribution.
+- **FR-087** The project shall document a repeatable two-device latency calibration procedure.
+- **FR-088** Stop/Panic shall fan out safely to every active MIDI destination.
+- **FR-089** A multi-device performance profile shall define behavior when one destination becomes unavailable (stop, reduced instrumentation, or compatible fallback routing).
+- **FR-090** Future distributed endpoints shall pre-stage MIDI assets and schedule local playback from a coordinated future start rather than relying on per-event delivery over ordinary Wi-Fi.
 
 ### Library
 
@@ -72,6 +89,12 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **FR-106** The library shall distinguish Verified/Open material from Personal imports.
 - **FR-107** SQLite shall be treated as an operational/search index; durable library metadata shall be recoverable outside a single database file.
 - **FR-108** The system should support quality grading of MIDI performances.
+- **FR-109** Smart stations shall support deterministic weighting/rules including no-repeat windows, composer/artist diversity, history weighting, quality preference, and optional duration/energy constraints.
+- **FR-110** The station engine should be able to record diagnostic selection reasons/scores for a queued track.
+- **FR-111** A track merely queued shall not automatically count as played for history/no-repeat purposes.
+- **FR-112** The importer shall distinguish objective MIDI facts from curated or AI-inferred descriptive metadata.
+- **FR-113** The public project shall support a copyright-clean synthetic MIDI conformance library independent of copyrighted musical repertoire.
+- **FR-114** Two-piano/duet assets shall be able to record part-to-track/channel mapping and preferred device roles.
 
 ### Backup / recovery
 
@@ -79,6 +102,8 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **FR-121** Backup storage may use a cloud provider such as Google Drive but shall not be required for live playback.
 - **FR-122** The project shall document a bare-metal recovery procedure.
 - **FR-123** A full-system image or reproducible deployment shall be maintained as a second recovery layer.
+- **FR-124** Backup/synchronization shall not mount a remote cloud database as the time-critical live playback data path.
+- **FR-125** Release/recovery documentation should include a tested restore drill onto blank replacement storage.
 
 ## Non-functional requirements
 
@@ -96,6 +121,10 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **NFR-012 Observability:** Device, library, playback, backup, and AI-provider health should be visible in an administrative status view.
 - **NFR-013 Resource efficiency:** The initial reference appliance shall be designed to run comfortably on a Raspberry Pi 5 with 4 GB RAM without requiring a larger-memory model for ordinary hosted-AI operation.
 - **NFR-014 UI maintainability:** Attached-display and remote-browser experiences shall share the same responsive application and API contracts.
+- **NFR-015 Testability:** Core MIDI behavior shall be testable with generated/copyright-clean fixtures rather than requiring commercial music files.
+- **NFR-016 Evidence:** Hardware compatibility claims shall be traceable to manufacturer documentation or reproducible physical test evidence.
+- **NFR-017 Timing evidence:** The chosen Linux/Python MIDI scheduling path shall be benchmarked under realistic appliance load before being treated as musically sufficient.
+- **NFR-018 Determinism boundary:** AI may influence intent/metadata but time-critical MIDI scheduling and hardware execution shall remain deterministic.
 
 ## Reference hardware baseline
 
@@ -128,6 +157,8 @@ This baseline is intentionally separate from the MIDI sound-engine profile. Open
 10. Internet disconnect during playback does not stop the music.
 11. The same deployment remains functional when the attached display is disconnected and control continues from a household browser.
 12. Local kiosk and remote browser use the same application/API state rather than independent playback controllers.
+13. Notes outside the physical keybed but within the device's documented receive range are tested.
+14. Long-duration playback completes without resource growth or stuck-note accumulation.
 
 ### AI Concierge MVP
 
@@ -136,6 +167,8 @@ This baseline is intentionally separate from the MIDI sound-engine profile. Open
 3. “Popular Christmas music” weights holiday and familiarity metadata appropriately.
 4. Malformed/model-hallucinated fields are rejected by schema validation.
 5. AI provider outage leaves manual browsing/stations functional.
+6. A request for unavailable content does not cause fabricated tracks to appear.
+7. Speech input, if enabled, enters through the same validated intent path as typed text.
 
 ### Two-device MVP
 
@@ -144,3 +177,13 @@ This baseline is intentionally separate from the MIDI sound-engine profile. Open
 3. Configured per-device offsets change event scheduling predictably.
 4. A two-piano MIDI performance can route Piano I and Piano II independently.
 5. Device removal triggers configured safe/fallback behavior.
+6. Stop/Panic reaches both destinations.
+7. A repeatable synchronization fixture is used to measure relative audio latency.
+
+### Recovery MVP
+
+1. Provision blank replacement storage.
+2. Reinstall/restore OpenOrchestrion without relying on the failed device.
+3. Restore music, metadata, stations/playlists, configuration, and runtime database state.
+4. Reconnect hardware using device profiles.
+5. Confirm library, AI configuration, and playback functionality.
