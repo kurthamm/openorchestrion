@@ -13,6 +13,12 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **FR-005** The system shall support random/shuffle playback with configurable no-repeat rules.
 - **FR-006** The system shall support dynamic stations such as dinner music, ragtime, relaxing classical, Christmas, cocktail jazz, and two-piano repertoire.
 - **FR-007** Multiple connected clients shall receive synchronized playback state updates.
+- **FR-008** The system shall support both an attached-display Appliance Edition and a display-free Headless Edition using the same server and web application.
+- **FR-009** The attached display shall not require a separate native GUI application or separately maintained front-end codebase.
+- **FR-010** The reference Appliance Edition shall target a 7-inch-class touchscreen suitable for the Music Concierge, Now Playing, queue, station shortcuts, and touch transport controls.
+- **FR-011** The local appliance UI shall prioritize immediate listening functions over administration complexity.
+- **FR-012** Full administration functions shall remain available through the household web UI, including library import, metadata editing, device profiles, routing, latency calibration, AI configuration, backup, logs, and diagnostics.
+- **FR-013** Loss or absence of the attached display shall not prevent playback or remote browser control.
 
 ### AI Music Concierge
 
@@ -88,6 +94,23 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 - **NFR-010 Rights hygiene:** The public repository shall not redistribute MIDI whose rights are unclear merely because it is downloadable elsewhere.
 - **NFR-011 Accessibility:** The web UI should be usable with standard browser accessibility mechanisms and touch targets appropriate for kiosk use.
 - **NFR-012 Observability:** Device, library, playback, backup, and AI-provider health should be visible in an administrative status view.
+- **NFR-013 Resource efficiency:** The initial reference appliance shall be designed to run comfortably on a Raspberry Pi 5 with 4 GB RAM without requiring a larger-memory model for ordinary hosted-AI operation.
+- **NFR-014 UI maintainability:** Attached-display and remote-browser experiences shall share the same responsive application and API contracts.
+
+## Reference hardware baseline
+
+The initial reproducible Appliance Edition is documented in `docs/reference-build.md` and currently targets:
+
+- Raspberry Pi 5, 4 GB
+- 7-inch-class attached touchscreen
+- active cooling
+- reliable Pi 5 power supply
+- 128 GB high-endurance microSD initially, with NVMe as an optional upgrade
+- Raspberry Pi OS 64-bit
+- Chromium kiosk mode for the local display
+- direct USB MIDI where supported
+
+This baseline is intentionally separate from the MIDI sound-engine profile. OpenOrchestrion remains portable to comparable Linux hardware.
 
 ## Reference acceptance tests
 
@@ -103,6 +126,8 @@ This document captures the current requirements discussed for OpenOrchestrion. I
 8. Stop/panic leaves no hanging notes.
 9. Phone and touchscreen remain synchronized through playback changes.
 10. Internet disconnect during playback does not stop the music.
+11. The same deployment remains functional when the attached display is disconnected and control continues from a household browser.
+12. Local kiosk and remote browser use the same application/API state rather than independent playback controllers.
 
 ### AI Concierge MVP
 
