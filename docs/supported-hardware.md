@@ -4,7 +4,7 @@ This table distinguishes documentation evidence from physical project validation
 
 | Device | MIDI receive | USB | GM / multitimbral | Polyphony | Status | Project view |
 | --- | --- | --- | --- | ---: | --- | --- |
-| **Casio CT-X700** | Yes, manufacturer documented | Class-compliant USB MIDI | GM Level 1 / multi-part | 48 max | Documented compatible | **Reference candidate** |
+| **Casio CT-X700** | Yes, manufacturer documented | Class-compliant USB MIDI | GM Level 1 / multi-part | 48 max | **Documented compatible** | **Reference candidate** |
 | Yamaha PSR-EW310 | Yes, two-way USB MIDI documented | USB MIDI/audio | GM/XGlite family | 48 | Candidate | Strong second-engine choice |
 | Yamaha PSR-EW300 | Yes, two-way USB MIDI documented | USB MIDI/audio | GM/XGlite family | 48 | Candidate | Strong value choice |
 | Yamaha PSR-E363 | Yes, two-way USB MIDI documented | USB MIDI/audio | GM/XGlite family | 48 | Candidate | Similar engine class to EW300; key count irrelevant here |
@@ -27,6 +27,15 @@ A device progresses through three levels:
 
 A USB connector alone is not evidence of inbound MIDI playback support.
 
+## Reference candidate evidence
+
+The CT-X700 now has both narrative and machine-readable profiles:
+
+- [CT-X700 evidence/profile](hardware/casio-ct-x700.md)
+- [`device-profiles/casio-ct-x700.json`](../device-profiles/casio-ct-x700.json)
+
+The profile intentionally remains `documented`, not `project-validated`, until physical testing passes.
+
 ## Reference acceptance test
 
 A device should not be marked Project Validated until it passes:
@@ -38,5 +47,17 @@ A device should not be marked Project Validated until it passes:
 - Program Change / Bank Select where supported.
 - Multichannel playback where claimed.
 - Channel 10 percussion where applicable.
+- Note receive range beyond physical keybed where claimed.
+- Practical polyphony stress behavior.
 - Long-running playback.
 - Power-cycle/reconnect behavior.
+- Endpoint identity capture.
+- Latency characterization for multi-device use.
+
+See [test-strategy.md](test-strategy.md) for the reusable conformance suite.
+
+## Second-engine strategy
+
+The first complementary engine should ideally come from a different sound family rather than simply duplicating the Casio. Yamaha PSR-EW310 / EW300 / E363-class hardware is currently the leading second-engine direction because it offers documented inbound USB MIDI, approximately 48-note polyphony, and a different Yamaha sound set.
+
+The objective is tone diversity plus independent synthesis capacity, not human key feel.
