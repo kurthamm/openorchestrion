@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openorchestrion.example/schemas/device-profile.schema.json",
+  "title": "OpenOrchestrion MIDI Device Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "manufacturer", "model", "midi_receive", "transport", "max_polyphony", "latency_offset_ms"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$"},
+    "manufacturer": {"type": "string"},
+    "model": {"type": "string"},
+    "status": {"type": "string", "enum": ["documented", "community-tested", "project-validated"]},
+    "midi_receive": {"type": "boolean"},
+    "transport": {"type": "string", "enum": ["usb-midi", "din-midi", "network-midi", "other"]},
+    "class_compliant_usb": {"type": ["boolean", "null"]},
+    "general_midi": {"type": ["boolean", "null"]},
+    "multitimbral_parts": {"type": ["integer", "null"], "minimum": 1, "maximum": 64},
+    "max_polyphony": {"type": ["integer", "null"], "minimum": 1},
+    "note_receive_min": {"type": ["integer", "null"], "minimum": 0, "maximum": 127},
+    "note_receive_max": {"type": ["integer", "null"], "minimum": 0, "maximum": 127},
+    "supports_velocity": {"type": ["boolean", "null"]},
+    "supports_sustain_cc64": {"type": ["boolean", "null"]},
+    "supports_program_change": {"type": ["boolean", "null"]},
+    "supports_bank_select": {"type": ["boolean", "null"]},
+    "percussion_channel_10": {"type": ["boolean", "null"]},
+    "built_in_speakers": {"type": ["boolean", "null"]},
+    "audio_outputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "preferred_instrument_families": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "latency_offset_ms": {"type": "number", "minimum": -1000, "maximum": 1000},
+    "documentation": {"type": "array", "items": {"type": "string"}},
+    "notes": {"type": ["string", "null"]}
+  }
+}
