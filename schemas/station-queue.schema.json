@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openorchestrion.example/schemas/station-queue.schema.json",
+  "title": "OpenOrchestrion Smart Station Queue",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "seed",
+    "requested_duration_seconds",
+    "total_duration_seconds",
+    "candidate_assets",
+    "candidate_compositions",
+    "items",
+    "relaxations",
+    "diagnostics"
+  ],
+  "properties": {
+    "seed": {"type": "integer"},
+    "requested_duration_seconds": {"type": ["integer", "null"], "minimum": 60},
+    "total_duration_seconds": {"type": "number", "minimum": 0},
+    "candidate_assets": {"type": "integer", "minimum": 0},
+    "candidate_compositions": {"type": "integer", "minimum": 0},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "asset_id",
+          "composition_id",
+          "title",
+          "composer",
+          "duration_seconds",
+          "midi_path",
+          "score",
+          "base_score",
+          "match_tier",
+          "selected_for",
+          "score_breakdown",
+          "sequence_adjustments"
+        ],
+        "properties": {
+          "asset_id": {"type": "string", "minLength": 1},
+          "composition_id": {"type": ["string", "null"]},
+          "title": {"type": "string", "minLength": 1},
+          "composer": {"type": ["string", "null"]},
+          "duration_seconds": {"type": "number", "minimum": 0},
+          "midi_path": {"type": "string", "minLength": 1},
+          "score": {"type": "number"},
+          "base_score": {"type": "number"},
+          "match_tier": {"type": "integer", "minimum": 0, "maximum": 2},
+          "selected_for": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "score_breakdown": {
+            "type": "object",
+            "additionalProperties": {"type": "number"}
+          },
+          "sequence_adjustments": {
+            "type": "object",
+            "additionalProperties": {"type": "number"}
+          }
+        }
+      }
+    },
+    "relaxations": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}
