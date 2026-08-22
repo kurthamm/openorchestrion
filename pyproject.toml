@@ -23,6 +23,8 @@ dependencies = [
 openorchestrion-fixtures = "openorchestrion.testing.midi_fixtures:main"
 openorchestrion-analyze = "openorchestrion.midi.analyzer:main"
 openorchestrion-import-midi = "openorchestrion.library.importer:main"
+openorchestrion-reindex = "openorchestrion.library.catalog:reindex_main"
+openorchestrion-catalog = "openorchestrion.library.catalog:query_main"
 
 [project.optional-dependencies]
 dev = [
