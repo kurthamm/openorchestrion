@@ -4,7 +4,7 @@
 
 **Software foundation / hardware acquisition and validation**
 
-OpenOrchestrion now has a detailed design baseline plus executable MIDI generation, analysis, ingestion, catalog, and deterministic Smart Station selection. The first end-to-end physical build is still pending acquisition of the target sound engines.
+OpenOrchestrion now has a detailed design baseline plus executable MIDI generation, analysis, ingestion, catalog, deterministic Smart Station selection, and durable play history. The first end-to-end physical build is still pending acquisition of the target sound engines.
 
 ## Current hardware targets
 
@@ -23,81 +23,25 @@ The earlier **Casio CT-X700** investigation remains a documented-compatible fall
 
 ### Synthetic MIDI conformance generator
 
-OpenOrchestrion can generate a copyright-clean test laboratory including:
-
-- single note
-- velocity ladder
-- sustain CC64
-- Program Change / Bank Select
-- GM multichannel ensemble + channel 10 percussion
-- MIDI note range 0–127
-- 16/32/48/64-note polyphony stress
-- two-piano split
-- synchronization clicks
-- long-run endurance material
-- parser-resilience events
+OpenOrchestrion can generate a copyright-clean test laboratory including single-note, velocity, sustain, Program Change/Bank Select, GM ensemble/percussion, full note-range, polyphony stress, two-piano split, sync-click, endurance, and parser-resilience fixtures.
 
 ### Deterministic MIDI analyzer
 
-Implemented analysis includes:
-
-- SHA-256/file identity
-- SMF format/timing
-- duration and tempo map
-- tracks/channels
-- Program Change / Bank Select with GM names
-- controllers and sustain
-- percussion
-- note/velocity statistics
-- pitch bend and aftertouch
-- SysEx count
-- sustain-aware estimated peak simultaneous MIDI notes
-- generic compatibility/complexity flags
+Implemented analysis includes file identity, SMF format/timing, duration/tempo, tracks/channels, programs/banks, controllers/sustain, percussion, note/velocity statistics, pitch bend/aftertouch, SysEx count, sustain-aware estimated peak simultaneous MIDI notes, and generic compatibility/complexity flags.
 
 ### Durable MIDI importer
 
-The importer provides:
-
-- recursive file discovery
-- SHA-256 content-addressed storage
-- exact duplicate/idempotent import behavior
-- rights/provenance capture
-- durable JSON sidecars
-- strict separation of deterministic analysis, curated metadata, and future AI enrichment
+The importer provides recursive discovery, SHA-256 content-addressed storage, duplicate/idempotent import behavior, rights/provenance capture, durable JSON sidecars, and strict separation of deterministic analysis, curated metadata, and future AI enrichment.
 
 ### Rebuildable SQLite catalog
 
-The catalog can now be recreated from durable sidecars at any time. It indexes:
-
-- compositions separately from individual MIDI performances
-- title/composer/artist/era
-- genres, moods, themes, tags, and instrumentation
-- performance type and quality grade
-- familiarity, energy, and favorites
-- rights/provenance
-- duration, channels, tracks, programs, note range, sustain, percussion, and peak simultaneous notes
-
-Catalog rebuilding is atomic so an invalid sidecar cannot destroy the last known-good index.
+The catalog can be recreated from durable sidecars at any time. It indexes compositions separately from individual MIDI performances plus descriptive metadata, rights/provenance, MIDI structure, and compatibility-relevant facts. Rebuilding is atomic so an invalid sidecar cannot destroy the last known-good index.
 
 ### Deterministic Smart Station engine
 
-Structured `PlaybackIntent` can now produce an explainable queue without AI or attached hardware. The selector implements:
+Structured `PlaybackIntent` can produce an explainable queue without AI or hardware. The selector supports exact/partial/fallback matching, weighted preferences, hard exclusions, device/MIDI constraints, best-performance-per-composition selection, composer diversity, duration targets, seeded variation, per-item score explanations, and explicit soft-preference relaxation.
 
-- exact / partial / fallback metadata matching tiers
-- genre, mood, theme, era, instrumentation, and performance-type matching
-- composer/artist preference weighting
-- familiarity, energy, favorite, and quality scoring
-- hard include/exclude tags
-- rights and MIDI/device eligibility constraints
-- one preferred MIDI performance per composition
-- composer diversity and energy-transition penalties
-- requested-duration/overshoot consideration
-- deterministic seeded variation for reproducible tests
-- per-item score breakdown and selection reasons
-- explicit soft-preference relaxation diagnostics
-- hooks for recent asset/composition exclusions
-
-Example command:
+Example:
 
 ```bash
 openorchestrion-station var/library/catalog.db \
@@ -107,12 +51,36 @@ openorchestrion-station var/library/catalog.db \
   --seed 42
 ```
 
+### Durable play history
+
+Listening behavior is now stored separately from the rebuildable catalog in `history.db`.
+
+Implemented behavior includes:
+
+- queued / started / substantially-played / completed / skipped / failed lifecycle states
+- substantial-listen threshold before a partial play counts for no-repeat/history
+- completed tracks always count
+- quick skips and queued-only items do not count as played
+- append-only meaningful lifecycle events plus current play-attempt summary state
+- recent asset/composition lookup for configurable no-repeat windows
+- per-asset play count, last-played, total listened time, completions, and substantial skips
+- staleness ranking for “not heard recently” behavior
+- helper to merge recent history into `StationConstraints`
+- explicit history schema versioning
+- backup/recovery separation from rebuildable `catalog.db`
+
+Example:
+
+```bash
+openorchestrion-history var/history.db recent --days 30
+```
+
 ## Next software dependencies
 
-1. **Durable play history** — record what was actually played, calculate no-repeat windows, and provide rarely-played/last-played weighting.
-2. **AI Music Concierge** — translate natural language into/refine `PlaybackIntent` and hand it to the deterministic selector.
-3. **Playback state machine and virtual MIDI outputs** — queue, play, pause, stop, skip, panic, and hardware-neutral playback state before physical keyboards arrive.
-4. **Responsive web UI** — appliance/phone interface driven by the same API and WebSocket state.
+1. **AI Music Concierge** — translate natural language into/refine `PlaybackIntent` and hand it to the deterministic selector.
+2. **Playback state machine and virtual MIDI outputs** — queue, play, pause, stop, skip, panic, history-event emission, and hardware-neutral playback state before physical keyboards arrive.
+3. **Responsive web UI** — appliance/phone interface driven by the same API and WebSocket state.
+4. **CI and schema/test automation** — run the non-hardware regression suite automatically on GitHub.
 
 ## Decisions already made
 
@@ -129,6 +97,7 @@ openorchestrion-station var/library/catalog.db \
 - Deterministic MIDI facts, human-curated metadata, and AI inference remain distinct data classes.
 - SQLite catalog data is rebuildable and is not the sole durable source of music metadata.
 - Smart Station selection is deterministic, explainable, and independently testable from AI.
+- Listening history is durable runtime state and is not stored solely in the rebuildable catalog.
 
 ## Immediate proof-of-concept tests when hardware arrives
 
