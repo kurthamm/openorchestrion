@@ -4,6 +4,52 @@
 
 OpenOrchestrion should not rely on “it seemed to play a song” as hardware or software validation. The project needs deterministic, copyright-clean test material that exercises individual MIDI behaviors and can be reproduced by contributors.
 
+## Current implementation
+
+The first synthetic conformance generator is implemented in:
+
+`openorchestrion.testing.midi_fixtures`
+
+After installing the project, generate the complete suite with:
+
+```bash
+openorchestrion-fixtures build/midi-fixtures
+```
+
+or directly from Python:
+
+```bash
+python -m openorchestrion.testing.midi_fixtures build/midi-fixtures
+```
+
+The default suite creates **14 MIDI files plus `manifest.json`**:
+
+```text
+single-note.mid
+velocity-ladder.mid
+sustain-cc64.mid
+program-change.mid
+gm-ensemble.mid
+note-range.mid
+polyphony-16.mid
+polyphony-32.mid
+polyphony-48.mid
+polyphony-64.mid
+two-piano-split.mid
+sync-click.mid
+long-run.mid
+unsupported-events.mid
+manifest.json
+```
+
+`long-run.mid` represents 120 minutes by default. A shorter or longer test can be generated with:
+
+```bash
+openorchestrion-fixtures build/midi-fixtures --long-run-minutes 240
+```
+
+The generated directory is intentionally ignored by Git. The source generator and assertions are versioned; binary output is reproducible. Unit tests verify the expected velocities, sustain values, GM channels/percussion, full MIDI note range, simultaneous polyphony loads, independent two-piano channels, synchronized click timestamps, and parser-safe noncritical event content.
+
 ## Synthetic MIDI conformance suite
 
 The repository should generate its own tiny Standard MIDI Files for testing. A generator script is preferable to committing opaque binary fixtures wherever practical.
@@ -80,6 +126,8 @@ Validates resource stability, queue progression, reconnect handling, and absence
 ### 11. `unsupported-events`
 
 Include safely ignored metadata and selected unsupported/noncritical MIDI events so the parser can prove it does not crash or execute embedded content.
+
+The initial fixture deliberately avoids sending arbitrary SysEx to hardware. SysEx parsing can be tested separately without making an unknown device execute vendor-specific commands.
 
 ## Hardware validation levels
 
