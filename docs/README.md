@@ -16,6 +16,10 @@ This directory contains the living design and implementation specification.
 - [AI Music Concierge](ai-music-concierge.md)
 - [Smart stations and selection](stations-and-selection.md)
 
+## Application interface
+
+- [API contract](api-contract.md) — REST/WebSocket agreement between the web UI and the playback backend, and the boundary decisions both sides depend on. Changes require review from both sides.
+
 ## MIDI and library
 
 - [MIDI library](midi-library.md)
