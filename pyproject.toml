@@ -26,6 +26,7 @@ openorchestrion-import-midi = "openorchestrion.library.importer:main"
 openorchestrion-reindex = "openorchestrion.library.catalog:reindex_main"
 openorchestrion-catalog = "openorchestrion.library.catalog:query_main"
 openorchestrion-station = "openorchestrion.stations:main"
+openorchestrion-history = "openorchestrion.history:main"
 
 [project.optional-dependencies]
 dev = [
