@@ -11,6 +11,10 @@ from openorchestrion.library.catalog import rebuild_catalog
 from openorchestrion.library.importer import import_paths
 from openorchestrion.testing.midi_fixtures import generate_suite
 
+COMMAND_ID_1 = "00000000-0000-4000-8000-000000000001"
+COMMAND_ID_2 = "00000000-0000-4000-8000-000000000002"
+COMMAND_ID_3 = "00000000-0000-4000-8000-000000000003"
+
 
 def _settings(tmp_path: Path, *, with_library: bool) -> Settings:
     root = tmp_path / "library"
@@ -83,11 +87,11 @@ def test_search_returns_indexed_assets(stocked_client: TestClient) -> None:
 def test_concierge_answers_offline(stocked_client: TestClient) -> None:
     response = stocked_client.post(
         "/api/concierge/ask",
-        json={"prompt": "play dinner music for two hours", "command_id": "abc-123"},
+        json={"prompt": "play dinner music for two hours", "command_id": COMMAND_ID_1},
     )
     assert response.status_code == 200
     body = response.json()
-    assert body["command_id"] == "abc-123"
+    assert body["command_id"] == COMMAND_ID_1
     assert body["intent"]["duration_minutes"] == 120
     assert body["preview"] is not None
 
@@ -145,8 +149,8 @@ def test_history_request_does_not_create_a_database(tmp_path: Path) -> None:
         ("post", "/api/queue", {"mode": "replace", "intent": {"themes": ["dinner"]}}),
         ("post", "/api/queue/reorder", {"asset_id": "sha256:abc", "to_index": 2}),
         ("post", "/api/queue/remove", {"asset_id": "sha256:abc"}),
-        ("post", "/api/transport/play", {"command_id": "cmd-1"}),
-        ("post", "/api/transport/panic", {"command_id": "cmd-2"}),
+        ("post", "/api/transport/play", {"command_id": COMMAND_ID_2}),
+        ("post", "/api/transport/panic", {"command_id": COMMAND_ID_3}),
         ("post", "/api/library/assets/sha256:abc/favorite", {"favorite": True}),
     ],
 )
@@ -302,6 +306,25 @@ def test_malformed_queue_command_is_request_invalid(empty_client: TestClient) ->
     response = empty_client.post("/api/queue/reorder", json={"to_index": -1})
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "request_invalid"
+
+
+def test_command_id_must_be_a_uuid(empty_client: TestClient) -> None:
+    response = empty_client.post("/api/transport/skip", json={"command_id": "not-a-uuid"})
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "request_invalid"
+
+
+def test_queue_replace_requires_exactly_one_source(empty_client: TestClient) -> None:
+    empty = empty_client.post("/api/queue", json={})
+    assert empty.status_code == 422
+    assert empty.json()["error"]["code"] == "request_invalid"
+
+    ambiguous = empty_client.post(
+        "/api/queue",
+        json={"intent": {}, "asset_ids": ["sha256:abc"]},
+    )
+    assert ambiguous.status_code == 422
+    assert ambiguous.json()["error"]["code"] == "request_invalid"
 
 
 def test_intent_body_failure_is_still_intent_invalid(empty_client: TestClient) -> None:
