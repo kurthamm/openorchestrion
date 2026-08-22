@@ -14,8 +14,8 @@ export function renderQueue(node, state, handlers) {
       node,
       notice(
         'warn',
-        'The queue lives in the playback engine',
-        'Queueing arrives with issue #14. Station previews on the Listen tab already show what would play.',
+        'Queue unavailable',
+        'This backend is not currently exposing queue state. Station previews on Listen still show what would be selected.',
       ),
     );
     return;
