@@ -26,6 +26,10 @@ This directory contains the living design and implementation specification.
 - [Test strategy](test-strategy.md)
 - [MIDI conformance quickstart](midi-conformance-quickstart.md)
 
+## Runtime state and listening history
+
+- [Durable play history](play-history.md) — queued/started/substantial/completed semantics, no-repeat windows, staleness and backup boundaries.
+
 ## Hardware
 
 - [Hardware selection](hardware-selection.md)
@@ -43,7 +47,7 @@ This directory contains the living design and implementation specification.
 
 - [ADR index](adr/README.md)
 
-Key accepted decisions include local-first playback, treating keyboards as sound engines, isolating AI from MIDI execution, one master timeline for multiple devices, one shared web UI, rebuildable library metadata, and evidence-based MIDI receive compatibility.
+Key accepted decisions include local-first playback, treating keyboards as sound engines, isolating AI from MIDI execution, one master timeline for multiple devices, one shared web UI, rebuildable library metadata, durable history outside the rebuildable catalog, and evidence-based MIDI receive compatibility.
 
 ## White paper
 
