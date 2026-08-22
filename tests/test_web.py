@@ -119,6 +119,24 @@ def test_hidden_views_are_actually_hidden() -> None:
     assert re.search(r"\.view\[hidden\]\s*\{[^}]*display:\s*none", css)
 
 
+def test_ticker_updates_progress_without_rebuilding_the_subtree() -> None:
+    """The per-frame path must not replace the transport buttons.
+
+    Driving the live backend caught this: the ticker called the full
+    ``renderNowPlaying``, which ``replaceChildren()``s the subtree ~60x/s, so a
+    tap landing between frames hit a detached node and the controls could not be
+    pressed while music played.
+    """
+    app_js = (WEB_ROOT / "js" / "app.js").read_text(encoding="utf-8")
+    ticker = app_js[app_js.index("const ticker = createTicker") : app_js.index("function toast")]
+    assert "updateProgress(" in ticker, "the per-frame callback must do an in-place update"
+
+    now_playing = (WEB_ROOT / "js" / "views" / "nowplaying.js").read_text(encoding="utf-8")
+    update = now_playing[now_playing.index("export function updateProgress") :]
+    update = update[: update.index("\nfunction ")]
+    assert "render(" not in update, "updateProgress must not rebuild the subtree"
+
+
 def test_position_module_does_not_trust_the_server_clock() -> None:
     """Contract D1: anchoring on server_time would break on clock skew."""
     source = (WEB_ROOT / "js" / "position.js").read_text(encoding="utf-8")

@@ -4,6 +4,15 @@
  * Progress is interpolated locally between server anchors (contract D1).
  * Transport buttons are optimistic: they mark themselves pending immediately so
  * a touchscreen feels responsive, then reconcile against server state (D4).
+ *
+ * Rendering is deliberately split in two. `renderNowPlaying` rebuilds the
+ * subtree and runs only when state changes; `updateProgress` runs every frame
+ * while playing and mutates nothing but the bar width and the two clocks.
+ *
+ * They must stay separate: rebuilding on every frame replaces the transport
+ * buttons ~60 times a second, so a tap that lands between frames hits a node
+ * that has already been detached. That made the controls unreliable to press
+ * while music was playing.
  */
 
 import { h, render } from '../dom.js';
@@ -55,9 +64,9 @@ export function renderNowPlaying(node, state, handlers, anchored) {
     return;
   }
 
+  const durationMs = anchored?.durationMs ?? (track.duration_seconds ?? 0) * 1000;
   const elapsed = positionAt(anchored);
   const fraction = progressAt(anchored);
-  const durationMs = anchored?.durationMs ?? (track.duration_seconds ?? 0) * 1000;
 
   render(
     node,
@@ -93,6 +102,31 @@ export function renderNowPlaying(node, state, handlers, anchored) {
       transportRow(state, handlers, playing),
     ),
   );
+}
+
+/**
+ * Per-frame progress update.
+ *
+ * Touches only text and width, so the transport buttons keep their identity and
+ * stay clickable while the bar animates. Returns false when the structure it
+ * needs is absent, letting the caller fall back to a full render.
+ */
+export function updateProgress(node, anchored, track) {
+  const fill = node.querySelector('.bar-fill');
+  const bar = node.querySelector('.bar');
+  const clocks = node.querySelectorAll('.np-time');
+  if (!fill || !bar || clocks.length < 2) return false;
+
+  const durationMs = anchored?.durationMs ?? (track?.duration_seconds ?? 0) * 1000;
+  const elapsed = positionAt(anchored);
+  const fraction = progressAt(anchored);
+
+  fill.style.width = fraction === null ? '0%' : `${Math.min(100, fraction * 100)}%`;
+  clocks[0].textContent = formatClock(elapsed);
+  clocks[1].textContent = formatClock(Math.max(0, durationMs - elapsed));
+  bar.setAttribute('aria-valuenow', String(Math.round(elapsed / 1000)));
+  bar.setAttribute('aria-valuetext', `${formatClock(elapsed)} of ${formatClock(durationMs)}`);
+  return true;
 }
 
 function transportRow(state, handlers, playing) {

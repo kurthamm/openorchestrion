@@ -13,7 +13,7 @@ import { StateSocket } from './socket.js';
 import { ensureSessionId, getState, setState, subscribe } from './store.js';
 import { renderHealth } from './views/health.js';
 import { renderAskResult, renderStations, STATIONS } from './views/listen.js';
-import { renderNowPlaying } from './views/nowplaying.js';
+import { renderNowPlaying, updateProgress } from './views/nowplaying.js';
 import { renderFacets, renderResults } from './views/browse.js';
 import { renderHistory, renderQueue } from './views/queue.js';
 
@@ -37,8 +37,14 @@ const nodes = {
 
 let positionAnchor = null;
 
+// Per-frame work is a cheap in-place update, never a rebuild: replacing the
+// subtree at 60fps detaches the transport buttons mid-tap. Fall back to a full
+// render only if the expected structure is not there.
 const ticker = createTicker(() => {
-  renderNowPlaying(nodes.nowPlaying, getState(), handlers, positionAnchor);
+  const state = getState();
+  if (!updateProgress(nodes.nowPlaying, positionAnchor, state.playback?.now_playing)) {
+    renderNowPlaying(nodes.nowPlaying, state, handlers, positionAnchor);
+  }
 });
 
 function toast(message, tone = 'info') {
@@ -309,7 +315,7 @@ subscribe((state) => {
   renderResults(nodes.searchResults, state, handlers);
   renderQueue(nodes.queuePanel, state, handlers);
   renderHistory(nodes.historyPanel, state);
-  if (!ticker.running) renderNowPlaying(nodes.nowPlaying, state, handlers, positionAnchor);
+  renderNowPlaying(nodes.nowPlaying, state, handlers, positionAnchor);
 
   for (const button of nodes.tabs.querySelectorAll('.tab')) {
     const active = button.dataset.view === state.view;
