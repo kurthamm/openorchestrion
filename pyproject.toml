@@ -25,6 +25,7 @@ openorchestrion-analyze = "openorchestrion.midi.analyzer:main"
 openorchestrion-import-midi = "openorchestrion.library.importer:main"
 openorchestrion-reindex = "openorchestrion.library.catalog:reindex_main"
 openorchestrion-catalog = "openorchestrion.library.catalog:query_main"
+openorchestrion-station = "openorchestrion.stations:main"
 
 [project.optional-dependencies]
 dev = [
