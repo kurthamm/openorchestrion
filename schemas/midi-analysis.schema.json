@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openorchestrion.example/schemas/midi-analysis.schema.json",
+  "title": "OpenOrchestrion Deterministic MIDI Analysis",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source", "sha256", "file_size_bytes", "midi_type", "ticks_per_beat", "track_count",
+    "duration_seconds", "tracks", "tempo_changes", "time_signature_changes", "channels",
+    "melodic_channels", "percussion_channels", "percussion_note_count", "note_count", "note_min",
+    "note_max", "velocity", "program_uses", "controllers", "sustain_used", "pitch_bend_used",
+    "channel_aftertouch_used", "poly_aftertouch_used", "sysex_count", "peak_simultaneous_notes",
+    "peak_simultaneous_notes_by_channel", "assessment"
+  ],
+  "properties": {
+    "source": {"type": "string"},
+    "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+    "file_size_bytes": {"type": ["integer", "null"], "minimum": 0},
+    "midi_type": {"type": "integer", "minimum": 0, "maximum": 2},
+    "ticks_per_beat": {"type": "integer", "minimum": 1},
+    "track_count": {"type": "integer", "minimum": 1},
+    "duration_seconds": {"type": "number", "minimum": 0},
+    "tracks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["index", "name", "event_count", "channels", "note_count", "note_min", "note_max", "program_changes", "end_tick"],
+        "properties": {
+          "index": {"type": "integer", "minimum": 0},
+          "name": {"type": ["string", "null"]},
+          "event_count": {"type": "integer", "minimum": 0},
+          "channels": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 16}, "uniqueItems": true},
+          "note_count": {"type": "integer", "minimum": 0},
+          "note_min": {"type": ["integer", "null"], "minimum": 0, "maximum": 127},
+          "note_max": {"type": ["integer", "null"], "minimum": 0, "maximum": 127},
+          "program_changes": {"type": "integer", "minimum": 0},
+          "end_tick": {"type": "integer", "minimum": 0}
+        }
+      }
+    },
+    "tempo_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tick", "seconds", "tempo_us_per_beat", "bpm"],
+        "properties": {
+          "tick": {"type": "integer", "minimum": 0},
+          "seconds": {"type": "number", "minimum": 0},
+          "tempo_us_per_beat": {"type": "integer", "minimum": 1},
+          "bpm": {"type": "number", "exclusiveMinimum": 0}
+        },
+        "additionalProperties": false
+      }
+    },
+    "time_signature_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["tick", "numerator", "denominator"],
+        "properties": {
+          "tick": {"type": "integer", "minimum": 0},
+          "numerator": {"type": "integer", "minimum": 1},
+          "denominator": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "channels": {"$ref": "#/$defs/channels"},
+    "melodic_channels": {"$ref": "#/$defs/channels"},
+    "percussion_channels": {"$ref": "#/$defs/channels"},
+    "percussion_note_count": {"type": "integer", "minimum": 0},
+    "note_count": {"type": "integer", "minimum": 0},
+    "note_min": {"type": ["integer", "null"], "minimum": 0, "maximum": 127},
+    "note_max": {"type": ["integer", "null"], "minimum": 0, "maximum": 127},
+    "velocity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "minimum", "maximum", "mean", "median", "histogram"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "minimum": {"type": ["integer", "null"], "minimum": 1, "maximum": 127},
+        "maximum": {"type": ["integer", "null"], "minimum": 1, "maximum": 127},
+        "mean": {"type": ["number", "null"], "minimum": 1, "maximum": 127},
+        "median": {"type": ["number", "null"], "minimum": 1, "maximum": 127},
+        "histogram": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 1}}
+      }
+    },
+    "program_uses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["tick", "channel", "program_zero_based", "gm_program_number", "gm_name", "bank_msb", "bank_lsb"],
+        "properties": {
+          "tick": {"type": "integer", "minimum": 0},
+          "channel": {"type": "integer", "minimum": 1, "maximum": 16},
+          "program_zero_based": {"type": "integer", "minimum": 0, "maximum": 127},
+          "gm_program_number": {"type": "integer", "minimum": 1, "maximum": 128},
+          "gm_name": {"type": "string"},
+          "bank_msb": {"type": "integer", "minimum": 0, "maximum": 127},
+          "bank_lsb": {"type": "integer", "minimum": 0, "maximum": 127}
+        }
+      }
+    },
+    "controllers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["controller", "name", "count", "channels", "values"],
+        "properties": {
+          "controller": {"type": "integer", "minimum": 0, "maximum": 127},
+          "name": {"type": "string"},
+          "count": {"type": "integer", "minimum": 1},
+          "channels": {"$ref": "#/$defs/channels"},
+          "values": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 127}, "uniqueItems": true}
+        }
+      }
+    },
+    "sustain_used": {"type": "boolean"},
+    "pitch_bend_used": {"type": "boolean"},
+    "channel_aftertouch_used": {"type": "boolean"},
+    "poly_aftertouch_used": {"type": "boolean"},
+    "sysex_count": {"type": "integer", "minimum": 0},
+    "peak_simultaneous_notes": {"type": "integer", "minimum": 0},
+    "peak_simultaneous_notes_by_channel": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "assessment": {"type": "object"}
+  },
+  "$defs": {
+    "channels": {
+      "type": "array",
+      "items": {"type": "integer", "minimum": 1, "maximum": 16},
+      "uniqueItems": true
+    }
+  }
+}
