@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openorchestrion.example/schemas/midi-asset.schema.json",
+  "title": "OpenOrchestrion MIDI Asset Sidecar",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "asset_id", "file", "provenance", "deterministic_analysis", "descriptive_metadata", "ai_enrichment"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "asset_id": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["original_filename", "stored_filename", "sha256", "size_bytes"],
+      "properties": {
+        "original_filename": {"type": "string", "minLength": 1},
+        "stored_filename": {"type": "string", "pattern": "^[0-9a-f]{64}\\.mid$"},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "size_bytes": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["imported_at", "rights_status", "source_reference", "source_label", "license", "attribution"],
+      "properties": {
+        "imported_at": {"type": "string", "format": "date-time"},
+        "rights_status": {"type": "string", "enum": ["personal", "verified-open", "unknown"]},
+        "source_reference": {"type": ["string", "null"]},
+        "source_label": {"type": ["string", "null"]},
+        "license": {"type": ["string", "null"]},
+        "attribution": {"type": ["string", "null"]}
+      }
+    },
+    "deterministic_analysis": {"$ref": "midi-analysis.schema.json"},
+    "descriptive_metadata": {
+      "type": "object",
+      "description": "Curated or user-edited descriptive fields. Kept separate from facts extracted from MIDI bytes."
+    },
+    "ai_enrichment": {
+      "type": "array",
+      "description": "Future AI-inferred metadata entries with explicit model/provenance information.",
+      "items": {"type": "object"}
+    }
+  }
+}
