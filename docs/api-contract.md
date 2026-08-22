@@ -1,382 +1,368 @@
 # OpenOrchestrion API Contract
 
-**Status:** Accepted baseline for Issues #5 and #14. **Owner:** shared by the UI and playback lanes.
-**Applies to:** Issue #5 (web UI) and Issue #14 (playback state machine / virtual MIDI).
+**Status:** Accepted baseline for the web UI and playback backend.
 
-This document exists so that the frontend and backend lanes can work in parallel
-without inventing two different APIs. It is the coordination mechanism between
-contributors and between implementation phases.
+This document is the shared boundary between the responsive application and the
+server-owned OpenOrchestrion runtime. Changes to a published shape should be
+made here and in the Pydantic models in the same pull request.
 
-**Rule: if you need a shape that is not in this file, add it here in a PR before
-you write code that depends on it.** A contract change is a reviewable PR.
-Discovering a mismatch at merge time is the failure this file prevents.
+## 1. Ownership rules
 
----
+- The backend owns playback state, queue order, history, MIDI timing, routing,
+  and AI interpretation.
+- The web application renders authoritative state and sends commands. It never
+  runs its own MIDI clock or selection algorithm.
+- AI produces a validated `PlaybackIntent`. AI never sends MIDI, SysEx, shell
+  commands, or direct hardware instructions.
+- Device-specific behavior belongs behind capability profiles and routing
+  abstractions, not model-name checks scattered through application code.
+- The core runtime must continue to work when a browser disconnects and when a
+  hosted AI provider is unavailable.
 
-## 1. Ground rules
+## 2. Position anchors
 
-These restate project rules that already exist; they are here so the contract is
-readable on its own.
-
-- The backend is the source of truth for playback state, queue, history, MIDI
-  timing, and AI interpretation. The frontend renders state and sends commands.
-- The frontend never computes selection, scoring, no-repeat windows, or MIDI
-  timing. Those live in `stations.py`, `history.py`, `catalog.py`, `analyzer.py`.
-- AI produces a validated `PlaybackIntent`. It never emits MIDI, SysEx, shell
-  commands, or hardware instructions.
-- No keyboard model appears in application logic. Device behaviour comes from
-  device profiles.
-
-## 2. Baseline this contract replaced
-
-Before PR #15, `src/openorchestrion/app.py` exposed only three development
-endpoints:
-
-```
-GET  /api/health          -> {"status": "ok"}
-GET  /api/status          -> hardcoded literals
-POST /api/intent/validate -> echoes the posted PlaybackIntent back
-```
-
-The catalog, Smart Stations, play history, and Music Concierge already existed
-as Python libraries and CLIs, but had no coherent HTTP surface and there was no
-WebSocket state contract. PR #15 establishes that missing seam. The playback
-endpoints remain declared-but-pending until Issue #14 fills them in.
-
-## 3. Decisions that otherwise get made twice
-
-This is the important section. Each of these is a choice both lanes would
-otherwise make independently and differently.
-
-### D1 — Position is anchored at client receipt, not at server time
-
-The server does **not** push position every second. It pushes a position anchor
-whenever playback state changes:
-
-```json
-{ "position_ms": 41200, "duration_ms": 187000,
-  "rate": 1.0, "server_time": "2026-08-22T14:31:07.412Z" }
-```
-
-The client renders a smooth progress bar by interpolating from `position_ms` at
-`rate`, **anchored at the moment the message arrived locally**, typically a
-`performance.now()` reading taken in the message handler.
-
-**The client must not subtract `server_time` from its own clock.** Browser and
-appliance clocks are independent and routinely differ by seconds; a phone that
-has not synced NTP can be minutes out. Subtracting one from the other produces
-a progress bar that starts in the wrong place or runs backwards. `server_time`
-exists for ordering and diagnostics only, and the field carries that warning in
-its OpenAPI description so it is hard to misuse by accident.
-
-When `rate` is `0.0` (paused) the client stops advancing. Every state change
-re-anchors, so interpolation error never accumulates beyond one message
-interval.
-
-*Why not push at 1 Hz:* it is needless traffic to every connected client on a
-Pi, and it produces a visibly stuttering bar on the 7-inch display.
-
-### D2 — Reconnect gets a full snapshot; sequence numbers detect gaps
-
-Every WebSocket message carries a monotonically increasing `seq`. On connect the
-server immediately sends `state.snapshot` containing complete state. Subsequent
-messages are deltas.
-
-If a client sees a `seq` gap, it does not attempt to patch. It reconnects, or
-sends `{"type": "state.request_snapshot"}`, and replaces its local state wholesale.
-
-*Why:* on a household appliance, clients sleep, phones lock, and Wi-Fi drops.
-Delta streams without resync drift silently. Wholesale replacement is simpler
-than reconciliation and cannot half-apply.
-
-### D3 — The backend owns the queue; the client never holds an authoritative copy
-
-The client renders the queue from server state and sends mutations. It must not
-maintain its own ordering and diff it.
-
-```
-POST /api/queue/reorder
-POST /api/queue/remove
-```
-
-Every mutation returns the resulting queue and broadcasts it over the WebSocket,
-so the originating client and all others converge on the same value.
-
-### D4 — Optimistic UI is allowed, but must reconcile and must be reversible
-
-The 7-inch touchscreen needs immediate feedback; waiting for a round trip before
-a pause button responds feels broken. So the client may reflect intent
-immediately, but:
-
-- it marks that state `pending` until the server confirms;
-- it reverts on error or on a contradicting state message;
-- it never treats optimistic state as truth for anything else.
-
-Every mutation command accepts an optional client-generated `command_id` UUID.
-The server echoes it in the resulting state so the originating client can clear
-its `pending` flag. Commands are idempotent by `command_id`; a retry after a
-dropped connection must not double-skip a track.
-
-The Pydantic request models use the actual `UUID` type, so OpenAPI publishes
-`format: uuid` and malformed identifiers fail request validation before reaching
-the playback engine.
-
-### D5 — Correlation IDs go in the envelope, never in `PlaybackIntent`
-
-`PlaybackIntent` uses `extra="forbid"`. Unknown fields are rejected. This is
-deliberate: it stops model hallucinations becoming executable instructions and
-keeps UI metadata out of the deterministic intent object.
-
-So: no `client_id`, no `trace_id`, no UI hints inside the intent object. They go
-in the request envelope alongside it:
-
-```json
-{ "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71",
-  "prompt": "dinner music for two hours",
-  "session_id": "kitchen-tablet", "current_intent": null }
-```
-
-`session_id` is separate from `command_id` and does more than correlate. It
-names a **server-side Concierge conversation**, so "a little more upbeat"
-refines the previous turn instead of starting over, and every surface in the
-house sharing an id sees the same conversation.
-
-- With `session_id`: the turn builds on that session's remembered intent.
-- With `session_id` **and** an explicit `current_intent`: the explicit one wins,
-  which lets a client resync after losing its own state.
-- Without `session_id`: the call is stateless and only `current_intent` applies.
-
-Sessions are in-memory and bounded (LRU, 64 by default). Conversation state is
-a convenience, not durable data. Losing it on restart costs the user one extra
-sentence, so it deliberately does not go in a database.
-
-### D6 — Degraded states are explicit fields, never absent data
-
-The UI must distinguish "no provider configured" from "AI request failed" from
-"AI is thinking". It cannot infer that from a missing key. Every degradable
-subsystem reports its own state:
+The server does not push a progress update every second. A playback state
+message contains a position anchor:
 
 ```json
 {
-  "ai": {"enabled": true, "provider": "deterministic-fallback",
-         "reason": "no_provider_configured_using_offline_interpreter"},
-  "outputs": {"ready": false, "devices": [], "reason": "no_midi_output"},
-  "library": {"indexed": false, "assets": 0, "compositions": 0,
-              "genres": 0, "moods": 0, "themes": 0}
+  "position_ms": 41200,
+  "duration_ms": 187000,
+  "rate": 1.0,
+  "server_time": "2026-08-22T14:31:07.412Z"
 }
 ```
 
-`ConciergeResult` also carries `fallback_used` and `primary_error`. When
-`fallback_used` is `true`, the UI should say so, for example "answered offline",
-rather than silently presenting a degraded result as a normal one.
+The client records its own local receipt time, preferably with
+`performance.now()`, and interpolates from `position_ms` at `rate`.
 
----
+**Never subtract `server_time` from the browser clock.** The two wall clocks can
+have different offsets. `server_time` exists for diagnostics and ordering only.
+A paused state has `rate = 0.0`.
 
-## 4. REST endpoints
+## 3. Queue ownership and optimistic UI
 
-`(#14)` marks endpoints that depend on the playback state machine. They are
-**declared with their real success models** and return `not_implemented` until
-that lands, so a generated client already knows the shape it will receive. It is
-never told that a successful `/api/queue` call returns an error object.
+The backend owns the authoritative queue. Every mutation returns the resulting
+queue and also produces state events for connected clients.
 
-| Method | Path | Backed by | Status |
-|---|---|---|---|
-| GET | `/api/health` | — | implemented |
-| GET | `/api/status` | aggregate | implemented, playback fields become real in #14 |
-| POST | `/api/concierge/ask` | `ai.MusicConcierge.interpret` | implemented |
-| POST | `/api/stations/preview` | `stations.build_station` | implemented |
-| GET | `/api/library/search` | `catalog.search_catalog` | implemented |
-| GET | `/api/library/stats` | `catalog.catalog_stats` | implemented |
-| GET | `/api/library/assets/{asset_id}` | `catalog.get_asset` | implemented |
-| POST | `/api/library/assets/{asset_id}/favorite` | metadata writer | blocked, see §6 |
-| GET | `/api/history/recent` | `history.history_summaries` | implemented |
-| GET | `/api/devices` | `midi.devices.list_output_ports` | implemented |
-| GET | `/api/queue` | queue state | (#14) |
-| POST | `/api/queue` | replace/append from intent or assets | (#14) |
-| POST | `/api/queue/reorder`, `/api/queue/remove` | queue state | (#14) |
-| POST | `/api/transport/{play,pause,stop,skip,panic}` | transport | (#14) |
-| WS | `/api/ws` | state sync | (#14) |
+The UI may optimistically change a button or local visual state for immediate
+touch feedback, but optimistic state:
 
-### `POST /api/concierge/ask`
+- is marked pending;
+- is reversible;
+- is never used as authoritative input to another operation;
+- is replaced by the server response or WebSocket state.
 
-Request:
+Mutation commands accept an optional UUID `command_id`. Successful command IDs
+are idempotent. Retrying a command after a dropped connection must not
+accidentally skip twice or append the same queue twice. Reusing one command ID
+for a different operation is a conflict.
+
+Correlation and UI metadata never go inside `PlaybackIntent`, which rejects
+unknown fields.
+
+## 4. Concierge sessions
+
+`POST /api/concierge/ask` supports optional `session_id` conversation state.
+Sessions are bounded and in-memory because losing conversational context on an
+appliance restart is acceptable; durable listening history is not stored there.
+
+- With `session_id`, a turn refines that session's current intent.
+- With `session_id` plus explicit `current_intent`, the explicit intent replaces
+  remembered context before the turn. This is the resync path.
+- Without `session_id`, the call is stateless unless `current_intent` is supplied.
+
+Example:
 
 ```json
-{ "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71",
+{
+  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71",
   "session_id": "kitchen-tablet",
-  "prompt": "something more upbeat", "current_intent": null }
+  "prompt": "a little more upbeat",
+  "current_intent": null
+}
 ```
 
-Response mirrors `ConciergeResult.to_dict()` plus the queue preview the UI needs
-to render a result:
+## 5. Degraded states
+
+Subsystem availability is explicit rather than inferred from missing fields.
+For example:
 
 ```json
-{ "intent": { "...PlaybackIntent..." },
-  "provider": "structured-model",
+{
+  "ai": {
+    "enabled": true,
+    "provider": "deterministic-fallback",
+    "reason": "no_provider_configured_using_offline_interpreter"
+  },
+  "outputs": {
+    "ready": false,
+    "devices": [],
+    "reason": "no_midi_output"
+  },
+  "library": {
+    "indexed": false,
+    "assets": 0,
+    "compositions": 0,
+    "genres": 0,
+    "moods": 0,
+    "themes": 0
+  }
+}
+```
+
+When the hosted Concierge provider fails and the deterministic fallback answers,
+`fallback_used` and `primary_error` make that degradation visible to the UI.
+
+## 6. REST surface
+
+| Method | Path | Response / owner | Status |
+|---|---|---|---|
+| GET | `/api/health` | health | implemented |
+| GET | `/api/status` | `SystemStatus` | implemented |
+| POST | `/api/intent/validate` | `PlaybackIntent` | implemented |
+| POST | `/api/concierge/ask` | `ConciergeResponse` | implemented |
+| POST | `/api/stations/preview` | `StationQueueModel` | implemented |
+| GET | `/api/library/search` | `LibrarySearchResponse` | implemented |
+| GET | `/api/library/stats` | `LibraryCounts` | implemented |
+| GET | `/api/library/assets/{asset_id}` | `LibraryAssetDetail` | implemented |
+| POST | `/api/library/assets/{asset_id}/favorite` | metadata writer | blocked |
+| GET | `/api/history/recent` | `HistoryResponse` | implemented |
+| GET | `/api/devices` | `DevicesResponse` | implemented |
+| GET | `/api/queue` | `QueueState` | implemented |
+| POST | `/api/queue` | `QueueState` | implemented |
+| POST | `/api/queue/reorder` | `QueueState` | implemented |
+| POST | `/api/queue/remove` | `QueueState` | implemented |
+| POST | `/api/transport/{action}` | `PlaybackState` | implemented |
+| WS | `/api/ws` | snapshot + typed deltas | implemented |
+
+The OpenAPI schema generated by FastAPI is the machine-readable form of this
+contract.
+
+## 7. Concierge and station preview
+
+`POST /api/concierge/ask` returns the validated intent plus an optional station
+preview when a catalog exists:
+
+```json
+{
+  "intent": {"themes": ["Christmas"], "familiarity": "high"},
+  "provider": "deterministic-fallback",
   "fallback_used": false,
   "primary_error": null,
-  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71",
-  "preview": { "...StationQueue..." } }
+  "command_id": null,
+  "preview": {"items": [], "relaxations": [], "diagnostics": []}
+}
 ```
 
-The Concierge is an async model call and may take seconds. The UI needs a
-"thinking" state; `command_id` correlates the eventual answer to the prompt.
-`session_id` maps to a `ConciergeSession`, which holds `current_intent` for
-successive refinements such as "a little more upbeat" and "more piano".
+`POST /api/stations/preview` accepts `intent`, `seed`, and `max_tracks`. The
+response includes scoring explanations, `relaxations`, and `diagnostics`.
+Clients should surface meaningful relaxations rather than silently pretending
+every requested preference was satisfied.
 
-### `POST /api/stations/preview`
+Both preview and playback queue generation feed durable no-repeat history into
+Smart Station constraints when `avoid_recent_repeats` is enabled.
 
-Takes a `PlaybackIntent`, returns `StationQueue.to_dict()` as already produced by
-`stations.build_station()`, including `items[].score_breakdown`, `selected_for`,
-`relaxations`, and `diagnostics`.
+## 8. Queue commands
 
-**Render `relaxations`.** When the selector could not honour the request it says
-so. The appliance should pass that on rather than silently serving something
-else.
-
-### `GET /api/library/search`
-
-Query params map 1:1 onto `catalog.search_catalog()`:
-`text`, `composer`, `genre` (repeatable), `mood`, `theme`, `performance_type`,
-`rights_status`, `min_familiarity`, `max_energy`, `limit` (1–1000).
-
-### Queue and transport command bodies
-
-`POST /api/queue` accepts **exactly one** queue source. An empty request and a
-request containing both sources are `request_invalid`.
+`POST /api/queue` accepts exactly one source.
 
 Intent source:
 
 ```json
-{ "mode": "replace",
-  "intent": { "themes": ["dinner"], "energy": "low" },
-  "seed": 42, "max_tracks": 25,
-  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71" }
+{
+  "mode": "replace",
+  "intent": {"themes": ["dinner"], "energy": "low"},
+  "seed": 42,
+  "max_tracks": 25,
+  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71"
+}
 ```
 
-Explicit asset source:
+Explicit catalog source:
 
 ```json
-{ "mode": "append",
+{
+  "mode": "append",
   "asset_ids": ["sha256:...", "sha256:..."],
-  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71" }
+  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71"
+}
 ```
 
-Queue mutations are:
+An empty source or a request that supplies both `intent` and `asset_ids` is
+`request_invalid`.
+
+Queue mutations:
 
 ```json
 POST /api/queue/reorder
-{ "asset_id": "sha256:...", "to_index": 3,
-  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71" }
+{
+  "asset_id": "sha256:...",
+  "to_index": 3,
+  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71"
+}
+```
 
+```json
 POST /api/queue/remove
-{ "asset_id": "sha256:...",
-  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71" }
+{
+  "asset_id": "sha256:...",
+  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71"
+}
 ```
 
-Transport actions accept an optional body containing only the idempotency token:
+The current queue implementation identifies entries by `asset_id` and therefore
+does not allow one asset to appear twice in the same queue.
+
+## 9. Transport
+
+Supported actions are:
+
+```text
+play
+pause
+stop
+skip
+panic
+```
+
+A transport request may contain only an optional UUID command ID:
 
 ```json
-POST /api/transport/skip
-{ "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71" }
+{
+  "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71"
+}
 ```
 
-Every queue mutation returns `QueueState`; every transport mutation returns
-`PlaybackState`. While #14 is pending, the same routes return a typed 501
-`ErrorResponse`.
+`play` resumes when the engine is paused. `stop`, `skip`, and `panic` terminate
+an active history attempt appropriately and perform MIDI cleanup. `panic` fans
+cleanup across every configured destination.
 
-## 5. WebSocket
+## 10. Playback state
 
-Every server message is a typed, discriminated envelope. `type` is a closed set,
-not a free string, and each server-to-client type has a concrete payload model in
-`api/models.py`.
+`PlaybackState` is authoritative:
 
 ```json
-{ "type": "state.snapshot", "seq": 41,
-  "ts": "2026-08-22T14:31:07.412Z", "payload": { } }
+{
+  "state": "playing",
+  "now_playing": {
+    "asset_id": "sha256:...",
+    "composition_id": null,
+    "title": "Example",
+    "composer": null,
+    "duration_seconds": 142.4,
+    "queue_index": 0
+  },
+  "position": {
+    "position_ms": 21500,
+    "duration_ms": 142400,
+    "rate": 1.0,
+    "server_time": "2026-08-22T17:00:00+00:00"
+  },
+  "command_id": null
+}
 ```
 
-`seq` increases monotonically; a gap tells the client to resync rather than
-patch.
+Public states are `idle`, `playing`, `paused`, and `stopped`. Runtime failures
+arrive as typed errors plus a stopped playback state rather than inventing a
+browser-only error transport state.
 
-| Type | When | Payload model |
-|---|---|---|
-| `state.snapshot` | on connect, on resync request | `SnapshotPayload` — status + playback + queue |
-| `state.playback` | transport or track change | `PlaybackState` carrying `PositionAnchor` |
-| `state.queue` | queue mutated | `QueueState` |
-| `state.devices` | device appears/disappears | `OutputsState` |
-| `state.library` | reindex completed | `LibraryCounts` |
-| `concierge.result` | async answer ready | `ConciergeResponse` |
-| `error` | command rejected | `ErrorBody` |
+## 11. WebSocket state
 
-Client-to-server control is intentionally tiny: `state.request_snapshot` and
-`ping`. All mutations go over REST, not the socket. One code path handles
-commands; the socket is read-mostly state distribution.
+On connection, `/api/ws` immediately sends a complete `state.snapshot` containing:
 
-Until #14 lands, `/api/ws` accepts the connection, sends one `error` envelope
-with code `not_implemented`, and closes. That is enough for the UI to build and
-exercise its reconnect path now, against the envelope shape it will keep.
+- `SystemStatus`;
+- `PlaybackState`;
+- `QueueState`.
 
-## 6. Cross-lane blockers
+Subsequent server messages use typed envelopes:
 
-**Favorites in Issue #5 are blocked.** `favorite` lives in the sidecar's
-`descriptive_metadata` block, and nothing in the repository writes to that block
-(review finding OO-01). Until a metadata writer exists, `POST .../favorite`
-cannot persist. The frontend may build the control against the published shape,
-but must render the 501 state rather than pretending persistence succeeded.
+| Type | Payload |
+|---|---|
+| `state.snapshot` | complete status + playback + queue |
+| `state.playback` | `PlaybackState` |
+| `state.queue` | `QueueState` |
+| `state.devices` | `OutputsState` |
+| `state.library` | `LibraryCounts` |
+| `concierge.result` | `ConciergeResponse` |
+| `error` | `ErrorBody` |
 
-Browse/search can also be sparse until descriptive metadata is populated. The
-frontend should handle untitled or lightly tagged assets gracefully instead of
-assuming all imported MIDI already has curated metadata.
+Each envelope has monotonically increasing `seq` and a server timestamp. A
+sequence gap means the client must replace local state from a fresh snapshot,
+not attempt to infer the missing deltas.
 
-## 7. Errors
-
-One envelope, with a stable machine-readable `code` the UI can switch on.
+Client messages are intentionally small:
 
 ```json
-{ "error": { "code": "intent_invalid",
-             "message": "duration_minutes must be between 1 and 1440",
-             "detail": { "field": "duration_minutes" } } }
+{"type": "state.request_snapshot"}
+{"type": "ping"}
 ```
 
-Codes: `intent_invalid`, `request_invalid`, `concierge_unavailable`,
-`library_empty`, `asset_not_found`, `no_midi_output`, `transport_conflict`,
-`not_implemented`, `internal_error`.
+All state mutations use REST. The socket is a state-distribution channel, not a
+second command API.
 
-`intent_invalid` is reserved for failures **inside a PlaybackIntent**, so the UI
-can send the user back to the Concierge surface with the offending field. Any
-other malformed request, such as a bad query parameter, malformed UUID, or
-malformed queue command, is `request_invalid`. Conflating them sends the user to
-the wrong screen.
+A snapshot is an authoritative checkpoint. Deltas at or before the snapshot's
+sequence number are stale and must not be replayed afterward.
 
-A bare 500 with an HTML body is never returned. An unhandled exception is caught
-and re-emitted as `internal_error`, with the real cause logged server-side and
-nothing about it disclosed to the client.
+## 12. Errors
 
----
+All HTTP errors use one envelope:
 
-## 8. How this gets enforced
+```json
+{
+  "error": {
+    "code": "request_invalid",
+    "message": "request payload failed validation",
+    "detail": {"field": "body.command_id"}
+  }
+}
+```
 
-The Pydantic request/response models in `src/openorchestrion/api/models.py` are
-the executable contract. FastAPI derives `/openapi.json` from them, and API tests
-assert both the success and interim-error schemas for pending playback routes.
+Stable codes are:
 
-PR #15 establishes the complete surface before Issue #14 fills in playback:
+```text
+intent_invalid
+request_invalid
+concierge_unavailable
+library_empty
+asset_not_found
+no_midi_output
+transport_conflict
+not_implemented
+internal_error
+```
 
-- existing domain services are exposed behind typed HTTP responses;
-- #14 routes publish their eventual success models now and return typed 501s;
-- request validation rejects ambiguous queue sources and malformed UUIDs;
-- WebSocket server messages have discriminated payload types;
-- the frontend can generate a client from `/openapi.json` without guessing.
+`intent_invalid` is reserved for errors inside `PlaybackIntent`.
+`request_invalid` covers malformed query parameters, UUIDs, queue commands, and
+other request structure.
 
-Future contract changes update the models, this document, and contract tests in
-the same PR before either lane writes code against the new shape.
+Unexpected exceptions are logged server-side and returned as non-sensitive
+`internal_error` JSON. The touchscreen should never receive a framework HTML
+500 page.
 
-## 9. Changing this document
+## 13. Favorites blocker
 
-1. Open a PR editing this file and the corresponding Pydantic models/tests.
-2. Review the effect on both Issue #5 and Issue #14.
-3. Merge before writing code that depends on the change.
+Favorites remain outside Issue #14. The `favorite` value is durable descriptive
+metadata, and the repository still needs the metadata-writer workflow that can
+safely edit a sidecar and rebuild/reconcile the catalog.
 
-If a change is architectural, such as a new ownership boundary, add an ADR under
-`docs/adr/` in the same PR per the existing project rule.
+Until that exists, the favorite endpoint returns a typed `not_implemented`
+response. The UI may render the control but must not pretend persistence
+succeeded.
+
+## 14. Development without hardware
+
+Set:
+
+```bash
+OPENORCHESTRION_VIRTUAL_MIDI=1
+```
+
+The application creates `OpenOrchestrion Virtual`, an in-memory output behind
+the same playback abstraction used by physical Mido ports. This allows queue,
+transport, history, WebSocket, scheduler, and routing behavior to be developed
+before the CTK-6200 and PSR-EW300 are present.
+
+Arbitrary imported SysEx is suppressed by default. See
+[Playback engine](playback-engine.md) for timing, routing, pause/resume, cleanup,
+and failure semantics.

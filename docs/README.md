@@ -18,7 +18,8 @@ This directory contains the living design and implementation specification.
 
 ## Application interface
 
-- [API contract](api-contract.md) — REST/WebSocket agreement between the web UI and the playback backend, and the boundary decisions both sides depend on. Changes require review from both sides.
+- [API contract](api-contract.md) — REST/WebSocket agreement between the web UI and playback backend.
+- [Playback engine](playback-engine.md) — server-owned queue, transport state machine, virtual MIDI, timing, routing, cleanup and history integration.
 
 ## MIDI and library
 
