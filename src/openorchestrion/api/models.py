@@ -9,8 +9,9 @@ change and needs review from both the UI and playback sides.
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ..models import PlaybackIntent
 
@@ -178,7 +179,7 @@ class ConciergeAskRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     prompt: str = Field(min_length=1, max_length=2000)
-    command_id: str | None = None
+    command_id: UUID | None = None
     session_id: str | None = None
     current_intent: PlaybackIntent | None = None
 
@@ -197,7 +198,7 @@ class ConciergeResponse(BaseModel):
     provider: str
     fallback_used: bool
     primary_error: str | None = None
-    command_id: str | None = None
+    command_id: UUID | None = None
     preview: StationQueueModel | None = None
 
 
@@ -253,7 +254,7 @@ class FavoriteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     favorite: bool = True
-    command_id: str | None = None
+    command_id: UUID | None = None
 
 
 # --------------------------------------------------------------------------
@@ -306,7 +307,7 @@ class PlaybackState(BaseModel):
     state: Literal["idle", "playing", "paused", "stopped"]
     now_playing: NowPlaying | None = None
     position: PositionAnchor | None = None
-    command_id: str | None = Field(
+    command_id: UUID | None = Field(
         default=None,
         description="Echoes the command that produced this state, so the "
         "originating client can clear its optimistic pending flag.",
@@ -332,13 +333,13 @@ class QueueState(BaseModel):
     items: list[QueueEntry] = Field(default_factory=list)
     current_index: int | None = Field(default=None, ge=0)
     total_duration_seconds: float = 0.0
-    command_id: str | None = None
+    command_id: UUID | None = None
 
 
 class TransportCommand(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    command_id: str | None = Field(
+    command_id: UUID | None = Field(
         default=None,
         description="Client-generated. Commands are idempotent by this value, "
         "so a retry after a dropped connection does not double-skip a track.",
@@ -346,7 +347,7 @@ class TransportCommand(BaseModel):
 
 
 class QueueReplaceRequest(BaseModel):
-    """Fill the queue from an intent or from explicit assets."""
+    """Fill the queue from exactly one source: an intent or explicit assets."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -355,7 +356,15 @@ class QueueReplaceRequest(BaseModel):
     asset_ids: list[str] = Field(default_factory=list)
     seed: int = 0
     max_tracks: int = Field(default=25, ge=1, le=1000)
-    command_id: str | None = None
+    command_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def require_exactly_one_source(self) -> QueueReplaceRequest:
+        has_intent = self.intent is not None
+        has_assets = bool(self.asset_ids)
+        if has_intent == has_assets:
+            raise ValueError("provide exactly one of intent or non-empty asset_ids")
+        return self
 
 
 class QueueReorderRequest(BaseModel):
@@ -363,14 +372,14 @@ class QueueReorderRequest(BaseModel):
 
     asset_id: str
     to_index: int = Field(ge=0)
-    command_id: str | None = None
+    command_id: UUID | None = None
 
 
 class QueueRemoveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     asset_id: str
-    command_id: str | None = None
+    command_id: UUID | None = None
 
 
 # --------------------------------------------------------------------------
