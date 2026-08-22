@@ -17,36 +17,34 @@ from .api.errors import install_error_handlers
 from .api.routes import router
 from .api.sessions import ConciergeSessions
 from .api.settings import Settings
+from .playback import PlaybackEngine
+from .playback.factory import create_default_playback
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Resolve configuration once so handlers never read the environment.
-
-    Values injected by :func:`create_app` win: startup fills in what is missing
-    rather than replacing what a caller already supplied.
-    """
+    """Resolve application services once and keep playback server-owned."""
     if not hasattr(app.state, "settings"):
         app.state.settings = Settings.from_env()
     if not hasattr(app.state, "concierge"):
-        # No primary provider configured: MusicConcierge falls back to the
-        # offline deterministic interpreter, so natural language keeps working
-        # without a network or an API key.
         app.state.concierge = MusicConcierge()
     if not hasattr(app.state, "concierge_sessions"):
         app.state.concierge_sessions = ConciergeSessions(app.state.concierge)
-    yield
+    if not hasattr(app.state, "playback"):
+        app.state.playback = create_default_playback(app.state.settings)
+    try:
+        yield
+    finally:
+        await app.state.playback.close()
 
 
 def create_app(
     *,
     settings: Settings | None = None,
     concierge: MusicConcierge | None = None,
+    playback: PlaybackEngine | None = None,
 ) -> FastAPI:
-    """Build an application instance.
-
-    Tests pass explicit dependencies; production uses the lifespan defaults.
-    """
+    """Build an application instance with injectable services for tests."""
     application = FastAPI(
         title="OpenOrchestrion",
         description="Networked MIDI music appliance",
@@ -60,6 +58,8 @@ def create_app(
     if concierge is not None:
         application.state.concierge = concierge
         application.state.concierge_sessions = ConciergeSessions(concierge)
+    if playback is not None:
+        application.state.playback = playback
     return application
 
 
