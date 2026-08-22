@@ -17,9 +17,109 @@ Examples:
 - “More recognizable.”
 - “More piano.”
 
-The system should be able to show a concise interpretation such as:
+The system can retain a concise interpretation such as:
 
 > Upbeat, recognizable Christmas dinner music with a piano-forward mix.
+
+## Current implementation
+
+The first provider-neutral Concierge pipeline is implemented in `openorchestrion.ai`.
+
+It has four separate responsibilities:
+
+```text
+natural language
+      │
+      ▼
+MusicConciergeProvider
+      │
+      ▼
+strict PlaybackIntent validation
+      │
+      ▼
+validated PlaybackIntent
+      │
+      ▼
+Smart Station selector
+```
+
+The AI/provider layer ends at the validated `PlaybackIntent`. It has no playback-engine, catalog-mutation, or MIDI-device handle.
+
+### Strict structured-model adapter
+
+`ValidatingJSONConciergeProvider` wraps a minimal `IntentBackend` interface. A future hosted model, local model, or OpenAI-compatible provider only needs to implement:
+
+```text
+generate_intent(
+    prompt,
+    current_intent,
+    contract
+) -> JSON object/string
+```
+
+The returned object must validate as `PlaybackIntent`.
+
+Unknown fields are forbidden by the Pydantic model as well as the JSON Schema. A provider response containing invented fields such as `midi_command`, `sysex`, `play_this_url`, or any other non-contract instruction is rejected rather than ignored.
+
+For conversational refinement, the validation boundary also verifies that existing hard `include_tags` and `exclude_tags` were not silently dropped by the model.
+
+### Offline deterministic fallback
+
+`DeterministicConciergeProvider` handles a deliberately small set of common household requests without Internet or a language model. It exists for:
+
+- provider outages;
+- offline operation;
+- deterministic CI tests;
+- basic useful control when AI is disabled.
+
+It currently understands the project’s core examples, including dinner, Christmas, cocktail, classical, jazz, ragtime/Joplin, relaxing/upbeat, recognizable/popular, piano, orchestral, two-piano, dueling-piano, and common duration phrases.
+
+It is not presented as a replacement for a general LLM. It is the appliance’s graceful fallback.
+
+### Resilient service
+
+`MusicConcierge` tries the configured primary provider first. If it raises an exception or returns invalid structured output, the request falls back to the deterministic provider. The result records:
+
+- provider used;
+- whether fallback occurred;
+- primary-provider error when applicable;
+- final validated intent.
+
+Provider failure therefore does not disable ordinary local music selection.
+
+### Conversational session
+
+`ConciergeSession` stores the active intent between turns.
+
+Example:
+
+```text
+Play dinner music for two hours
+→ A little more upbeat
+→ More recognizable
+→ Add Christmas music
+→ More piano
+```
+
+The final intent retains the two-hour dinner context while refining energy, familiarity, theme, and instrumentation.
+
+## CLI
+
+The initial CLI exposes the deterministic/offline path:
+
+```bash
+openorchestrion-concierge "Play dinner music for two hours" --json
+```
+
+A refinement can be tested against an existing intent:
+
+```bash
+openorchestrion-concierge "More upbeat" \
+  --current-intent-json current-intent.json \
+  --json
+```
+
+Provider-specific hosted/local adapters are intentionally separate integrations. Adding one must not change the downstream station, playback, or MIDI contracts.
 
 ## Safety boundary
 
@@ -51,7 +151,7 @@ This preserves a clean security and reliability boundary. An AI model cannot inv
 
 ## PlaybackIntent
 
-A first-pass intent model should support:
+The intent model supports:
 
 - `duration_minutes`
 - `genres`
@@ -85,13 +185,15 @@ Library: actual available tracks
 Selector: final queue
 ```
 
+There is intentionally no arbitrary track/URL/playback-command field in `PlaybackIntent`.
+
 If too few tracks satisfy every soft preference, the deterministic selection layer may relax soft constraints while preserving hard exclusions. The UI may explain that relaxation rather than silently fabricating content.
 
 ## Conversational refinement
 
-The Music Concierge should retain the current session context. If the user first requests dinner music and then says “more upbeat,” the second turn modifies the existing station rather than starting from a blank slate.
+The Music Concierge retains current session context. A second-turn request such as “more upbeat” modifies the existing station rather than beginning from a blank intent.
 
-Suggested session state:
+Suggested higher-level session state remains:
 
 ```text
 CurrentIntent
@@ -101,17 +203,7 @@ LastUserRequest
 LastInterpretation
 ```
 
-A sequence such as:
-
-```text
-Play dinner music
-→ more upbeat
-→ more recognizable
-→ add Christmas music
-→ more piano
-```
-
-should converge on one refined active intent.
+`ConciergeSession` currently owns the intent portion. Queue/station state will be owned by the playback/application state machine rather than the model provider.
 
 ## Voice input
 
@@ -127,20 +219,19 @@ text prompt
 PlaybackIntent
 ```
 
-A browser, local speech engine, or external assistant may provide transcription later. Voice input must still pass through the same schema validation and deterministic selection path.
+A browser, local speech engine, or external assistant may provide transcription later. Voice input must still pass through the same validation and deterministic selection path.
 
 ## AI provider abstraction
 
-OpenOrchestrion should not require a specific vendor. A provider interface can support:
+OpenOrchestrion does not require a specific vendor. The backend seam can support:
 
-- hosted LLM provider
-- local model
-- OpenAI-compatible endpoint
-- deterministic/no-AI provider
+- hosted LLM provider;
+- local model;
+- OpenAI-compatible endpoint;
+- other structured-output provider;
+- deterministic/no-AI fallback.
 
-The provider contract returns the same validated intent shape regardless of implementation.
-
-AI provider selection must not affect the MIDI scheduling architecture.
+The provider contract always returns the same validated intent shape. AI provider selection must not affect the MIDI scheduling architecture.
 
 ## AI Librarian
 
@@ -176,27 +267,23 @@ Any generated/modified arrangement should be saved as a new derived asset with p
 
 ## Offline behavior
 
-AI is optional. If unavailable, the application must continue to support:
+AI is optional. If unavailable, the application continues to support browsing, search, Smart Stations, favorites, queue control, local MIDI playback, and the deterministic Concierge fallback.
 
-- browsing
-- search
-- fixed and smart stations
-- themes/genres/moods
-- favorites
-- random play
-- queue control
-- local MIDI playback
-
-An already-built queue or active station should continue to play if the AI provider or Internet becomes unavailable.
+An already-built queue or active station continues to play if the AI provider or Internet becomes unavailable.
 
 ## Testing
 
-Use deterministic fake providers in CI to verify:
+The repository now includes tests for:
 
-- valid prompt → valid intent
-- conversational refinement
-- unknown fields rejected
-- hard exclusions preserved
-- nonexistent catalog items are not fabricated
-- provider outage fallback
-- AI layer has no direct MIDI device access
+- dinner-duration interpretation;
+- popular Christmas interpretation;
+- relaxing classical piano interpretation;
+- multi-turn conversational refinement;
+- dueling-piano interpretation;
+- solo-piano to orchestral refinement;
+- rejection of model-hallucinated fields;
+- preservation of hard exclusions during model refinement;
+- primary-provider outage fallback;
+- strict `PlaybackIntent` extra-field rejection.
+
+Provider-specific adapters should use deterministic fake backends in CI and must never require live external API calls for the core regression suite.
