@@ -19,7 +19,7 @@ not a delta. You may describe listening preferences only. Never return filenames
 claims, URLs, MIDI messages, SysEx, shell commands, device commands, or fields outside the
 PlaybackIntent schema. The deterministic OpenOrchestrion selector decides what real music
 exists and what is playable. If current_intent is supplied, conversational refinements such
-as 'more upbeat' must preserve unrelated existing preferences.
+as 'more upbeat' must preserve unrelated existing preferences and all hard include/exclude tags.
 """
 
 
@@ -125,9 +125,20 @@ class ValidatingJSONConciergeProvider(MusicConciergeProvider):
         if not isinstance(payload, dict):
             raise ProviderOutputError("provider output must be one JSON object")
         try:
-            return PlaybackIntent.model_validate(payload)
+            intent = PlaybackIntent.model_validate(payload)
         except ValidationError as exc:
             raise ProviderOutputError(f"provider output failed PlaybackIntent validation: {exc}") from exc
+
+        if current_intent is not None and _looks_like_refinement(prompt, current_intent):
+            current_includes = {value.casefold() for value in current_intent.include_tags}
+            current_excludes = {value.casefold() for value in current_intent.exclude_tags}
+            returned_includes = {value.casefold() for value in intent.include_tags}
+            returned_excludes = {value.casefold() for value in intent.exclude_tags}
+            if not current_includes.issubset(returned_includes):
+                raise ProviderOutputError("provider dropped a hard include tag during refinement")
+            if not current_excludes.issubset(returned_excludes):
+                raise ProviderOutputError("provider dropped a hard exclude tag during refinement")
+        return intent
 
 
 class DisabledConciergeProvider(MusicConciergeProvider):
@@ -264,7 +275,6 @@ class DeterministicConciergeProvider(MusicConciergeProvider):
         if duration is not None:
             intent.duration_minutes = duration
 
-        # Themes / occasions
         if "dinner" in lowered or "while we eat" in lowered:
             _append_unique(intent.themes, "dinner")
         if any(word in lowered for word in ("christmas", "xmas")):
@@ -274,18 +284,16 @@ class DeterministicConciergeProvider(MusicConciergeProvider):
         if any(word in lowered for word in ("cocktail", "cocktails")):
             _append_unique(intent.themes, "cocktail")
 
-        # Genres
         for token, label in (
             ("classical", "classical"),
             ("ragtime", "ragtime"),
             ("jazz", "jazz"),
             ("broadway", "Broadway"),
-            ("pop ", "pop"),
+            ("pop music", "pop"),
         ):
             if token in lowered:
                 _append_unique(intent.genres, label)
 
-        # Mood / energy
         if any(word in lowered for word in ("relaxing", "relaxed", "calm", "quiet")):
             _append_unique(intent.moods, "relaxed")
             if not refining or intent.energy is None:
@@ -304,17 +312,14 @@ class DeterministicConciergeProvider(MusicConciergeProvider):
         if any(phrase in lowered for phrase in ("less upbeat", "quieter", "calmer")):
             intent.energy = _step_level(intent.energy, -1, default="low")
 
-        # Familiarity
         if "more recognizable" in lowered or "more familiar" in lowered:
             intent.familiarity = _step_level(intent.familiarity, 1, default="high")
         elif any(word in lowered for word in ("popular", "recognizable", "familiar")):
             intent.familiarity = "high"
 
-        # Composer preferences
         if "joplin" in lowered:
             _append_unique(intent.composers, "Scott Joplin")
 
-        # Instrumentation and performance type
         if "dueling piano" in lowered or "dueling pianos" in lowered:
             _append_unique(intent.instrumentation, "piano")
             intent.performance_types = [PerformanceType.DUELING_PIANO]
@@ -325,8 +330,6 @@ class DeterministicConciergeProvider(MusicConciergeProvider):
             _append_unique(intent.instrumentation, "piano")
             intent.performance_types = [PerformanceType.SOLO_PIANO]
         if "piano" in lowered:
-            _append_unique(intent.instrumentation, "piano")
-        if "more piano" in lowered:
             _append_unique(intent.instrumentation, "piano")
         if "orchestral" in lowered or "orchestra" in lowered:
             _append_unique(intent.instrumentation, "orchestra")
