@@ -1,0 +1,64 @@
+# Example OpenOrchestrion Smart Station presets.
+#
+# These are declarative PlaybackIntent examples. The current selector consumes
+# PlaybackIntent directly; a future preset loader can expose these by name.
+
+stations:
+  dinner-music:
+    name: Dinner Music
+    intent:
+      themes: [dinner]
+      moods: [relaxed]
+      energy: low
+      familiarity: medium
+      instrumentation: [piano, small ensemble]
+      avoid_recent_repeats: true
+      repeat_window_days: 30
+
+  relaxing-classical:
+    name: Relaxing Classical
+    intent:
+      genres: [classical]
+      moods: [relaxed, reflective]
+      energy: low
+      performance_types: [SOLO_PIANO, MULTI_INSTRUMENT]
+      avoid_recent_repeats: true
+      repeat_window_days: 30
+
+  ragtime-radio:
+    name: Ragtime Radio
+    intent:
+      genres: [ragtime]
+      composers: [Scott Joplin]
+      energy: medium
+      instrumentation: [piano]
+      avoid_recent_repeats: true
+      repeat_window_days: 30
+
+  popular-christmas:
+    name: Popular Christmas
+    intent:
+      themes: [Christmas]
+      familiarity: high
+      performance_types: [SOLO_PIANO, MULTI_INSTRUMENT]
+      avoid_recent_repeats: true
+      repeat_window_days: 30
+
+  cocktail-hour:
+    name: Cocktail Hour
+    intent:
+      themes: [cocktail]
+      moods: [relaxed]
+      familiarity: high
+      energy: medium
+      instrumentation: [piano, small ensemble]
+      avoid_recent_repeats: true
+      repeat_window_days: 30
+
+  two-pianos:
+    name: Two Pianos
+    intent:
+      performance_types: [TWO_PIANO, PIANO_DUET]
+      instrumentation: [piano]
+      avoid_recent_repeats: true
+      repeat_window_days: 30
