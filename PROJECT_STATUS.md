@@ -4,7 +4,7 @@
 
 **Software foundation / hardware acquisition and validation**
 
-OpenOrchestrion now has a detailed design baseline plus executable MIDI generation, analysis, ingestion, catalog, deterministic Smart Station selection, and durable play history. The first end-to-end physical build is still pending acquisition of the target sound engines.
+OpenOrchestrion now has executable MIDI generation, analysis, ingestion, a rebuildable catalog, deterministic Smart Stations, durable play history, and the provider-neutral Music Concierge intent pipeline. The first end-to-end physical build is still pending acquisition of the target sound engines.
 
 ## Current hardware targets
 
@@ -53,33 +53,40 @@ openorchestrion-station var/library/catalog.db \
 
 ### Durable play history
 
-Listening behavior is now stored separately from the rebuildable catalog in `history.db`.
+Listening behavior is stored separately from the rebuildable catalog in `history.db`.
+
+Implemented behavior includes queued/started/substantially-played/completed/skipped/failed lifecycle states, meaningful-play thresholds, recent asset/composition lookup for no-repeat windows, play-count/last-played summaries, staleness ranking, Smart Station exclusion helpers, schema versioning, and backup/recovery separation from `catalog.db`.
+
+### AI Music Concierge intent pipeline
+
+Natural-language control now has a provider-neutral, strictly validated boundary.
 
 Implemented behavior includes:
 
-- queued / started / substantially-played / completed / skipped / failed lifecycle states
-- substantial-listen threshold before a partial play counts for no-repeat/history
-- completed tracks always count
-- quick skips and queued-only items do not count as played
-- append-only meaningful lifecycle events plus current play-attempt summary state
-- recent asset/composition lookup for configurable no-repeat windows
-- per-asset play count, last-played, total listened time, completions, and substantial skips
-- staleness ranking for “not heard recently” behavior
-- helper to merge recent history into `StationConstraints`
-- explicit history schema versioning
-- backup/recovery separation from rebuildable `catalog.db`
+- `MusicConciergeProvider` abstraction
+- minimal `IntentBackend` seam for future hosted/local structured-output models
+- `ValidatingJSONConciergeProvider` for JSON/model output
+- strict `PlaybackIntent` validation with unknown fields forbidden
+- preservation checks for hard include/exclude tags on refinement turns
+- `ConciergeSession` for conversational current-intent state
+- resilient primary-provider → deterministic-fallback behavior
+- offline deterministic interpretation for core household requests
+- duration, dinner, Christmas, cocktail, classical, jazz, ragtime/Joplin, familiarity, energy, piano, orchestra, two-piano, and dueling-piano interpretation
+- no AI/provider access to catalog mutation, playback engines, or MIDI ports
 
-Example:
+Example offline/fallback command:
 
 ```bash
-openorchestrion-history var/history.db recent --days 30
+openorchestrion-concierge "Play popular Christmas music while we eat, mostly piano" --json
 ```
+
+The resulting `PlaybackIntent` can be passed directly into the deterministic Smart Station engine. Provider-specific hosted/local integrations remain replaceable adapters rather than architectural dependencies.
 
 ## Next software dependencies
 
-1. **AI Music Concierge** — translate natural language into/refine `PlaybackIntent` and hand it to the deterministic selector.
-2. **Playback state machine and virtual MIDI outputs** — queue, play, pause, stop, skip, panic, history-event emission, and hardware-neutral playback state before physical keyboards arrive.
-3. **Responsive web UI** — appliance/phone interface driven by the same API and WebSocket state.
+1. **Playback state machine and virtual MIDI outputs** — own the active queue, play/pause/stop/skip/panic state, emit history events, advance between tracks, and exercise MIDI scheduling without physical keyboards.
+2. **Responsive web/API layer** — appliance/phone interface driven by one server-side playback state and WebSocket updates.
+3. **Hosted/local AI provider adapter(s)** — optional concrete integrations behind the already-implemented `IntentBackend` seam.
 4. **CI and schema/test automation** — run the non-hardware regression suite automatically on GitHub.
 
 ## Decisions already made
@@ -98,6 +105,8 @@ openorchestrion-history var/history.db recent --days 30
 - SQLite catalog data is rebuildable and is not the sole durable source of music metadata.
 - Smart Station selection is deterministic, explainable, and independently testable from AI.
 - Listening history is durable runtime state and is not stored solely in the rebuildable catalog.
+- Unknown AI/model fields fail closed at the PlaybackIntent boundary rather than being ignored.
+- Hosted/local model selection is an adapter concern and cannot change MIDI execution architecture.
 
 ## Immediate proof-of-concept tests when hardware arrives
 
@@ -114,4 +123,4 @@ openorchestrion-history var/history.db recent --days 30
 11. Power-cycle and verify automatic recovery.
 12. With both keyboards, test synchronized split routing and measure relative latency.
 13. Route the generated two-piano fixture independently to the two engines.
-14. Exercise the AI Music Concierge against deterministic library results.
+14. Exercise the Music Concierge against the real catalog and Smart Station selector.
