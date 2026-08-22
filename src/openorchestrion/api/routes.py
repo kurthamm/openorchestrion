@@ -15,36 +15,60 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Query, Request, WebSocket
 
-from ..ai import MusicConcierge
-from ..library.catalog import catalog_stats, search_catalog
+from ..ai import ConciergeResult, MusicConcierge
+from ..library.catalog import catalog_stats, get_asset, search_catalog
 from ..midi.devices import list_output_ports
 from ..models import PlaybackIntent
 from ..stations import build_station
 from .errors import ApiError
 from .models import (
+    TRANSPORT_ACTIONS,
     AiState,
     ConciergeAskRequest,
     ConciergeResponse,
     DevicesResponse,
+    ErrorBody,
+    ErrorEnvelope,
     ErrorResponse,
+    FavoriteRequest,
     HistoryEntry,
     HistoryResponse,
     LibraryAsset,
+    LibraryAssetDetail,
     LibraryCounts,
     LibrarySearchResponse,
     OutputsState,
-    SocketEnvelope,
+    PlaybackState,
+    QueueRemoveRequest,
+    QueueReorderRequest,
+    QueueReplaceRequest,
+    QueueState,
     StationPreviewRequest,
     StationQueueModel,
     SystemStatus,
+    TransportCommand,
 )
+from .sessions import ConciergeSessions
 from .settings import Settings
 
 router = APIRouter(prefix="/api")
 
-# Declared on #14-owned routes so the generated client knows the failure shape.
-_NOT_IMPLEMENTED: dict[int | str, dict[str, Any]] = {
-    501: {"model": ErrorResponse, "description": "Awaiting the playback state machine (#14)"}
+# Declared alongside the real success model on #14-owned routes: the generated
+# client learns both the eventual success shape and the interim failure shape.
+_PENDING_PLAYBACK: dict[int | str, dict[str, Any]] = {
+    501: {
+        "model": ErrorResponse,
+        "description": "Not yet implemented: awaiting the playback state machine (#14)",
+    }
+}
+_PENDING_METADATA_WRITER: dict[int | str, dict[str, Any]] = {
+    501: {
+        "model": ErrorResponse,
+        "description": (
+            "Not yet implemented: awaiting a descriptive_metadata writer. "
+            "Independent of #14."
+        ),
+    }
 }
 
 
@@ -54,6 +78,10 @@ def _settings(request: Request) -> Settings:
 
 def _concierge(request: Request) -> MusicConcierge:
     return request.app.state.concierge
+
+
+def _sessions(request: Request) -> ConciergeSessions:
+    return request.app.state.concierge_sessions
 
 
 def _pending(feature: str) -> ApiError:
@@ -135,6 +163,26 @@ async def devices() -> DevicesResponse:
     return DevicesResponse(outputs=_outputs_state())
 
 
+async def _interpret(request: Request, payload: ConciergeAskRequest) -> ConciergeResult:
+    """Run one Concierge turn, continuing a server-side conversation if asked.
+
+    With a ``session_id`` the turn builds on that session's previous intent, so
+    "a little more upbeat" refines rather than starts over. An explicit
+    ``current_intent`` overrides the remembered one, which lets a client resync
+    the conversation after its own state was lost. Without a ``session_id`` the
+    call is stateless.
+    """
+    if payload.session_id is None:
+        return await _concierge(request).interpret(
+            payload.prompt,
+            current_intent=payload.current_intent,
+        )
+    session = _sessions(request).get(payload.session_id)
+    if payload.current_intent is not None:
+        session.current_intent = payload.current_intent.model_copy(deep=True)
+    return await session.ask(payload.prompt)
+
+
 @router.post("/concierge/ask", response_model=ConciergeResponse)
 async def concierge_ask(request: Request, payload: ConciergeAskRequest) -> ConciergeResponse:
     """Interpret natural language into a validated intent, with a queue preview.
@@ -143,10 +191,7 @@ async def concierge_ask(request: Request, payload: ConciergeAskRequest) -> Conci
     configured, so this endpoint works with no network and no API key.
     """
     settings = _settings(request)
-    result = await _concierge(request).interpret(
-        payload.prompt,
-        current_intent=payload.current_intent,
-    )
+    result = await _interpret(request, payload)
     preview: StationQueueModel | None = None
     if settings.catalog_db.is_file():
         preview = _queue_model(build_station(settings.catalog_db, result.intent))
@@ -254,53 +299,78 @@ async def history_recent(
     return HistoryResponse(items=items, count=len(items))
 
 
+@router.get(
+    "/library/assets/{asset_id}",
+    response_model=LibraryAssetDetail,
+    responses={404: {"model": ErrorResponse, "description": "No such asset in the catalog"}},
+)
+async def library_asset(request: Request, asset_id: str) -> LibraryAssetDetail:
+    settings = _settings(request)
+    record = None
+    if settings.catalog_db.is_file():
+        record = get_asset(settings.catalog_db, asset_id)
+    if record is None:
+        raise ApiError(
+            "asset_not_found",
+            f"no indexed asset {asset_id}",
+            status_code=404,
+            detail={"asset_id": asset_id},
+        )
+    record.pop("midi_path", None)
+    record.pop("metadata_path", None)
+    return LibraryAssetDetail.model_validate(record)
+
+
 @router.post(
     "/library/assets/{asset_id}/favorite",
-    responses=_NOT_IMPLEMENTED,
-    response_model=ErrorResponse,
+    response_model=LibraryAssetDetail,
+    responses=_PENDING_METADATA_WRITER,
 )
-async def set_favorite(asset_id: str) -> ErrorResponse:
-    """Blocked upstream of #14.
+async def set_favorite(asset_id: str, payload: FavoriteRequest) -> LibraryAssetDetail:
+    """Blocked on the metadata writer, not on #14.
 
     ``favorite`` lives in the sidecar's ``descriptive_metadata`` block and
     nothing in the project writes to that block yet, so this cannot persist.
+    Success returns the updated asset.
     """
     raise ApiError(
         "not_implemented",
         "Favorites need a descriptive_metadata writer before they can persist.",
         status_code=501,
-        detail={"asset_id": asset_id},
+        detail={"asset_id": asset_id, "requested": payload.favorite},
     )
 
 
-@router.get("/queue", responses=_NOT_IMPLEMENTED, response_model=ErrorResponse)
-async def get_queue() -> ErrorResponse:
+@router.get("/queue", response_model=QueueState, responses=_PENDING_PLAYBACK)
+async def get_queue() -> QueueState:
     raise _pending("Queue state")
 
 
-@router.post("/queue", responses=_NOT_IMPLEMENTED, response_model=ErrorResponse)
-async def replace_queue() -> ErrorResponse:
+@router.post("/queue", response_model=QueueState, responses=_PENDING_PLAYBACK)
+async def replace_queue(payload: QueueReplaceRequest) -> QueueState:
+    """Fill the queue from an intent or explicit assets, replacing or appending."""
     raise _pending("Queue mutation")
 
 
-@router.post("/queue/reorder", responses=_NOT_IMPLEMENTED, response_model=ErrorResponse)
-async def reorder_queue() -> ErrorResponse:
+@router.post("/queue/reorder", response_model=QueueState, responses=_PENDING_PLAYBACK)
+async def reorder_queue(payload: QueueReorderRequest) -> QueueState:
     raise _pending("Queue reordering")
 
 
-@router.post("/queue/remove", responses=_NOT_IMPLEMENTED, response_model=ErrorResponse)
-async def remove_from_queue() -> ErrorResponse:
+@router.post("/queue/remove", response_model=QueueState, responses=_PENDING_PLAYBACK)
+async def remove_from_queue(payload: QueueRemoveRequest) -> QueueState:
     raise _pending("Queue removal")
 
 
-@router.post("/transport/{action}", responses=_NOT_IMPLEMENTED, response_model=ErrorResponse)
-async def transport(action: str) -> ErrorResponse:
-    if action not in {"play", "pause", "stop", "skip", "panic"}:
+@router.post("/transport/{action}", response_model=PlaybackState, responses=_PENDING_PLAYBACK)
+async def transport(action: str, payload: TransportCommand | None = None) -> PlaybackState:
+    """Apply a transport action and return the resulting authoritative state."""
+    if action not in TRANSPORT_ACTIONS:
         raise ApiError(
             "transport_conflict",
             f"unknown transport action: {action}",
             status_code=422,
-            detail={"allowed": ["play", "pause", "stop", "skip", "panic"]},
+            detail={"allowed": list(TRANSPORT_ACTIONS)},
         )
     raise _pending(f"Transport '{action}'")
 
@@ -309,18 +379,17 @@ async def transport(action: str) -> ErrorResponse:
 async def state_socket(websocket: WebSocket) -> None:
     """Accept, report that state streaming is pending, and close.
 
-    Connecting succeeds so the UI can exercise its reconnect path now; the
-    envelope shape here is the one snapshots and deltas will use.
+    Connecting succeeds so the UI can exercise its reconnect path now, against
+    the same typed envelope snapshots and deltas will use.
     """
     await websocket.accept()
-    envelope = SocketEnvelope(
-        type="error",
+    envelope = ErrorEnvelope(
         seq=0,
         ts=datetime.now(UTC).isoformat(),
-        payload={
-            "code": "not_implemented",
-            "message": "State streaming arrives with the playback state machine (issue #14)",
-        },
+        payload=ErrorBody(
+            code="not_implemented",
+            message="State streaming arrives with the playback state machine (issue #14)",
+        ),
     )
     await websocket.send_json(envelope.model_dump())
     await websocket.close(code=1011)

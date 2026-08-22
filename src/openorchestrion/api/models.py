@@ -8,7 +8,7 @@ change and needs review from both the UI and playback sides.
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -16,15 +16,25 @@ from ..models import PlaybackIntent
 
 # Stable, machine-readable error codes. The UI switches on these rather than
 # parsing prose, so treat the strings as part of the contract.
+#
+# ``intent_invalid`` is reserved for failures inside a PlaybackIntent, so the UI
+# can point the Concierge surface at the offending field. Any other malformed
+# request — a bad query parameter, a malformed queue command — is
+# ``request_invalid``.
 ErrorCode = Literal[
     "intent_invalid",
+    "request_invalid",
     "concierge_unavailable",
     "library_empty",
     "asset_not_found",
     "no_midi_output",
     "transport_conflict",
     "not_implemented",
+    "internal_error",
 ]
+
+TransportAction = Literal["play", "pause", "stop", "skip", "panic"]
+TRANSPORT_ACTIONS: tuple[str, ...] = ("play", "pause", "stop", "skip", "panic")
 
 
 class ErrorBody(BaseModel):
@@ -218,16 +228,221 @@ class DevicesResponse(BaseModel):
     outputs: OutputsState
 
 
-class SocketEnvelope(BaseModel):
-    """Envelope for every WebSocket message in both directions.
+class LibraryAssetDetail(LibraryAsset):
+    """Single-asset view. Adds the deterministic facts a detail screen shows."""
 
-    ``seq`` increases monotonically; a gap tells the client to request a fresh
-    snapshot rather than attempt to patch its local state.
+    model_config = ConfigDict(extra="forbid")
+
+    composition_id: str | None = None
+    original_filename: str | None = None
+    era: str | None = None
+    year_composed: int | None = None
+    track_count: int | None = None
+    note_count: int | None = None
+    sustain_used: bool | None = None
+    percussion_note_count: int | None = None
+    gm_assessment: str | None = None
+    genres: list[str] = Field(default_factory=list)
+    moods: list[str] = Field(default_factory=list)
+    themes: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    instrumentation: list[str] = Field(default_factory=list)
+
+
+class FavoriteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    favorite: bool = True
+    command_id: str | None = None
+
+
+# --------------------------------------------------------------------------
+# Playback, queue and transport (implemented by issue #14)
+#
+# These shapes are declared now so the UI can be written against their final
+# form. The routes return ``not_implemented`` until the state machine exists,
+# but the success models are what it must produce.
+# --------------------------------------------------------------------------
+
+
+class PositionAnchor(BaseModel):
+    """A point-in-time reading of playback position.
+
+    The client renders a smooth progress bar by interpolating from
+    ``position_ms`` at ``rate``, **anchored at the moment the message was
+    received locally** — never by subtracting ``server_time`` from its own
+    clock. Browser and appliance clocks are independent and may differ by
+    seconds; ``server_time`` exists for ordering and diagnostics only.
+
+    ``rate`` is 0.0 while paused, so a paused client simply stops advancing.
     """
 
     model_config = ConfigDict(extra="forbid")
 
-    type: str
-    seq: int
+    position_ms: int = Field(ge=0)
+    duration_ms: int | None = Field(default=None, ge=0)
+    rate: float = Field(default=1.0, ge=0.0)
+    server_time: str = Field(
+        description="Server clock at emission. Ordering and diagnostics only; not a client anchor."
+    )
+
+
+class NowPlaying(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    asset_id: str
+    composition_id: str | None = None
+    title: str
+    composer: str | None = None
+    duration_seconds: float
+    queue_index: int | None = Field(default=None, ge=0)
+
+
+class PlaybackState(BaseModel):
+    """Authoritative transport state. The UI renders this; it never derives it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    state: Literal["idle", "playing", "paused", "stopped"]
+    now_playing: NowPlaying | None = None
+    position: PositionAnchor | None = None
+    command_id: str | None = Field(
+        default=None,
+        description="Echoes the command that produced this state, so the "
+        "originating client can clear its optimistic pending flag.",
+    )
+
+
+class QueueEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    asset_id: str
+    composition_id: str | None = None
+    title: str
+    composer: str | None = None
+    duration_seconds: float
+    index: int = Field(ge=0)
+
+
+class QueueState(BaseModel):
+    """The authoritative queue. Clients render it and send mutations."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    items: list[QueueEntry] = Field(default_factory=list)
+    current_index: int | None = Field(default=None, ge=0)
+    total_duration_seconds: float = 0.0
+    command_id: str | None = None
+
+
+class TransportCommand(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    command_id: str | None = Field(
+        default=None,
+        description="Client-generated. Commands are idempotent by this value, "
+        "so a retry after a dropped connection does not double-skip a track.",
+    )
+
+
+class QueueReplaceRequest(BaseModel):
+    """Fill the queue from an intent or from explicit assets."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["replace", "append"] = "replace"
+    intent: PlaybackIntent | None = None
+    asset_ids: list[str] = Field(default_factory=list)
+    seed: int = 0
+    max_tracks: int = Field(default=25, ge=1, le=1000)
+    command_id: str | None = None
+
+
+class QueueReorderRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    asset_id: str
+    to_index: int = Field(ge=0)
+    command_id: str | None = None
+
+
+class QueueRemoveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    asset_id: str
+    command_id: str | None = None
+
+
+# --------------------------------------------------------------------------
+# WebSocket
+# --------------------------------------------------------------------------
+
+
+class SnapshotPayload(BaseModel):
+    """Complete state, sent on connect and on resync.
+
+    A client that sees a ``seq`` gap replaces its state from one of these
+    wholesale rather than attempting to patch.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    status: SystemStatus
+    playback: PlaybackState
+    queue: QueueState
+
+
+class SocketEnvelopeBase(BaseModel):
+    """``seq`` increases monotonically; a gap means resync, not patch."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    seq: int = Field(ge=0)
     ts: str
-    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class SnapshotEnvelope(SocketEnvelopeBase):
+    type: Literal["state.snapshot"] = "state.snapshot"
+    payload: SnapshotPayload
+
+
+class PlaybackEnvelope(SocketEnvelopeBase):
+    type: Literal["state.playback"] = "state.playback"
+    payload: PlaybackState
+
+
+class QueueEnvelope(SocketEnvelopeBase):
+    type: Literal["state.queue"] = "state.queue"
+    payload: QueueState
+
+
+class DevicesEnvelope(SocketEnvelopeBase):
+    type: Literal["state.devices"] = "state.devices"
+    payload: OutputsState
+
+
+class LibraryEnvelope(SocketEnvelopeBase):
+    type: Literal["state.library"] = "state.library"
+    payload: LibraryCounts
+
+
+class ConciergeEnvelope(SocketEnvelopeBase):
+    type: Literal["concierge.result"] = "concierge.result"
+    payload: ConciergeResponse
+
+
+class ErrorEnvelope(SocketEnvelopeBase):
+    type: Literal["error"] = "error"
+    payload: ErrorBody
+
+
+SocketMessage = Annotated[
+    SnapshotEnvelope
+    | PlaybackEnvelope
+    | QueueEnvelope
+    | DevicesEnvelope
+    | LibraryEnvelope
+    | ConciergeEnvelope
+    | ErrorEnvelope,
+    Field(discriminator="type"),
+]

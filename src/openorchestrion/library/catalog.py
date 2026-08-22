@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import sqlite3
+from contextlib import closing
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Sequence
@@ -488,6 +489,39 @@ def search_catalog(
     with _connect(db_path) as conn:
         rows = conn.execute(sql, params).fetchall()
     return [dict(row) for row in rows]
+
+
+def get_asset(db_path: str | Path, asset_id: str) -> dict[str, Any] | None:
+    """Return one indexed asset with its descriptive tags, or None.
+
+    Tags are grouped by kind so a caller gets genres/moods/themes separately
+    rather than having to re-split a flat list.
+    """
+    with closing(_connect(db_path)) as conn:
+        row = conn.execute(
+            """
+            SELECT asset_id, composition_id, title, composer, artist, era, year_composed,
+                   performance_type, quality_grade, familiarity, energy, favorite,
+                   duration_seconds, rights_status, peak_simultaneous_notes,
+                   original_filename, track_count, note_count, sustain_used,
+                   percussion_note_count, gm_assessment, midi_path, metadata_path
+            FROM assets WHERE asset_id = ?
+            """,
+            (asset_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        tag_rows = conn.execute(
+            "SELECT kind, value FROM asset_tags WHERE asset_id = ? ORDER BY kind, value",
+            (asset_id,),
+        ).fetchall()
+
+    result = dict(row)
+    result["favorite"] = bool(result["favorite"])
+    result["sustain_used"] = bool(result["sustain_used"])
+    for field, kind in TAG_FIELDS.items():
+        result[field] = [tag["value"] for tag in tag_rows if tag["kind"] == kind]
+    return result
 
 
 def catalog_stats(db_path: str | Path) -> dict[str, int]:

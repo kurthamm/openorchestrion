@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from .ai import MusicConcierge
 from .api.errors import install_error_handlers
 from .api.routes import router
+from .api.sessions import ConciergeSessions
 from .api.settings import Settings
 
 
@@ -32,6 +33,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         # offline deterministic interpreter, so natural language keeps working
         # without a network or an API key.
         app.state.concierge = MusicConcierge()
+    if not hasattr(app.state, "concierge_sessions"):
+        app.state.concierge_sessions = ConciergeSessions(app.state.concierge)
     yield
 
 
@@ -56,6 +59,7 @@ def create_app(
         application.state.settings = settings
     if concierge is not None:
         application.state.concierge = concierge
+        application.state.concierge_sessions = ConciergeSessions(concierge)
     return application
 
 

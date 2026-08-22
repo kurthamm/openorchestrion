@@ -52,24 +52,33 @@ truth.
 This is the important section. Each of these is a choice both lanes would
 otherwise make independently and differently.
 
-### D1 — Now Playing position is pushed on change, interpolated on the client
+### D1 — Position is anchored at client receipt, not at server time
 
 The server does **not** push position every second. It pushes a position anchor
 whenever playback state changes:
 
 ```json
 { "position_ms": 41200, "duration_ms": 187000,
-  "anchor_server_time": "2026-08-22T14:31:07.412Z", "rate": 1.0 }
+  "rate": 1.0, "server_time": "2026-08-22T14:31:07.412Z" }
 ```
 
-The client renders a smooth progress bar by interpolating from `anchor_server_time`
-at `rate`, and re-anchors on every state message. When `rate` is `0.0` (paused)
-the client stops advancing.
+The client renders a smooth progress bar by interpolating from `position_ms` at
+`rate`, **anchored at the moment the message arrived locally** — typically a
+`performance.now()` reading taken in the message handler.
 
-*Why:* a 1 Hz push to every connected client is needless traffic on a Pi, and it
-produces a visibly stuttering progress bar on the 7-inch display. Interpolation
-gives a smooth bar with near-zero traffic. Clock skew is bounded because every
-state change re-anchors.
+**The client must not subtract `server_time` from its own clock.** Browser and
+appliance clocks are independent and routinely differ by seconds; a phone that
+has not synced NTP can be minutes out. Subtracting one from the other produces
+a progress bar that starts in the wrong place or runs backwards. `server_time`
+exists for ordering and diagnostics only, and the field carries that warning in
+its OpenAPI description so it is hard to misuse by accident.
+
+When `rate` is `0.0` (paused) the client stops advancing. Every state change
+re-anchors, so interpolation error never accumulates beyond one message
+interval.
+
+*Why not push at 1 Hz:* it is needless traffic to every connected client on a
+Pi, and it produces a visibly stuttering bar on the 7-inch display.
 
 ### D2 — Reconnect gets a full snapshot; sequence numbers detect gaps
 
@@ -126,6 +135,20 @@ in the request envelope alongside it:
   "session_id": "kitchen-tablet", "current_intent": null }
 ```
 
+`session_id` is separate from `command_id` and does more than correlate. It
+names a **server-side Concierge conversation**, so "a little more upbeat"
+refines the previous turn instead of starting over, and every surface in the
+house sharing an id sees the same conversation.
+
+- With `session_id`: the turn builds on that session's remembered intent.
+- With `session_id` **and** an explicit `current_intent`: the explicit one wins,
+  which lets a client resync after losing its own state.
+- Without `session_id`: the call is stateless and only `current_intent` applies.
+
+Sessions are in-memory and bounded (LRU, 64 by default). Conversation state is
+a convenience, not durable data — losing it on restart costs the user one extra
+sentence, so it deliberately does not go in a database.
+
 ### D6 — Degraded states are explicit fields, never absent data
 
 The UI must distinguish "no AI configured" from "AI request failed" from "AI is
@@ -146,9 +169,10 @@ than silently presenting a degraded result as a normal one.
 
 ## 4. REST endpoints
 
-`(#14)` marks endpoints that depend on the playback state machine and will 501
-until it lands. `(stub)` marks endpoints that should ship immediately returning
-fixture data, so the frontend is never blocked.
+`(#14)` marks endpoints that depend on the playback state machine. They are
+**declared with their real success models** and return `not_implemented` until
+that lands, so a generated client already knows the shape it will receive — it
+is never told that a successful `/api/queue` call returns an error object.
 
 | Method | Path | Backed by | Status |
 |---|---|---|---|
@@ -159,6 +183,7 @@ fixture data, so the frontend is never blocked.
 | GET | `/api/library/search` | `catalog.search_catalog` | stub |
 | GET | `/api/library/stats` | `catalog.catalog_stats` | stub |
 | GET | `/api/library/assets/{asset_id}` | `catalog` | stub |
+| GET | `/api/library/assets/{asset_id}` | `catalog.get_asset` | implemented |
 | POST | `/api/library/assets/{asset_id}/favorite` | **blocked — see §6** | blocked |
 | GET | `/api/history/recent` | `history.history_summaries` | stub |
 | GET | `/api/devices` | `midi.devices.list_output_ports` | stub |
@@ -209,28 +234,35 @@ Query params map 1:1 onto `catalog.search_catalog()`:
 
 ## 5. WebSocket
 
-Envelope for every message in both directions:
+Every message in both directions is a typed, discriminated envelope. `type` is a
+closed set, not a free string, and each type has a concrete payload model — see
+`api/models.py`.
 
 ```json
 { "type": "state.snapshot", "seq": 41,
   "ts": "2026-08-22T14:31:07.412Z", "payload": { } }
 ```
 
-Server → client types:
+`seq` increases monotonically; a gap tells the client to resync rather than
+patch.
 
-| Type | When | Payload |
+| Type | When | Payload model |
 |---|---|---|
-| `state.snapshot` | on connect, on resync request | full state |
-| `state.playback` | transport or track change | now playing + position anchor (D1) |
-| `state.queue` | queue mutated | ordered queue |
-| `state.devices` | device appears/disappears | outputs block |
-| `state.library` | reindex completed | counts |
-| `concierge.result` | async answer ready | same body as the REST response |
-| `error` | command rejected | error envelope (§7) |
+| `state.snapshot` | on connect, on resync request | `SnapshotPayload` — status + playback + queue |
+| `state.playback` | transport or track change | `PlaybackState` (carries `PositionAnchor`) |
+| `state.queue` | queue mutated | `QueueState` |
+| `state.devices` | device appears/disappears | `OutputsState` |
+| `state.library` | reindex completed | `LibraryCounts` |
+| `concierge.result` | async answer ready | `ConciergeResponse` |
+| `error` | command rejected | `ErrorBody` |
 
 Client → server types: `state.request_snapshot`, `ping`. **All mutations go over
-REST, not the socket** — one code path for commands, one for state. The socket is
-read-mostly.
+REST, not the socket** — one code path for commands, one for state. The socket
+is read-mostly.
+
+Until #14 lands, `/api/ws` accepts the connection, sends one `error` envelope
+with code `not_implemented`, and closes. That is enough for the UI to build and
+exercise its reconnect path now, against the envelope shape it will keep.
 
 ## 6. Cross-lane blockers
 
@@ -256,11 +288,18 @@ One envelope, with a stable machine-readable `code` the UI can switch on.
              "detail": { "field": "duration_minutes" } } }
 ```
 
-Initial codes: `intent_invalid`, `concierge_unavailable`, `library_empty`,
-`asset_not_found`, `no_midi_output`, `transport_conflict`, `not_implemented`.
+Codes: `intent_invalid`, `request_invalid`, `concierge_unavailable`,
+`library_empty`, `asset_not_found`, `no_midi_output`, `transport_conflict`,
+`not_implemented`, `internal_error`.
 
-Never return a bare 500 with an HTML body — the UI has no way to render that on
-a 7-inch screen.
+`intent_invalid` is reserved for failures **inside a PlaybackIntent**, so the UI
+can send the user back to the Concierge surface with the offending field. Any
+other malformed request — a bad query parameter, a malformed queue command — is
+`request_invalid`. Conflating them sends the user to the wrong screen.
+
+A bare 500 with an HTML body is never returned: an unhandled exception is caught
+and re-emitted as `internal_error`, with the real cause logged server-side and
+nothing about it disclosed to the client.
 
 ---
 
