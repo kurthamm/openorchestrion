@@ -59,6 +59,7 @@ from .sessions import ConciergeSessions
 from .settings import Settings
 
 router = APIRouter(prefix="/api")
+Connection = Request | WebSocket
 
 _PENDING_METADATA_WRITER: dict[int | str, dict[str, Any]] = {
     501: {
@@ -71,28 +72,24 @@ _PENDING_METADATA_WRITER: dict[int | str, dict[str, Any]] = {
 }
 
 
-def _settings(request: Request) -> Settings:
-    return request.app.state.settings
+def _settings(connection: Connection) -> Settings:
+    return connection.app.state.settings
 
 
-def _concierge(request: Request) -> MusicConcierge:
-    return request.app.state.concierge
+def _concierge(connection: Connection) -> MusicConcierge:
+    return connection.app.state.concierge
 
 
 def _sessions(request: Request) -> ConciergeSessions:
     return request.app.state.concierge_sessions
 
 
-def _playback(request: Request) -> PlaybackEngine:
-    return request.app.state.playback
+def _playback(connection: Connection) -> PlaybackEngine:
+    return connection.app.state.playback
 
 
-def _websocket_playback(websocket: WebSocket) -> PlaybackEngine:
-    return websocket.scope["app"].state.playback
-
-
-def _outputs_state(request: Request) -> OutputsState:
-    playback = _playback(request)
+def _outputs_state(connection: Connection) -> OutputsState:
+    playback = _playback(connection)
     devices = list(playback.output_names)
     if not playback.outputs_ready:
         return OutputsState(ready=False, devices=[], reason="no_midi_output")
@@ -129,12 +126,12 @@ def _playback_state_model(snapshot: Any) -> PlaybackState:
     return PlaybackState.model_validate(snapshot.to_dict())
 
 
-async def _system_status(request: Request) -> SystemStatus:
-    settings = _settings(request)
-    concierge = _concierge(request)
-    outputs = _outputs_state(request)
+async def _system_status(connection: Connection) -> SystemStatus:
+    settings = _settings(connection)
+    concierge = _concierge(connection)
+    outputs = _outputs_state(connection)
     library = _library_counts(settings.catalog_db)
-    playback = await _playback(request).playback_snapshot()
+    playback = await _playback(connection).playback_snapshot()
     ai = AiState(
         enabled=True,
         provider=concierge.primary.name if concierge.primary else concierge.fallback.name,
@@ -483,13 +480,13 @@ async def transport(
     return _playback_state_model(snapshot)
 
 
-async def _snapshot_envelope(request: Request, *, seq: int) -> SnapshotEnvelope:
-    playback_snapshot, queue_snapshot = await _playback(request).snapshots()
+async def _snapshot_envelope(connection: Connection, *, seq: int) -> SnapshotEnvelope:
+    playback_snapshot, queue_snapshot = await _playback(connection).snapshots()
     return SnapshotEnvelope(
         seq=seq,
-        ts=_playback(request).clock.utcnow().isoformat(),
+        ts=_playback(connection).clock.utcnow().isoformat(),
         payload=SnapshotPayload(
-            status=await _system_status(request),
+            status=await _system_status(connection),
             playback=_playback_state_model(playback_snapshot),
             queue=_queue_state_model(queue_snapshot),
         ),
@@ -529,13 +526,12 @@ def _event_envelope(event: Any) -> Any:
 async def state_socket(websocket: WebSocket) -> None:
     """Push authoritative snapshots and state deltas; clients never own playback."""
     await websocket.accept()
-    playback = _websocket_playback(websocket)
+    playback = _playback(websocket)
     event_queue = playback.events.subscribe()
-    request = Request(websocket.scope)
     receive_task: asyncio.Task[Any] | None = None
     event_task: asyncio.Task[Any] | None = None
     try:
-        snapshot = await _snapshot_envelope(request, seq=playback.events.seq)
+        snapshot = await _snapshot_envelope(websocket, seq=playback.events.seq)
         await websocket.send_json(snapshot.model_dump(mode="json"))
         receive_task = asyncio.create_task(websocket.receive_json())
         event_task = asyncio.create_task(event_queue.get())
@@ -554,7 +550,7 @@ async def state_socket(websocket: WebSocket) -> None:
                 message = receive_task.result()
                 message_type = message.get("type") if isinstance(message, dict) else None
                 if message_type == "state.request_snapshot":
-                    snapshot = await _snapshot_envelope(request, seq=playback.events.seq)
+                    snapshot = await _snapshot_envelope(websocket, seq=playback.events.seq)
                     await websocket.send_json(snapshot.model_dump(mode="json"))
                 elif message_type == "ping":
                     pass
