@@ -14,6 +14,8 @@ from openorchestrion.testing.midi_fixtures import generate_suite
 COMMAND_ID_1 = "00000000-0000-4000-8000-000000000001"
 COMMAND_ID_2 = "00000000-0000-4000-8000-000000000002"
 COMMAND_ID_3 = "00000000-0000-4000-8000-000000000003"
+COMMAND_ID_4 = "00000000-0000-4000-8000-000000000004"
+COMMAND_ID_5 = "00000000-0000-4000-8000-000000000005"
 
 
 def _settings(tmp_path: Path, *, with_library: bool) -> Settings:
@@ -27,6 +29,7 @@ def _settings(tmp_path: Path, *, with_library: bool) -> Settings:
         library_root=root,
         catalog_db=root / "catalog.db",
         history_db=root / "history.db",
+        virtual_midi=True,
     )
 
 
@@ -60,16 +63,16 @@ def test_status_reports_missing_library_as_degraded_not_error(empty_client: Test
 
 
 def test_status_reports_offline_interpreter_as_enabled(empty_client: TestClient) -> None:
-    """Natural language works with no provider, so the UI must not hide it."""
     ai = empty_client.get("/api/status").json()["ai"]
     assert ai["enabled"] is True
     assert ai["reason"] == "no_provider_configured_using_offline_interpreter"
 
 
 def test_status_counts_a_real_library(stocked_client: TestClient) -> None:
-    library = stocked_client.get("/api/status").json()["library"]
-    assert library["indexed"] is True
-    assert library["assets"] > 0
+    status = stocked_client.get("/api/status").json()
+    assert status["library"]["indexed"] is True
+    assert status["library"]["assets"] > 0
+    assert status["outputs"]["ready"] is True
 
 
 def test_search_on_missing_catalog_is_empty_not_an_error(empty_client: TestClient) -> None:
@@ -111,7 +114,6 @@ def test_station_preview_returns_explainable_queue(stocked_client: TestClient) -
     body = response.json()
     assert len(body["items"]) <= 3
     assert body["seed"] == 42
-    # Relaxations must survive to the client so the appliance can explain itself.
     assert "relaxations" in body
 
 
@@ -122,7 +124,6 @@ def test_station_preview_without_catalog_uses_error_envelope(empty_client: TestC
 
 
 def test_unknown_intent_field_is_a_rendered_error_not_a_crash(empty_client: TestClient) -> None:
-    """PlaybackIntent forbids extra fields; the UI still needs a usable error."""
     response = empty_client.post(
         "/api/stations/preview",
         json={"intent": {"themes": ["dinner"], "client_hint": "nope"}},
@@ -142,29 +143,46 @@ def test_history_request_does_not_create_a_database(tmp_path: Path) -> None:
     assert not settings.history_db.exists()
 
 
-@pytest.mark.parametrize(
-    "method,path,body",
-    [
-        ("get", "/api/queue", None),
-        ("post", "/api/queue", {"mode": "replace", "intent": {"themes": ["dinner"]}}),
-        ("post", "/api/queue/reorder", {"asset_id": "sha256:abc", "to_index": 2}),
-        ("post", "/api/queue/remove", {"asset_id": "sha256:abc"}),
-        ("post", "/api/transport/play", {"command_id": COMMAND_ID_2}),
-        ("post", "/api/transport/panic", {"command_id": COMMAND_ID_3}),
-        ("post", "/api/library/assets/sha256:abc/favorite", {"favorite": True}),
-    ],
-)
-def test_playback_endpoints_declare_themselves_pending(
-    empty_client: TestClient, method: str, path: str, body: dict | None
-) -> None:
-    kwargs = {} if body is None else {"json": body}
-    response = getattr(empty_client, method)(path, **kwargs)
-    assert response.status_code == 501
-    assert response.json()["error"]["code"] == "not_implemented"
+def test_queue_starts_empty_and_requires_a_catalog_for_population(empty_client: TestClient) -> None:
+    response = empty_client.get("/api/queue")
+    assert response.status_code == 200
+    assert response.json()["items"] == []
+
+    response = empty_client.post(
+        "/api/queue",
+        json={"intent": {"themes": ["dinner"]}},
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "library_empty"
 
 
-def test_pending_playback_routes_publish_their_success_model() -> None:
-    """A future UI must not be told that a successful queue call returns an error."""
+def test_queue_and_transport_run_against_virtual_midi(stocked_client: TestClient) -> None:
+    asset = stocked_client.get("/api/library/search", params={"limit": 1}).json()["items"][0]
+    queued = stocked_client.post(
+        "/api/queue",
+        json={"asset_ids": [asset["asset_id"]], "command_id": COMMAND_ID_2},
+    )
+    assert queued.status_code == 200
+    assert queued.json()["items"][0]["asset_id"] == asset["asset_id"]
+    assert queued.json()["current_index"] == 0
+
+    started = stocked_client.post(
+        "/api/transport/play",
+        json={"command_id": COMMAND_ID_3},
+    )
+    assert started.status_code == 200
+    assert started.json()["state"] == "playing"
+    assert started.json()["now_playing"]["asset_id"] == asset["asset_id"]
+
+    stopped = stocked_client.post(
+        "/api/transport/stop",
+        json={"command_id": COMMAND_ID_4},
+    )
+    assert stopped.status_code == 200
+    assert stopped.json()["state"] == "stopped"
+
+
+def test_playback_routes_publish_real_success_models() -> None:
     with TestClient(create_app()) as client:
         paths = client.get("/openapi.json").json()["paths"]
 
@@ -176,12 +194,10 @@ def test_pending_playback_routes_publish_their_success_model() -> None:
     assert schema_ref("/api/queue", "post", "200").endswith("/QueueState")
     assert schema_ref("/api/queue/reorder", "post", "200").endswith("/QueueState")
     assert schema_ref("/api/transport/{action}", "post", "200").endswith("/PlaybackState")
-    # ...and still learns the interim failure shape.
-    assert schema_ref("/api/queue", "get", "501").endswith("/ErrorResponse")
+    assert "501" not in paths["/api/queue"]["get"]["responses"]
 
 
 def test_favorite_pending_reason_is_not_attributed_to_playback() -> None:
-    """Favorites are blocked by the metadata writer, independently of #14."""
     with TestClient(create_app()) as client:
         paths = client.get("/openapi.json").json()["paths"]
     description = paths["/api/library/assets/{asset_id}/favorite"]["post"]["responses"]["501"][
@@ -198,23 +214,26 @@ def test_unknown_transport_action_is_rejected(empty_client: TestClient) -> None:
     assert response.json()["error"]["code"] == "transport_conflict"
 
 
-def test_devices_reports_state_without_failing(empty_client: TestClient) -> None:
-    outputs = empty_client.get("/api/devices").json()["outputs"]
-    assert isinstance(outputs["ready"], bool)
-    if not outputs["ready"]:
-        assert outputs["reason"]
+def test_devices_reports_virtual_output(stocked_client: TestClient) -> None:
+    outputs = stocked_client.get("/api/devices").json()["outputs"]
+    assert outputs["ready"] is True
+    assert "OpenOrchestrion Virtual" in outputs["devices"]
 
 
-def test_websocket_accepts_and_reports_pending(empty_client: TestClient) -> None:
+def test_websocket_starts_with_full_snapshot_and_resyncs(empty_client: TestClient) -> None:
     with empty_client.websocket_connect("/api/ws") as socket:
-        envelope = socket.receive_json()
-    assert envelope["type"] == "error"
-    assert envelope["payload"]["code"] == "not_implemented"
-    assert envelope["seq"] == 0
+        first = socket.receive_json()
+        assert first["type"] == "state.snapshot"
+        assert first["payload"]["playback"]["state"] == "idle"
+        assert first["payload"]["queue"]["items"] == []
+
+        socket.send_json({"type": "state.request_snapshot"})
+        second = socket.receive_json()
+        assert second["type"] == "state.snapshot"
+        assert second["seq"] >= first["seq"]
 
 
 def test_session_id_carries_the_conversation_forward(stocked_client: TestClient) -> None:
-    """A refinement must build on the previous turn, not start over."""
     first = stocked_client.post(
         "/api/concierge/ask",
         json={"prompt": "play christmas music", "session_id": "kitchen"},
@@ -225,7 +244,6 @@ def test_session_id_carries_the_conversation_forward(stocked_client: TestClient)
         "/api/concierge/ask",
         json={"prompt": "a little more upbeat", "session_id": "kitchen"},
     ).json()
-    # The theme survives the refinement because the session remembered it.
     assert "christmas" in [theme.lower() for theme in second["intent"]["themes"]]
 
 
@@ -284,7 +302,6 @@ def test_asset_detail_returns_descriptive_tags(stocked_client: TestClient) -> No
     assert body["asset_id"] == listed["asset_id"]
     for field in ("genres", "moods", "themes", "instrumentation"):
         assert isinstance(body[field], list)
-    # Filesystem paths are not part of the client-facing contract.
     assert "midi_path" not in body
 
 
@@ -334,7 +351,6 @@ def test_intent_body_failure_is_still_intent_invalid(empty_client: TestClient) -
 
 
 def test_unexpected_exception_uses_the_error_envelope(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No bare framework 500 — a touchscreen cannot render an HTML error page."""
     from openorchestrion.api import routes
 
     def boom(*_args: object, **_kwargs: object) -> None:
@@ -346,12 +362,10 @@ def test_unexpected_exception_uses_the_error_envelope(monkeypatch: pytest.Monkey
     assert response.status_code == 500
     body = response.json()
     assert body["error"]["code"] == "internal_error"
-    # The cause is logged server-side, never leaked to the client.
     assert "catalog exploded" not in response.text
 
 
 def test_position_anchor_documents_the_clock_rule() -> None:
-    """server_time must not be presented as something a browser can subtract."""
     from openorchestrion.api.models import PositionAnchor
 
     description = PositionAnchor.model_fields["server_time"].description or ""
@@ -360,7 +374,6 @@ def test_position_anchor_documents_the_clock_rule() -> None:
 
 
 def test_openapi_schema_publishes_the_contract(empty_client: TestClient) -> None:
-    """The generated schema is what a frontend client is built from."""
     paths = empty_client.get("/openapi.json").json()["paths"]
     for path in (
         "/api/status",
