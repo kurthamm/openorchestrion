@@ -158,6 +158,26 @@ Machine-readable contracts:
 
 These will be validated in CI as the ingestion model evolves.
 
+## SQLite catalog layer
+
+The rebuildable catalog is now implemented in `openorchestrion.library.catalog`.
+
+```bash
+openorchestrion-reindex var/library
+```
+
+This scans durable sidecars and creates `var/library/catalog.db`. The build is atomic: an invalid sidecar in strict mode fails the temporary rebuild and leaves the previous known-good database intact.
+
+Basic queries are available through:
+
+```bash
+openorchestrion-catalog var/library/catalog.db --theme dinner --max-energy 3
+```
+
+The catalog distinguishes compositions from individual MIDI assets/performances, normalizes genres/moods/themes into indexed tag rows, and indexes deterministic MIDI facts needed by future device-compatibility and station-selection logic.
+
+See [catalog.md](catalog.md) for the schema, query examples, rebuild invariants, and the boundary between durable metadata and disposable SQLite state.
+
 ## Next layer
 
-This implementation deliberately stops before SQLite. The next library milestone will build the searchable/rebuildable database index **from these durable sidecars**, preserving the architectural rule that loss of one SQLite file cannot destroy the music catalog's irreplaceable metadata.
+The next library milestone is the **Smart Station engine**: take a structured request such as “recognizable dinner music, mostly piano,” query the catalog, score candidates, choose among alternate performances of the same composition, apply diversity/no-repeat policies, and return an explainable queue.
