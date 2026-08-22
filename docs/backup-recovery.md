@@ -2,7 +2,7 @@
 
 ## Goal
 
-The Raspberry Pi should be treated as replaceable hardware. A failed microSD card or Pi should not destroy the music library, metadata, stations, or configuration.
+The Raspberry Pi should be treated as replaceable hardware. A failed microSD card or Pi should not destroy the music library, metadata, stations, listening history, or configuration.
 
 ## Two-layer recovery model
 
@@ -14,6 +14,7 @@ Back up frequently:
 /var/lib/openorchestrion/
     music/
     metadata/
+    history.db
     database/
     stations/
     playlists/
@@ -38,7 +39,7 @@ Google Drive or another remote destination is suitable for backup because MIDI f
 Preferred model:
 
 ```text
-Local library / configuration
+Local library / configuration / history
           │
           ▼
  scheduled backup/sync
@@ -51,7 +52,19 @@ Playback continues from local storage even if the Internet is unavailable.
 
 ## Database strategy
 
-SQLite runtime state should be backed up safely, but durable music metadata should also be exportable/rebuildable from the library. The system should not make one SQLite file the only surviving copy of irreplaceable metadata.
+OpenOrchestrion now has two deliberately different database classes.
+
+### `catalog.db`: rebuildable
+
+The music catalog is an operational/search index. It can be deleted and regenerated from durable MIDI sidecars. It is convenient to back up, but it is not the only copy of irreplaceable music metadata.
+
+### `history.db`: durable runtime state
+
+Listening history records behavior that cannot be reconstructed from MIDI files or sidecars. It contains queued/started/substantial/completed/skipped/failed playback state, last-played data, play counts, and no-repeat inputs.
+
+`history.db` therefore **must be included in application-data backups** and must survive catalog reindexing.
+
+SQLite databases should be backed up using a database-safe snapshot/backup mechanism rather than copying a file while an active write transaction is in progress.
 
 ## Recovery drill
 
@@ -60,10 +73,13 @@ A release is not operationally complete until a restore has been tested:
 1. Provision a blank replacement storage device.
 2. Restore/reinstall OpenOrchestrion.
 3. Restore application data and music.
-4. Reconnect MIDI devices.
-5. Confirm device profiles and routing.
-6. Start the appliance.
-7. Verify library contents, favorites/history, stations, AI configuration, and playback.
+4. Restore `history.db` and other durable runtime state.
+5. Rebuild `catalog.db` from sidecars if needed.
+6. Reconnect MIDI devices.
+7. Confirm device profiles and routing.
+8. Start the appliance.
+9. Verify library contents, favorites/history, stations, AI configuration, and playback.
+10. Confirm recent-play/no-repeat behavior survived the restore.
 
 ## Storage medium
 
