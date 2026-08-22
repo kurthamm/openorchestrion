@@ -21,6 +21,8 @@ dependencies = [
 
 [project.scripts]
 openorchestrion-fixtures = "openorchestrion.testing.midi_fixtures:main"
+openorchestrion-analyze = "openorchestrion.midi.analyzer:main"
+openorchestrion-import-midi = "openorchestrion.library.importer:main"
 
 [project.optional-dependencies]
 dev = [
