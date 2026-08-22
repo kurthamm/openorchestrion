@@ -15,8 +15,10 @@ This document defines the current physical baseline for a reproducible OpenOrche
 | MIDI | Direct USB MIDI to compatible sound engine(s) when available |
 | Local UI | Chromium kiosk mode using the OpenOrchestrion web application |
 | Remote UI | Same responsive application from phone, tablet, or computer |
-| Reference sound engine | Casio CT-X700 candidate pending physical project validation |
-| Optional second engine | Yamaha PSR-EW310/EW300/E363 class candidate |
+| Primary sound-engine target | Casio CTK-6200, pending acquisition and project validation |
+| Complementary sound-engine target | Yamaha PSR-EW300, pending acquisition and project validation |
+
+The earlier Casio CT-X700 work remains a useful documented compatibility reference, but the current acquisition plan is the **CTK-6200 + PSR-EW300** pairing. Both are intended as broad MIDI-addressable sound engines; the pairing also gives the project two different manufacturer sound palettes for routing and two-piano experiments.
 
 ## Why Raspberry Pi 5 4 GB
 
@@ -123,8 +125,10 @@ The reference installation adds the touchscreen:
                    │             │
                 USB MIDI      USB MIDI
                    │             │
-              Engine A       Engine B
+              CTK-6200       PSR-EW300
 ```
+
+The software remains hardware-neutral. If either target is not acquired, another documented-compatible sound engine can occupy that role without changing the application architecture.
 
 ## Storage philosophy
 
