@@ -19,6 +19,9 @@ dependencies = [
   "PyYAML>=6.0"
 ]
 
+[project.scripts]
+openorchestrion-fixtures = "openorchestrion.testing.midi_fixtures:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
