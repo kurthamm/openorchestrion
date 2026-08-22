@@ -1,31 +1,33 @@
-"""HTTP routes implementing ``docs/api-contract.md``.
-
-Endpoints backed by an existing domain module call it directly — the API adds no
-selection, scoring or timing logic of its own. Endpoints owned by the playback
-state machine (issue #14) are declared here and return ``not_implemented`` so
-they appear in the generated OpenAPI schema and the UI can wire against their
-final shape before the backend exists.
-"""
+"""HTTP and WebSocket surface for the OpenOrchestrion application."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import asyncio
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Query, Request, WebSocket
+from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 
 from ..ai import ConciergeResult, MusicConcierge
+from ..history import apply_no_repeat_window
 from ..library.catalog import catalog_stats, get_asset, search_catalog
-from ..midi.devices import list_output_ports
 from ..models import PlaybackIntent
-from ..stations import build_station
+from ..playback import (
+    PlaybackConflict,
+    PlaybackEngine,
+    PlaybackError,
+    PlaybackOutputError,
+    QueueItemSpec,
+)
+from ..stations import StationConstraints, build_station
 from .errors import ApiError
 from .models import (
     TRANSPORT_ACTIONS,
     AiState,
     ConciergeAskRequest,
+    ConciergeEnvelope,
     ConciergeResponse,
+    DevicesEnvelope,
     DevicesResponse,
     ErrorBody,
     ErrorEnvelope,
@@ -36,13 +38,18 @@ from .models import (
     LibraryAsset,
     LibraryAssetDetail,
     LibraryCounts,
+    LibraryEnvelope,
     LibrarySearchResponse,
     OutputsState,
+    PlaybackEnvelope,
     PlaybackState,
+    QueueEnvelope,
     QueueRemoveRequest,
     QueueReorderRequest,
     QueueReplaceRequest,
     QueueState,
+    SnapshotEnvelope,
+    SnapshotPayload,
     StationPreviewRequest,
     StationQueueModel,
     SystemStatus,
@@ -52,15 +59,8 @@ from .sessions import ConciergeSessions
 from .settings import Settings
 
 router = APIRouter(prefix="/api")
+Connection = Request | WebSocket
 
-# Declared alongside the real success model on #14-owned routes: the generated
-# client learns both the eventual success shape and the interim failure shape.
-_PENDING_PLAYBACK: dict[int | str, dict[str, Any]] = {
-    501: {
-        "model": ErrorResponse,
-        "description": "Not yet implemented: awaiting the playback state machine (#14)",
-    }
-}
 _PENDING_METADATA_WRITER: dict[int | str, dict[str, Any]] = {
     501: {
         "model": ErrorResponse,
@@ -72,39 +72,28 @@ _PENDING_METADATA_WRITER: dict[int | str, dict[str, Any]] = {
 }
 
 
-def _settings(request: Request) -> Settings:
-    return request.app.state.settings
+def _settings(connection: Connection) -> Settings:
+    return connection.app.state.settings
 
 
-def _concierge(request: Request) -> MusicConcierge:
-    return request.app.state.concierge
+def _concierge(connection: Connection) -> MusicConcierge:
+    return connection.app.state.concierge
 
 
 def _sessions(request: Request) -> ConciergeSessions:
     return request.app.state.concierge_sessions
 
 
-def _pending(feature: str) -> ApiError:
-    return ApiError(
-        "not_implemented",
-        f"{feature} arrives with the playback state machine (issue #14)",
-        status_code=501,
-    )
+def _playback(connection: Connection) -> PlaybackEngine:
+    return connection.app.state.playback
 
 
-def _outputs_state() -> OutputsState:
-    """Report MIDI availability without letting a missing backend fail the request.
-
-    A developer machine with no ALSA backend is a normal degraded state, not an
-    error: the UI still renders, it just cannot offer playback.
-    """
-    try:
-        devices = list_output_ports()
-    except Exception as exc:  # noqa: BLE001 - any backend failure is a renderable state
-        return OutputsState(ready=False, devices=[], reason=f"{type(exc).__name__}: {exc}")
-    if not devices:
+def _outputs_state(connection: Connection) -> OutputsState:
+    playback = _playback(connection)
+    devices = list(playback.output_names)
+    if not playback.outputs_ready:
         return OutputsState(ready=False, devices=[], reason="no_midi_output")
-    return OutputsState(ready=True, devices=devices)
+    return OutputsState(ready=True, devices=devices, reason=None)
 
 
 def _library_counts(catalog_db: Path) -> LibraryCounts:
@@ -125,8 +114,131 @@ def _require_catalog(settings: Settings) -> Path:
     return settings.catalog_db
 
 
-def _queue_model(queue: Any) -> StationQueueModel:
+def _station_queue_model(queue: Any) -> StationQueueModel:
     return StationQueueModel.model_validate(queue.to_dict())
+
+
+def _queue_state_model(snapshot: Any) -> QueueState:
+    return QueueState.model_validate(snapshot.to_dict())
+
+
+def _playback_state_model(snapshot: Any) -> PlaybackState:
+    return PlaybackState.model_validate(snapshot.to_dict())
+
+
+async def _system_status(connection: Connection) -> SystemStatus:
+    settings = _settings(connection)
+    concierge = _concierge(connection)
+    outputs = _outputs_state(connection)
+    library = _library_counts(settings.catalog_db)
+    playback = await _playback(connection).playback_snapshot()
+    ai = AiState(
+        enabled=True,
+        provider=concierge.primary.name if concierge.primary else concierge.fallback.name,
+        reason=None if concierge.primary else "no_provider_configured_using_offline_interpreter",
+    )
+    if playback.state == "playing":
+        phase = "playing"
+    elif not library.indexed or not outputs.ready:
+        phase = "degraded"
+    else:
+        phase = "ready"
+    return SystemStatus(
+        phase=phase,
+        playing=playback.state == "playing",
+        ai=ai,
+        outputs=outputs,
+        library=library,
+    )
+
+
+def _translate_playback_error(exc: Exception) -> ApiError:
+    if isinstance(exc, PlaybackConflict):
+        return ApiError("transport_conflict", str(exc), status_code=409)
+    if isinstance(exc, PlaybackOutputError):
+        return ApiError("no_midi_output", str(exc), status_code=409)
+    if isinstance(exc, PlaybackError):
+        return ApiError(
+            "internal_error",
+            "Playback failed. Check the server log.",
+            status_code=500,
+        )
+    raise exc
+
+
+def _asset_spec(record: dict[str, Any], settings: Settings) -> QueueItemSpec:
+    relative_path = Path(str(record["midi_path"]))
+    midi_path = relative_path if relative_path.is_absolute() else settings.library_root / relative_path
+    title = record.get("title") or record.get("original_filename") or record["asset_id"]
+    return QueueItemSpec(
+        asset_id=record["asset_id"],
+        composition_id=record.get("composition_id"),
+        title=title,
+        composer=record.get("composer"),
+        duration_seconds=float(record["duration_seconds"]),
+        midi_path=str(midi_path),
+    )
+
+
+def _station_constraints(settings: Settings, intent: PlaybackIntent) -> StationConstraints:
+    constraints = StationConstraints()
+    if (
+        intent.avoid_recent_repeats
+        and intent.repeat_window_days is not None
+        and settings.history_db.is_file()
+    ):
+        constraints = apply_no_repeat_window(
+            constraints,
+            settings.history_db,
+            days=intent.repeat_window_days,
+        )
+    return constraints
+
+
+def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[QueueItemSpec]:
+    catalog_db = _require_catalog(settings)
+    if payload.intent is not None:
+        station = build_station(
+            catalog_db,
+            payload.intent,
+            constraints=_station_constraints(settings, payload.intent),
+            seed=payload.seed,
+            max_tracks=payload.max_tracks,
+        )
+        if not station.items:
+            raise ApiError(
+                "library_empty",
+                "No playable catalog items matched this request.",
+                status_code=409,
+            )
+        specs: list[QueueItemSpec] = []
+        for item in station.items:
+            path = Path(item.midi_path)
+            midi_path = path if path.is_absolute() else settings.library_root / path
+            specs.append(
+                QueueItemSpec(
+                    asset_id=item.asset_id,
+                    composition_id=item.composition_id,
+                    title=item.title,
+                    composer=item.composer,
+                    duration_seconds=item.duration_seconds,
+                    midi_path=str(midi_path),
+                )
+            )
+        return specs
+
+    specs = []
+    for asset_id in payload.asset_ids:
+        record = get_asset(catalog_db, asset_id)
+        if record is None:
+            raise ApiError(
+                "asset_not_found",
+                f"no indexed asset {asset_id}",
+                status_code=404,
+                detail={"asset_id": asset_id},
+            )
+        specs.append(_asset_spec(record, settings))
+    return specs
 
 
 @router.get("/health", response_model=dict[str, str])
@@ -136,42 +248,15 @@ async def health() -> dict[str, str]:
 
 @router.get("/status", response_model=SystemStatus)
 async def status(request: Request) -> SystemStatus:
-    settings = _settings(request)
-    concierge = _concierge(request)
-    outputs = _outputs_state()
-    library = _library_counts(settings.catalog_db)
-    ai = AiState(
-        enabled=True,
-        provider=concierge.primary.name if concierge.primary else concierge.fallback.name,
-        reason=None if concierge.primary else "no_provider_configured_using_offline_interpreter",
-    )
-    if not library.indexed or not outputs.ready:
-        phase: str = "degraded"
-    else:
-        phase = "ready"
-    return SystemStatus(
-        phase=phase,  # type: ignore[arg-type]
-        playing=False,
-        ai=ai,
-        outputs=outputs,
-        library=library,
-    )
+    return await _system_status(request)
 
 
 @router.get("/devices", response_model=DevicesResponse)
-async def devices() -> DevicesResponse:
-    return DevicesResponse(outputs=_outputs_state())
+async def devices(request: Request) -> DevicesResponse:
+    return DevicesResponse(outputs=_outputs_state(request))
 
 
 async def _interpret(request: Request, payload: ConciergeAskRequest) -> ConciergeResult:
-    """Run one Concierge turn, continuing a server-side conversation if asked.
-
-    With a ``session_id`` the turn builds on that session's previous intent, so
-    "a little more upbeat" refines rather than starts over. An explicit
-    ``current_intent`` overrides the remembered one, which lets a client resync
-    the conversation after its own state was lost. Without a ``session_id`` the
-    call is stateless.
-    """
     if payload.session_id is None:
         return await _concierge(request).interpret(
             payload.prompt,
@@ -185,16 +270,17 @@ async def _interpret(request: Request, payload: ConciergeAskRequest) -> Concierg
 
 @router.post("/concierge/ask", response_model=ConciergeResponse)
 async def concierge_ask(request: Request, payload: ConciergeAskRequest) -> ConciergeResponse:
-    """Interpret natural language into a validated intent, with a queue preview.
-
-    The offline deterministic interpreter answers when no provider is
-    configured, so this endpoint works with no network and no API key.
-    """
     settings = _settings(request)
     result = await _interpret(request, payload)
     preview: StationQueueModel | None = None
     if settings.catalog_db.is_file():
-        preview = _queue_model(build_station(settings.catalog_db, result.intent))
+        preview = _station_queue_model(
+            build_station(
+                settings.catalog_db,
+                result.intent,
+                constraints=_station_constraints(settings, result.intent),
+            )
+        )
     return ConciergeResponse(
         intent=result.intent,
         provider=result.provider,
@@ -207,19 +293,20 @@ async def concierge_ask(request: Request, payload: ConciergeAskRequest) -> Conci
 
 @router.post("/stations/preview", response_model=StationQueueModel)
 async def stations_preview(request: Request, payload: StationPreviewRequest) -> StationQueueModel:
-    catalog_db = _require_catalog(_settings(request))
+    settings = _settings(request)
+    catalog_db = _require_catalog(settings)
     queue = build_station(
         catalog_db,
         payload.intent,
+        constraints=_station_constraints(settings, payload.intent),
         seed=payload.seed,
         max_tracks=payload.max_tracks,
     )
-    return _queue_model(queue)
+    return _station_queue_model(queue)
 
 
 @router.post("/intent/validate", response_model=PlaybackIntent)
 async def validate_intent(intent: PlaybackIntent) -> PlaybackIntent:
-    """Echo a validated intent. Retained so existing clients keep working."""
     return intent
 
 
@@ -283,12 +370,6 @@ async def history_recent(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=1000)] = 50,
 ) -> HistoryResponse:
-    """Most recently played first.
-
-    ``history_summaries`` orders oldest-first because staleness ranking wants it
-    that way; the UI wants the opposite, so reverse here rather than asking the
-    frontend to know that.
-    """
     settings = _settings(request)
     if not settings.history_db.is_file():
         return HistoryResponse(items=[], count=0)
@@ -306,9 +387,7 @@ async def history_recent(
 )
 async def library_asset(request: Request, asset_id: str) -> LibraryAssetDetail:
     settings = _settings(request)
-    record = None
-    if settings.catalog_db.is_file():
-        record = get_asset(settings.catalog_db, asset_id)
+    record = get_asset(settings.catalog_db, asset_id) if settings.catalog_db.is_file() else None
     if record is None:
         raise ApiError(
             "asset_not_found",
@@ -327,12 +406,6 @@ async def library_asset(request: Request, asset_id: str) -> LibraryAssetDetail:
     responses=_PENDING_METADATA_WRITER,
 )
 async def set_favorite(asset_id: str, payload: FavoriteRequest) -> LibraryAssetDetail:
-    """Blocked on the metadata writer, not on #14.
-
-    ``favorite`` lives in the sidecar's ``descriptive_metadata`` block and
-    nothing in the project writes to that block yet, so this cannot persist.
-    Success returns the updated asset.
-    """
     raise ApiError(
         "not_implemented",
         "Favorites need a descriptive_metadata writer before they can persist.",
@@ -341,30 +414,55 @@ async def set_favorite(asset_id: str, payload: FavoriteRequest) -> LibraryAssetD
     )
 
 
-@router.get("/queue", response_model=QueueState, responses=_PENDING_PLAYBACK)
-async def get_queue() -> QueueState:
-    raise _pending("Queue state")
+@router.get("/queue", response_model=QueueState)
+async def get_queue(request: Request) -> QueueState:
+    return _queue_state_model(await _playback(request).queue_snapshot())
 
 
-@router.post("/queue", response_model=QueueState, responses=_PENDING_PLAYBACK)
-async def replace_queue(payload: QueueReplaceRequest) -> QueueState:
-    """Fill the queue from an intent or explicit assets, replacing or appending."""
-    raise _pending("Queue mutation")
+@router.post("/queue", response_model=QueueState)
+async def replace_queue(request: Request, payload: QueueReplaceRequest) -> QueueState:
+    try:
+        snapshot = await _playback(request).set_queue(
+            _queue_specs(payload, _settings(request)),
+            mode=payload.mode,
+            command_id=str(payload.command_id) if payload.command_id else None,
+        )
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+    return _queue_state_model(snapshot)
 
 
-@router.post("/queue/reorder", response_model=QueueState, responses=_PENDING_PLAYBACK)
-async def reorder_queue(payload: QueueReorderRequest) -> QueueState:
-    raise _pending("Queue reordering")
+@router.post("/queue/reorder", response_model=QueueState)
+async def reorder_queue(request: Request, payload: QueueReorderRequest) -> QueueState:
+    try:
+        snapshot = await _playback(request).reorder(
+            payload.asset_id,
+            payload.to_index,
+            command_id=str(payload.command_id) if payload.command_id else None,
+        )
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+    return _queue_state_model(snapshot)
 
 
-@router.post("/queue/remove", response_model=QueueState, responses=_PENDING_PLAYBACK)
-async def remove_from_queue(payload: QueueRemoveRequest) -> QueueState:
-    raise _pending("Queue removal")
+@router.post("/queue/remove", response_model=QueueState)
+async def remove_from_queue(request: Request, payload: QueueRemoveRequest) -> QueueState:
+    try:
+        snapshot = await _playback(request).remove(
+            payload.asset_id,
+            command_id=str(payload.command_id) if payload.command_id else None,
+        )
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+    return _queue_state_model(snapshot)
 
 
-@router.post("/transport/{action}", response_model=PlaybackState, responses=_PENDING_PLAYBACK)
-async def transport(action: str, payload: TransportCommand | None = None) -> PlaybackState:
-    """Apply a transport action and return the resulting authoritative state."""
+@router.post("/transport/{action}", response_model=PlaybackState)
+async def transport(
+    request: Request,
+    action: str,
+    payload: TransportCommand | None = None,
+) -> PlaybackState:
     if action not in TRANSPORT_ACTIONS:
         raise ApiError(
             "transport_conflict",
@@ -372,24 +470,105 @@ async def transport(action: str, payload: TransportCommand | None = None) -> Pla
             status_code=422,
             detail={"allowed": list(TRANSPORT_ACTIONS)},
         )
-    raise _pending(f"Transport '{action}'")
+    try:
+        snapshot = await _playback(request).transport(
+            action,  # type: ignore[arg-type]
+            command_id=(str(payload.command_id) if payload and payload.command_id else None),
+        )
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+    return _playback_state_model(snapshot)
+
+
+async def _snapshot_envelope(connection: Connection, *, seq: int) -> SnapshotEnvelope:
+    playback_snapshot, queue_snapshot = await _playback(connection).snapshots()
+    return SnapshotEnvelope(
+        seq=seq,
+        ts=_playback(connection).clock.utcnow().isoformat(),
+        payload=SnapshotPayload(
+            status=await _system_status(connection),
+            playback=_playback_state_model(playback_snapshot),
+            queue=_queue_state_model(queue_snapshot),
+        ),
+    )
+
+
+def _event_envelope(event: Any) -> Any:
+    common = {"seq": event.seq, "ts": event.ts}
+    if event.type == "state.playback":
+        return PlaybackEnvelope(
+            **common,
+            payload=PlaybackState.model_validate(event.payload),
+        )
+    if event.type == "state.queue":
+        return QueueEnvelope(**common, payload=QueueState.model_validate(event.payload))
+    if event.type == "state.devices":
+        return DevicesEnvelope(**common, payload=OutputsState.model_validate(event.payload))
+    if event.type == "state.library":
+        return LibraryEnvelope(**common, payload=LibraryCounts.model_validate(event.payload))
+    if event.type == "concierge.result":
+        return ConciergeEnvelope(
+            **common,
+            payload=ConciergeResponse.model_validate(event.payload),
+        )
+    if event.type == "error":
+        return ErrorEnvelope(**common, payload=ErrorBody.model_validate(event.payload))
+    return ErrorEnvelope(
+        **common,
+        payload=ErrorBody(
+            code="internal_error",
+            message=f"Unknown server event type: {event.type}",
+        ),
+    )
 
 
 @router.websocket("/ws")
 async def state_socket(websocket: WebSocket) -> None:
-    """Accept, report that state streaming is pending, and close.
-
-    Connecting succeeds so the UI can exercise its reconnect path now, against
-    the same typed envelope snapshots and deltas will use.
-    """
+    """Push authoritative snapshots and state deltas; clients never own playback."""
     await websocket.accept()
-    envelope = ErrorEnvelope(
-        seq=0,
-        ts=datetime.now(UTC).isoformat(),
-        payload=ErrorBody(
-            code="not_implemented",
-            message="State streaming arrives with the playback state machine (issue #14)",
-        ),
-    )
-    await websocket.send_json(envelope.model_dump())
-    await websocket.close(code=1011)
+    playback = _playback(websocket)
+    event_queue = playback.events.subscribe()
+    receive_task: asyncio.Task[Any] | None = None
+    event_task: asyncio.Task[Any] | None = None
+    try:
+        snapshot = await _snapshot_envelope(websocket, seq=playback.events.seq)
+        await websocket.send_json(snapshot.model_dump(mode="json"))
+        receive_task = asyncio.create_task(websocket.receive_json())
+        event_task = asyncio.create_task(event_queue.get())
+
+        while True:
+            done, _ = await asyncio.wait(
+                {receive_task, event_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if event_task in done:
+                event = event_task.result()
+                await websocket.send_json(_event_envelope(event).model_dump(mode="json"))
+                event_task = asyncio.create_task(event_queue.get())
+
+            if receive_task in done:
+                message = receive_task.result()
+                message_type = message.get("type") if isinstance(message, dict) else None
+                if message_type == "state.request_snapshot":
+                    snapshot = await _snapshot_envelope(websocket, seq=playback.events.seq)
+                    await websocket.send_json(snapshot.model_dump(mode="json"))
+                elif message_type == "ping":
+                    pass
+                else:
+                    envelope = ErrorEnvelope(
+                        seq=playback.events.seq,
+                        ts=playback.clock.utcnow().isoformat(),
+                        payload=ErrorBody(
+                            code="request_invalid",
+                            message="Unsupported WebSocket client message.",
+                        ),
+                    )
+                    await websocket.send_json(envelope.model_dump(mode="json"))
+                receive_task = asyncio.create_task(websocket.receive_json())
+    except WebSocketDisconnect:
+        pass
+    finally:
+        playback.events.unsubscribe(event_queue)
+        for task in (receive_task, event_task):
+            if task is not None and not task.done():
+                task.cancel()
