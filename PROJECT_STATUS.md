@@ -4,7 +4,7 @@
 
 **Software foundation / hardware acquisition and validation**
 
-OpenOrchestrion now has a detailed design baseline plus the first executable MIDI tooling. The first end-to-end physical build is still pending acquisition of the target sound engines.
+OpenOrchestrion now has a detailed design baseline plus executable MIDI generation, analysis, ingestion, catalog, and deterministic Smart Station selection. The first end-to-end physical build is still pending acquisition of the target sound engines.
 
 ## Current hardware targets
 
@@ -56,7 +56,7 @@ Implemented analysis includes:
 
 ### Durable MIDI importer
 
-The importer now provides:
+The importer provides:
 
 - recursive file discovery
 - SHA-256 content-addressed storage
@@ -65,7 +65,54 @@ The importer now provides:
 - durable JSON sidecars
 - strict separation of deterministic analysis, curated metadata, and future AI enrichment
 
-The searchable SQLite catalog remains the next library layer and will be rebuildable from durable sidecars rather than becoming the only copy of metadata.
+### Rebuildable SQLite catalog
+
+The catalog can now be recreated from durable sidecars at any time. It indexes:
+
+- compositions separately from individual MIDI performances
+- title/composer/artist/era
+- genres, moods, themes, tags, and instrumentation
+- performance type and quality grade
+- familiarity, energy, and favorites
+- rights/provenance
+- duration, channels, tracks, programs, note range, sustain, percussion, and peak simultaneous notes
+
+Catalog rebuilding is atomic so an invalid sidecar cannot destroy the last known-good index.
+
+### Deterministic Smart Station engine
+
+Structured `PlaybackIntent` can now produce an explainable queue without AI or attached hardware. The selector implements:
+
+- exact / partial / fallback metadata matching tiers
+- genre, mood, theme, era, instrumentation, and performance-type matching
+- composer/artist preference weighting
+- familiarity, energy, favorite, and quality scoring
+- hard include/exclude tags
+- rights and MIDI/device eligibility constraints
+- one preferred MIDI performance per composition
+- composer diversity and energy-transition penalties
+- requested-duration/overshoot consideration
+- deterministic seeded variation for reproducible tests
+- per-item score breakdown and selection reasons
+- explicit soft-preference relaxation diagnostics
+- hooks for recent asset/composition exclusions
+
+Example command:
+
+```bash
+openorchestrion-station var/library/catalog.db \
+  --theme dinner \
+  --energy low \
+  --duration-minutes 120 \
+  --seed 42
+```
+
+## Next software dependencies
+
+1. **Durable play history** — record what was actually played, calculate no-repeat windows, and provide rarely-played/last-played weighting.
+2. **AI Music Concierge** — translate natural language into/refine `PlaybackIntent` and hand it to the deterministic selector.
+3. **Playback state machine and virtual MIDI outputs** — queue, play, pause, stop, skip, panic, and hardware-neutral playback state before physical keyboards arrive.
+4. **Responsive web UI** — appliance/phone interface driven by the same API and WebSocket state.
 
 ## Decisions already made
 
@@ -80,6 +127,8 @@ The searchable SQLite catalog remains the next library layer and will be rebuild
 - AI interprets intent but does not directly emit MIDI.
 - Core playback must work without AI or Internet access.
 - Deterministic MIDI facts, human-curated metadata, and AI inference remain distinct data classes.
+- SQLite catalog data is rebuildable and is not the sole durable source of music metadata.
+- Smart Station selection is deterministic, explainable, and independently testable from AI.
 
 ## Immediate proof-of-concept tests when hardware arrives
 
