@@ -35,12 +35,48 @@
     "deterministic_analysis": {"$ref": "midi-analysis.schema.json"},
     "descriptive_metadata": {
       "type": "object",
-      "description": "Curated or user-edited descriptive fields. Kept separate from facts extracted from MIDI bytes."
+      "description": "Curated or user-edited descriptive fields. Kept separate from facts extracted from MIDI bytes.",
+      "additionalProperties": false,
+      "properties": {
+        "composition_id": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1},
+        "composition_title": {"type": "string", "minLength": 1},
+        "composer": {"type": "string", "minLength": 1},
+        "artist": {"type": "string", "minLength": 1},
+        "year_composed": {"type": "integer", "minimum": 1, "maximum": 9999},
+        "era": {"type": "string", "minLength": 1},
+        "genres": {"$ref": "#/$defs/stringList"},
+        "moods": {"$ref": "#/$defs/stringList"},
+        "themes": {"$ref": "#/$defs/stringList"},
+        "tags": {"$ref": "#/$defs/stringList"},
+        "instrumentation": {"$ref": "#/$defs/stringList"},
+        "performance_type": {
+          "type": "string",
+          "enum": ["SOLO_PIANO", "MULTI_INSTRUMENT", "PIANO_DUET", "TWO_PIANO", "DUELING_PIANO", "DISTRIBUTED"]
+        },
+        "quality_grade": {"type": "string", "enum": ["A", "B", "C", "D"]},
+        "familiarity": {"$ref": "#/$defs/level"},
+        "energy": {"$ref": "#/$defs/level"},
+        "favorite": {"type": "boolean"}
+      }
     },
     "ai_enrichment": {
       "type": "array",
       "description": "Future AI-inferred metadata entries with explicit model/provenance information.",
       "items": {"type": "object"}
+    }
+  },
+  "$defs": {
+    "stringList": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "level": {
+      "oneOf": [
+        {"type": "string", "enum": ["low", "medium", "high"]},
+        {"type": "integer", "minimum": 1, "maximum": 5}
+      ]
     }
   }
 }
