@@ -8,7 +8,7 @@ configuration and wiring only.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
@@ -35,6 +35,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        # A service restart is a real playback interruption. Finish the durable
+        # history attempt before closing ports so it cannot remain "started"
+        # forever after an orderly shutdown.
+        with suppress(Exception):
+            snapshot = await app.state.playback.playback_snapshot()
+            if snapshot.state in {"playing", "paused"}:
+                await app.state.playback.transport("stop")
         await app.state.playback.close()
 
 
