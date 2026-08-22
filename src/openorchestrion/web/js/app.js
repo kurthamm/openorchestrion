@@ -6,8 +6,8 @@
  * timing all live in the backend (docs/api-contract.md §1).
  */
 
-import { api, ApiError } from './api.js';
-import { h, render } from './dom.js';
+import { api, ApiError, commandId } from './api.js';
+import { h } from './dom.js';
 import { anchor, createTicker } from './position.js';
 import { StateSocket } from './socket.js';
 import { ensureSessionId, getState, setState, subscribe } from './store.js';
@@ -47,14 +47,19 @@ function toast(message, tone = 'info') {
   setTimeout(() => node.remove(), 5000);
 }
 
-/** Playback endpoints answer 501 until issue #14; treat that as a state. */
+/** Retain graceful behavior when controlling an older pre-#14 backend. */
 function handlePlaybackCall(error, feature) {
   if (error instanceof ApiError && error.pending) {
     setState({ playbackAvailable: false, queueAvailable: false });
-    toast(`${feature} arrives with the playback engine.`, 'warn');
+    toast(`${feature} is not available on this backend.`, 'warn');
     return true;
   }
   return false;
+}
+
+function pendingConfirmed(playback) {
+  const pendingId = getState().pendingCommandId;
+  return Boolean(pendingId && playback?.command_id === pendingId);
 }
 
 const handlers = {
@@ -71,8 +76,6 @@ const handlers = {
       const result = await api.ask({
         prompt,
         sessionId: ensureSessionId(),
-        // The session remembers the conversation server-side, so refinements
-        // continue without the client resending its own intent.
       });
       setState({ askBusy: false, askResult: result, lastIntent: result.intent });
     } catch (error) {
@@ -118,16 +121,26 @@ const handlers = {
   },
 
   async transport(action) {
-    // Optimistic: mark pending now so the touchscreen responds immediately,
-    // then reconcile against whatever the server reports (contract D4).
-    setState({ pendingTransport: action });
+    // Keep the id visible to both the REST call and the WebSocket path. If the
+    // HTTP response is lost but the matching state delta arrives, the UI can
+    // still reconcile the optimistic command instead of leaving it pending.
+    const id = commandId();
+    setState({ pendingTransport: action, pendingCommandId: id });
     try {
-      const playback = await api.transport(action);
+      const playback = await api.transport(action, id);
       positionAnchor = anchor(playback.position);
-      setState({ playback, pendingTransport: null, playbackAvailable: true });
+      setState({
+        playback,
+        pendingTransport: null,
+        pendingCommandId: null,
+        playbackAvailable: true,
+      });
       syncTicker();
     } catch (error) {
-      setState({ pendingTransport: null });
+      // A matching WebSocket delta may already have confirmed the command even
+      // if fetch lost its response. Do not turn that success back into an error.
+      if (getState().pendingCommandId !== id) return;
+      setState({ pendingTransport: null, pendingCommandId: null });
       if (handlePlaybackCall(error, 'Transport control')) return;
       toast(error.message, 'bad');
     }
@@ -152,7 +165,8 @@ const handlers = {
   },
 
   async toggleFavorite(assetId) {
-    const favorites = new Set(getState().localFavorites);
+    const previous = new Set(getState().localFavorites);
+    const favorites = new Set(previous);
     const next = !favorites.has(assetId);
     if (next) favorites.add(assetId);
     else favorites.delete(assetId);
@@ -163,13 +177,13 @@ const handlers = {
       toast(next ? 'Added to favorites.' : 'Removed from favorites.');
     } catch (error) {
       if (error instanceof ApiError && error.pending) {
-        // Expected: nothing writes descriptive_metadata yet. Keep the choice
-        // visible on this device and be honest that it is not stored.
+        // Expected until the descriptive-metadata writer lands. Keep the choice
+        // visible for this browser session and be explicit about its scope.
         setState({ favoritesPersist: false });
-        toast('Saved on this device only — the appliance cannot store favorites yet.', 'warn');
+        toast('Kept in this browser session only — favorites are not persistent yet.', 'warn');
         return;
       }
-      setState({ localFavorites: getState().localFavorites });
+      setState({ localFavorites: previous });
       toast(error.message, 'bad');
     }
   },
@@ -213,7 +227,7 @@ async function loadHistory() {
 
 async function loadQueue() {
   try {
-    setState({ queue: await api.queue(), queueAvailable: true });
+    setState({ queue: await api.queue(), queueAvailable: true, playbackAvailable: true });
   } catch (error) {
     if (error instanceof ApiError && error.pending) {
       setState({ queueAvailable: false, playbackAvailable: false });
@@ -234,21 +248,29 @@ function applyEnvelope(envelope) {
     case 'state.snapshot': {
       const payload = envelope.payload || {};
       positionAnchor = anchor(payload.playback?.position);
+      const confirmed = pendingConfirmed(payload.playback);
       setState({
         status: payload.status ?? getState().status,
         playback: payload.playback ?? getState().playback,
         queue: payload.queue ?? getState().queue,
         playbackAvailable: true,
         queueAvailable: true,
+        ...(confirmed ? { pendingTransport: null, pendingCommandId: null } : {}),
       });
       syncTicker();
       break;
     }
-    case 'state.playback':
+    case 'state.playback': {
       positionAnchor = anchor(envelope.payload?.position);
-      setState({ playback: envelope.payload, playbackAvailable: true });
+      const confirmed = pendingConfirmed(envelope.payload);
+      setState({
+        playback: envelope.payload,
+        playbackAvailable: true,
+        ...(confirmed ? { pendingTransport: null, pendingCommandId: null } : {}),
+      });
       syncTicker();
       break;
+    }
     case 'state.queue':
       setState({ queue: envelope.payload, queueAvailable: true });
       break;
@@ -311,8 +333,6 @@ nodes.askForm.addEventListener('submit', (event) => {
   void handlers.ask(nodes.askInput.value);
 });
 
-// Enter sends; Shift+Enter makes a new line. On a kiosk keyboard the former
-// is what people expect from a single-question surface.
 nodes.askInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault();
@@ -337,7 +357,6 @@ ensureSessionId();
 void loadStatus();
 socket.connect();
 
-// A kiosk sits idle for hours; re-check state when it comes back to the fore.
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') void loadStatus();
 });
