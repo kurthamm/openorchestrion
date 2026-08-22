@@ -143,14 +143,18 @@ Expressive piano MIDI with sustain can consume voices quickly. Full arrangements
 
 Two devices do not create a mathematically guaranteed doubled polyphony number, but split routing can substantially reduce voice stealing by distributing parts across independent synthesis engines.
 
-## Second-device strategy
+## Current two-engine acquisition strategy
 
-A second keyboard is most valuable when it provides a complementary sound engine rather than merely duplicating the first. The current conceptual pairing is:
+A second keyboard is most valuable when it provides a complementary sound engine rather than merely duplicating the first. The current target pairing is:
 
-- Casio CT-X700: AiX engine, GM/multitimbral role.
-- Yamaha PSR-EW310/EW300/E363: complementary Yamaha AWM sound set.
+- **Casio CTK-6200**: primary/general ensemble engine, broad Casio sound set, nominal 48-note polyphony, documented inbound MIDI.
+- **Yamaha PSR-EW300**: complementary Yamaha engine, nominal 48-note polyphony, documented two-way USB MIDI, GM/XGlite-family sound set.
 
-A routing profile can choose the preferred engine by instrument family.
+This pairing deliberately combines two manufacturers. The goal is to compare and route instrument families to whichever engine sounds best while also gaining independent synthesis capacity for two-piano and split-ensemble playback.
+
+The earlier CT-X700 + Yamaha concept remains architecturally valid, but CTK-6200 + PSR-EW300 is the current procurement target.
+
+A routing profile can choose the preferred engine by instrument family after physical listening/validation establishes useful preferences.
 
 ## Procurement rule
 
