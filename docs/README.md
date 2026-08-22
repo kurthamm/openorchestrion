@@ -22,6 +22,7 @@ This directory contains the living design and implementation specification.
 - [Music source strategy](music-sources.md)
 - [Two-piano and dueling-piano mode](two-piano-and-dueling.md)
 - [Test strategy](test-strategy.md)
+- [MIDI conformance quickstart](midi-conformance-quickstart.md)
 
 ## Hardware
 
