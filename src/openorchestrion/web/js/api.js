@@ -17,7 +17,7 @@ export class ApiError extends Error {
     this.detail = envelope.detail || null;
   }
 
-  /** True when the backend understands the request but hasn't built it yet. */
+  /** True when an older backend understands the request but has not built it yet. */
   get pending() {
     return this.code === 'not_implemented';
   }
@@ -34,7 +34,6 @@ async function request(path, { method = 'GET', body, signal } = {}) {
     });
   } catch (cause) {
     if (cause.name === 'AbortError') throw cause;
-    // Offline, or the appliance went away mid-request.
     throw new ApiError(0, { error: { code: 'unreachable', message: 'Cannot reach OpenOrchestrion.' } });
   }
 
@@ -64,10 +63,11 @@ function query(params) {
   return encoded ? `?${encoded}` : '';
 }
 
-/** Commands are idempotent by this id, so a retry cannot double-skip a track. */
+/** Commands are idempotent by this id, so a retry cannot double-apply a mutation. */
 export function commandId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  // Older engines: a v4-shaped fallback is enough for request correlation.
+  // randomUUID is secure-context-only in some browsers; getRandomValues remains
+  // available on the local HTTP appliance and gives us a valid v4-shaped UUID.
   return '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, (c) =>
     (c ^ (globalThis.crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))).toString(16),
   );
@@ -77,13 +77,13 @@ export const api = {
   status: () => request('/api/status'),
   devices: () => request('/api/devices'),
 
-  ask: ({ prompt, sessionId, currentIntent, signal }) =>
+  ask: ({ prompt, sessionId, currentIntent, signal, id = commandId() }) =>
     request('/api/concierge/ask', {
       method: 'POST',
       signal,
       body: {
         prompt,
-        command_id: commandId(),
+        command_id: id,
         session_id: sessionId ?? null,
         current_intent: currentIntent ?? null,
       },
@@ -99,16 +99,23 @@ export const api = {
   libraryStats: () => request('/api/library/stats'),
   asset: (assetId) => request(`/api/library/assets/${encodeURIComponent(assetId)}`),
 
-  setFavorite: (assetId, favorite) =>
+  setFavorite: (assetId, favorite, id = commandId()) =>
     request(`/api/library/assets/${encodeURIComponent(assetId)}/favorite`, {
       method: 'POST',
-      body: { favorite, command_id: commandId() },
+      body: { favorite, command_id: id },
     }),
 
   history: ({ limit = 50 } = {}) => request(`/api/history/recent${query({ limit })}`),
 
   queue: () => request('/api/queue'),
-  replaceQueue: ({ intent, assetIds = [], mode = 'replace', seed = 0, maxTracks = 25 }) =>
+  replaceQueue: ({
+    intent,
+    assetIds = [],
+    mode = 'replace',
+    seed = 0,
+    maxTracks = 25,
+    id = commandId(),
+  }) =>
     request('/api/queue', {
       method: 'POST',
       body: {
@@ -117,23 +124,23 @@ export const api = {
         asset_ids: assetIds,
         seed,
         max_tracks: maxTracks,
-        command_id: commandId(),
+        command_id: id,
       },
     }),
-  reorderQueue: (assetId, toIndex) =>
+  reorderQueue: (assetId, toIndex, id = commandId()) =>
     request('/api/queue/reorder', {
       method: 'POST',
-      body: { asset_id: assetId, to_index: toIndex, command_id: commandId() },
+      body: { asset_id: assetId, to_index: toIndex, command_id: id },
     }),
-  removeFromQueue: (assetId) =>
+  removeFromQueue: (assetId, id = commandId()) =>
     request('/api/queue/remove', {
       method: 'POST',
-      body: { asset_id: assetId, command_id: commandId() },
+      body: { asset_id: assetId, command_id: id },
     }),
 
-  transport: (action) =>
+  transport: (action, id = commandId()) =>
     request(`/api/transport/${encodeURIComponent(action)}`, {
       method: 'POST',
-      body: { command_id: commandId() },
+      body: { command_id: id },
     }),
 };
