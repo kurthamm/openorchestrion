@@ -2,22 +2,16 @@
  * WebSocket state synchronisation.
  *
  * Implements the client half of docs/api-contract.md §5:
- *  - every message carries a monotonically increasing `seq`;
- *  - a gap means resync, never patch — the client asks for a fresh snapshot
- *    and replaces its state wholesale;
+ *  - every server message carries a monotonically increasing `seq`;
+ *  - a gap means resync, never patch;
  *  - a snapshot arrives on connect, deltas after that.
  *
- * Until issue #14 lands the server accepts the connection and immediately
- * reports `not_implemented`. That is treated as a normal, renderable state, not
- * as a connection failure, so the reconnect path is exercised now rather than
- * written blind later.
+ * The `not_implemented` branch remains only for compatibility with an older
+ * backend. Current #14 servers send a real snapshot immediately.
  */
 
 const MIN_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30000;
-// The server currently answers `not_implemented` and closes. That is a settled
-// state, not a fault, so it gets a slow retry — enough to pick up the playback
-// engine once it ships, without hammering the appliance in the meantime.
 const PENDING_RETRY_MS = 60000;
 
 export class StateSocket {
@@ -62,46 +56,48 @@ export class StateSocket {
       try {
         envelope = JSON.parse(event.data);
       } catch {
-        return; // unparseable frame: ignore rather than tear down the socket
+        return;
       }
       this.handle(envelope);
     });
 
     socket.addEventListener('close', () => {
       if (this.closed) return;
-      // A close that follows `not_implemented` is the server saying "not yet",
-      // not a lost connection. Reporting it as offline would flap the health
-      // indicator and hide the real reason from the user.
+      // A legacy not_implemented close is "not yet", not a network outage.
       this.onConnectionChange(this.pending ? 'pending' : 'offline');
       this.scheduleReconnect();
     });
 
-    // 'error' is always followed by 'close'; reconnect is handled there.
+    // 'error' is followed by 'close'; reconnect is handled there.
     socket.addEventListener('error', () => {});
   }
 
   handle(envelope) {
+    // Sequence bookkeeping applies to *all* server envelopes, including errors.
+    // Otherwise an error at seq N followed by state at N+1 looks like a gap and
+    // forces a needless snapshot request.
+    if (typeof envelope.seq === 'number') {
+      if (envelope.type === 'state.snapshot') {
+        // A snapshot is authoritative by definition and may follow a resync
+        // request after expectedSeq was deliberately cleared.
+        this.expectedSeq = envelope.seq + 1;
+      } else {
+        const expected = this.expectedSeq;
+        if (expected !== null && envelope.seq !== expected) {
+          this.requestSnapshot();
+          return;
+        }
+        this.expectedSeq = envelope.seq + 1;
+      }
+    }
+
     if (envelope.type === 'error') {
       const code = envelope.payload?.code;
       if (code === 'not_implemented') {
-        // Expected until #14. Not a fault, and not worth retrying hard.
         this.pending = true;
         this.onConnectionChange('pending', envelope.payload);
         return;
       }
-      this.onMessage(envelope);
-      return;
-    }
-
-    if (typeof envelope.seq === 'number') {
-      const expected = this.expectedSeq;
-      if (expected !== null && envelope.seq !== expected) {
-        // A gap means we missed state. Patching from here would silently
-        // diverge, so ask for the whole picture instead.
-        this.requestSnapshot();
-        if (envelope.type !== 'state.snapshot') return;
-      }
-      this.expectedSeq = envelope.seq + 1;
     }
 
     this.onMessage(envelope);
