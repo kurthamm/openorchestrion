@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#12100E">
+<title>OpenOrchestrion</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<div class="shell">
+
+  <header class="topbar">
+    <h1 class="wordmark">OpenOrchestrion</h1>
+    <div class="health" id="health" role="status" aria-live="polite"></div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <button class="tab" data-view="listen" aria-current="page">Listen</button>
+    <button class="tab" data-view="browse">Browse</button>
+    <button class="tab" data-view="queue">Queue</button>
+    <button class="tab" data-view="history">History</button>
+  </nav>
+
+  <main id="main" class="main" tabindex="-1">
+
+    <section class="view" data-view="listen">
+      <form class="ask" id="ask-form">
+        <label class="ask-label" for="ask-input">What do you want to hear?</label>
+        <textarea id="ask-input" class="ask-input" rows="2" enterkeyhint="go"
+          placeholder="Popular Christmas music while we eat"
+          autocomplete="off" autocapitalize="sentences"></textarea>
+        <div class="ask-actions">
+          <button class="btn btn-primary" type="submit" id="ask-submit">Make it happen</button>
+          <button class="btn" type="button" id="surprise">Surprise me</button>
+        </div>
+      </form>
+
+      <div class="chips" id="stations" role="group" aria-label="Station shortcuts"></div>
+
+      <div id="ask-result" class="ask-result" aria-live="polite"></div>
+    </section>
+
+    <section class="view" data-view="browse" hidden>
+      <form class="search" id="search-form" role="search">
+        <input id="search-input" class="search-input" type="search"
+          placeholder="Search titles, composers, performers" autocomplete="off"
+          aria-label="Search the library">
+        <button class="btn" type="submit">Search</button>
+      </form>
+      <div class="chips" id="search-facets" role="group" aria-label="Filters"></div>
+      <div id="search-results" class="results" aria-live="polite"></div>
+    </section>
+
+    <section class="view" data-view="queue" hidden>
+      <div id="queue-panel" class="panel-body"></div>
+    </section>
+
+    <section class="view" data-view="history" hidden>
+      <div id="history-panel" class="panel-body"></div>
+    </section>
+
+  </main>
+
+  <footer class="nowplaying" id="nowplaying" aria-label="Now playing"></footer>
+
+</div>
+
+<div class="toasts" id="toasts" aria-live="assertive" aria-atomic="false"></div>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>

@@ -17,6 +17,7 @@ from .api.errors import install_error_handlers
 from .api.routes import router
 from .api.sessions import ConciergeSessions
 from .api.settings import Settings
+from .api.web import install_web_app
 
 
 @asynccontextmanager
@@ -55,6 +56,8 @@ def create_app(
     )
     install_error_handlers(application)
     application.include_router(router)
+    # Mounted last: the catch-all static mount at "/" must not shadow /api.
+    install_web_app(application)
     if settings is not None:
         application.state.settings = settings
     if concierge is not None:
