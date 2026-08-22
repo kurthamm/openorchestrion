@@ -1,8 +1,8 @@
 """Static serving for the responsive web application.
 
-Per ADR-0009 the UI ships as source: these files are served exactly as they
+Per ADR-0010 the UI ships as source: these files are served exactly as they
 exist in the repository, with no build step. Per ADR-0005 the same application
-serves the kiosk, phone, tablet, and desktop — the differences are layout, not
+serves the kiosk, phone, tablet, and desktop; the differences are layout, not
 a second front end.
 """
 
@@ -44,8 +44,8 @@ class _AppShell(StaticFiles):
 def install_web_app(app: FastAPI) -> bool:
     """Mount the web application at ``/`` if its assets are present.
 
-    Returns False when the directory is missing so an API-only deployment — or
-    a test that only exercises JSON routes — still starts cleanly.
+    Returns False when the directory is missing so an API-only deployment, or a
+    test that only exercises JSON routes, still starts cleanly.
     """
     if not WEB_ROOT.is_dir():
         return False
