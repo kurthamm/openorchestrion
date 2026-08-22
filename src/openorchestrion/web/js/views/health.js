@@ -13,7 +13,7 @@ const CONNECTION_LABEL = {
   connecting: ['warn', 'Connecting'],
   live: ['ok', 'Live'],
   offline: ['bad', 'Reconnecting'],
-  pending: ['warn', 'Playback engine not built yet'],
+  pending: ['warn', 'Playback unavailable'],
 };
 
 function pill(tone, label, title) {
@@ -56,8 +56,6 @@ export function renderHealth(node, state) {
     if (!library.indexed) {
       parts.push(pill('bad', 'No library', 'Import MIDI files, then rebuild the catalog.'));
     } else if (!library.compositions) {
-      // The catalog is built but nothing is tagged, so browse and stations
-      // will look empty even though files exist. Say so plainly.
       parts.push(
         pill('warn', `${library.assets} untitled`, 'Files are indexed but have no descriptive metadata yet.'),
       );
@@ -76,7 +74,7 @@ function connectionTitle(connection) {
     case 'offline':
       return 'Lost contact with the appliance. Retrying.';
     case 'pending':
-      return 'The appliance is reachable, but the playback engine (issue #14) is not implemented yet.';
+      return 'This backend reported that live playback state is not available.';
     default:
       return 'Contacting the appliance.';
   }
