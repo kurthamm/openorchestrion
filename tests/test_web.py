@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ from openorchestrion.api.web import WEB_ROOT
 from openorchestrion.app import create_app
 
 JS_FILES = sorted(WEB_ROOT.glob("js/**/*.js"))
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
@@ -22,7 +24,6 @@ def test_app_shell_is_served(client: TestClient) -> None:
     response = client.get("/")
     assert response.status_code == 200
     assert "OpenOrchestrion" in response.text
-    # A kiosk left running for weeks must not pin a stale shell.
     assert response.headers["cache-control"] == "no-store"
 
 
@@ -55,7 +56,7 @@ def test_api_responses_are_not_given_the_web_csp(client: TestClient) -> None:
 
 @pytest.mark.parametrize("path", [p for p in JS_FILES], ids=lambda p: p.name)
 def test_no_external_resources_referenced(path: Path) -> None:
-    """Nothing may be fetched from another origin — the Pi may have no network."""
+    """Nothing may be fetched from another origin; the Pi may have no Internet."""
     source = path.read_text(encoding="utf-8")
     assert "http://" not in source
     assert not re.search(r"https://(?!json-schema|openorchestrion)", source)
@@ -74,12 +75,23 @@ def test_stylesheet_uses_system_fonts_only() -> None:
     assert "system-ui" in css
 
 
-def test_no_innerhtml_assignment_anywhere() -> None:
-    """Library metadata is user-supplied; it is rendered as text, never markup.
+def test_package_data_includes_shell_and_nested_modules() -> None:
+    """Editable installs can hide bad package-data globs; wheels cannot."""
+    config = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    patterns = set(config["tool"]["setuptools"]["package-data"]["openorchestrion"])
+    required = {
+        "web/*.html",
+        "web/*.css",
+        "web/*.svg",
+        "web/*.webmanifest",
+        "web/js/*.js",
+        "web/js/views/*.js",
+    }
+    assert required.issubset(patterns)
 
-    Matches assignment rather than the identifier, so a comment explaining the
-    rule does not trip the rule.
-    """
+
+def test_no_innerhtml_assignment_anywhere() -> None:
+    """Library metadata is user-supplied; it is rendered as text, never markup."""
     unsafe = re.compile(r"(innerHTML|outerHTML|insertAdjacentHTML)\s*(=[^=]|\()")
     for path in JS_FILES:
         found = unsafe.search(path.read_text(encoding="utf-8"))
@@ -102,11 +114,7 @@ def test_every_module_is_reachable_from_the_entry_point() -> None:
 
 
 def test_hidden_views_are_actually_hidden() -> None:
-    """`.view {display:flex}` outranks the UA `[hidden]` rule.
-
-    Without an explicit override every section renders at once — which it did,
-    until a screenshot caught the Browse controls sitting under Listen.
-    """
+    """`.view {display:flex}` outranks the UA `[hidden]` rule."""
     css = (WEB_ROOT / "app.css").read_text(encoding="utf-8")
     assert re.search(r"\.view\[hidden\]\s*\{[^}]*display:\s*none", css)
 
@@ -115,7 +123,6 @@ def test_position_module_does_not_trust_the_server_clock() -> None:
     """Contract D1: anchoring on server_time would break on clock skew."""
     source = (WEB_ROOT / "js" / "position.js").read_text(encoding="utf-8")
     assert "performance.now()" in source
-    # The field may be discussed in comments, but never read as a value.
     assert "position.server_time" not in source
     assert "Date.parse(position" not in source
 
@@ -127,11 +134,26 @@ def test_socket_resyncs_on_a_sequence_gap() -> None:
     assert "state.request_snapshot" in source
 
 
+def test_socket_counts_error_envelopes_in_sequence() -> None:
+    """An error at seq N must not make the next state at N+1 look like a gap."""
+    source = (WEB_ROOT / "js" / "socket.js").read_text(encoding="utf-8")
+    assert source.index("typeof envelope.seq") < source.index("envelope.type === 'error'")
+
+
 def test_transport_commands_carry_an_idempotency_id() -> None:
     """Contract D4: a retry after a dropped connection must not double-skip."""
     source = (WEB_ROOT / "js" / "api.js").read_text(encoding="utf-8")
     assert "commandId()" in source
     assert "randomUUID" in source
+    assert "transport: (action, id = commandId())" in source
+
+
+def test_transport_can_reconcile_from_websocket_confirmation() -> None:
+    """The same command id must be visible to REST and WebSocket state."""
+    source = (WEB_ROOT / "js" / "app.js").read_text(encoding="utf-8")
+    assert "pendingCommandId" in source
+    assert "api.transport(action, id)" in source
+    assert "playback?.command_id === pendingId" in source
 
 
 def test_correlation_ids_stay_out_of_the_intent() -> None:
