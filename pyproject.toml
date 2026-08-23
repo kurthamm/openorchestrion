@@ -40,6 +40,16 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+openorchestrion = [
+  "web/*.html",
+  "web/*.css",
+  "web/*.svg",
+  "web/*.webmanifest",
+  "web/js/*.js",
+  "web/js/views/*.js",
+]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 

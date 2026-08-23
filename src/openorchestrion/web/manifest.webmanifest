@@ -1,0 +1,14 @@
+{
+  "name": "OpenOrchestrion",
+  "short_name": "Orchestrion",
+  "description": "Ask for music and hear it. Networked MIDI music appliance.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#131110",
+  "theme_color": "#131110",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
