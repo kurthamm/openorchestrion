@@ -1,0 +1,28 @@
+[Unit]
+Description=OpenOrchestrion MIDI appliance
+Documentation=https://github.com/kurthamm/openorchestrion
+After=local-fs.target network.target sound.target
+Wants=sound.target
+
+[Service]
+Type=simple
+User=openorchestrion
+Group=openorchestrion
+EnvironmentFile=-/etc/openorchestrion/openorchestrion.env
+WorkingDirectory=/var/lib/openorchestrion
+ExecStart=/opt/openorchestrion/venv/bin/openorchestrion-serve
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=20
+KillSignal=SIGTERM
+UMask=0027
+StateDirectory=openorchestrion
+StateDirectoryMode=0750
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/openorchestrion
+
+[Install]
+WantedBy=multi-user.target

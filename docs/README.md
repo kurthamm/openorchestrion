@@ -8,6 +8,7 @@ This directory contains the living design and implementation specification.
 - [Architecture](architecture.md) — major components and boundaries.
 - [Requirements](requirements.md) — stable FR/NFR IDs and acceptance tests.
 - [Reference build](reference-build.md) — Pi 5 4 GB, 7-inch appliance display, headless alternative.
+- [Raspberry Pi appliance installation](appliance-install.md) — boot-to-service systemd packaging, kiosk/headless install, updates, logs and recovery.
 - [Roadmap](../ROADMAP.md) — staged implementation plan.
 
 ## User experience and intelligence
@@ -41,6 +42,7 @@ This directory contains the living design and implementation specification.
 - [Hardware selection](hardware-selection.md)
 - [Supported/candidate hardware](supported-hardware.md)
 - [Casio CT-X700 reference profile](hardware/casio-ct-x700.md)
+- [Raspberry Pi timing benchmark protocol](pi-timing-benchmark.md) — reproducible loaded scheduler/jitter/drift evidence for Issue #6.
 - Machine-readable profiles: [`../device-profiles/`](../device-profiles/)
 
 ## Multi-device and operations
