@@ -30,6 +30,10 @@ openorchestrion-tag = "openorchestrion.library.tagging:main"
 openorchestrion-reanalyze = "openorchestrion.library.repair:main"
 openorchestrion-history = "openorchestrion.history:main"
 openorchestrion-concierge = "openorchestrion.ai:main"
+openorchestrion-serve = "openorchestrion.appliance:serve_main"
+openorchestrion-kiosk = "openorchestrion.appliance:kiosk_main"
+openorchestrion-smoke = "openorchestrion.appliance:smoke_main"
+openorchestrion-deploy = "openorchestrion.appliance:deploy_main"
 
 [project.optional-dependencies]
 dev = [
@@ -50,6 +54,10 @@ openorchestrion = [
   "web/*.webmanifest",
   "web/js/*.js",
   "web/js/views/*.js",
+  "deployment/*.service",
+  "deployment/*.env",
+  "deployment/*.desktop",
+  "deployment/*.sh",
 ]
 
 [tool.pytest.ini_options]
