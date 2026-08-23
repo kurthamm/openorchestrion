@@ -22,6 +22,26 @@ def test_server_options_are_environment_driven_and_single_process_safe() -> None
     assert options.log_level == "warning"
 
 
+def test_shared_env_file_is_loaded_with_process_overrides(tmp_path: Path) -> None:
+    env_file = tmp_path / "openorchestrion.env"
+    env_file.write_text(
+        "# appliance\n"
+        "OPENORCHESTRION_LIBRARY_ROOT=/var/lib/openorchestrion/library\n"
+        "OPENORCHESTRION_PORT=8000\n"
+        "OPENORCHESTRION_LOG_LEVEL='info'\n",
+        encoding="utf-8",
+    )
+    env = appliance.load_appliance_environment(
+        {"OPENORCHESTRION_PORT": "8123"},
+        config_path=env_file,
+    )
+    assert env["OPENORCHESTRION_LIBRARY_ROOT"] == "/var/lib/openorchestrion/library"
+    assert env["OPENORCHESTRION_PORT"] == "8123"
+    assert env["OPENORCHESTRION_LOG_LEVEL"] == "info"
+    assert appliance.server_options(env).port == 8123
+    assert appliance._kiosk_url(env) == "http://127.0.0.1:8123"
+
+
 @pytest.mark.parametrize("value", ["zero", "0", "65536"])
 def test_server_port_rejects_invalid_values(value: str) -> None:
     with pytest.raises(ValueError):
