@@ -73,71 +73,107 @@ def _track_analysis(midi: MidiFile) -> list[TrackAnalysis]:
 
 
 def _voice_peak(messages: list[Any]) -> tuple[int, dict[str, int]]:
-    keyed: Counter[tuple[int, int]] = Counter()
-    sustained: Counter[tuple[int, int]] = Counter()
+    """Estimate peak simultaneous sounding notes.
+
+    A sound engine allocates at most one voice per ``(channel, note)``: striking
+    a pitch that is already sounding retriggers that voice rather than adding
+    another. Occupancy is therefore modelled as *sets* of sounding notes, which
+    makes double-counting structurally impossible — the previous counter-based
+    version inflated without bound when a pitch was repeated under a held
+    sustain pedal, and a pedal-heavy piano piece could report hundreds of voices
+    where a real instrument sounds a handful.
+
+    That figure gates device eligibility (``max_peak_simultaneous_notes``), so
+    over-counting silently excluded exactly the solo-piano repertoire this
+    project exists to play.
+
+    Two stores per channel:
+
+    * ``keyed``     — the key is physically down.
+    * ``sustained`` — the key was released while the pedal was down, so the note
+      keeps sounding until the pedal lifts.
+
+    A note is in at most one store at a time; re-striking a sustained note moves
+    it back under the key.
+    """
+    keyed: defaultdict[int, set[int]] = defaultdict(set)
+    sustained: defaultdict[int, set[int]] = defaultdict(set)
     sustain_on: defaultdict[int, bool] = defaultdict(bool)
+
     current_total = 0
-    current_by_channel: Counter[int] = Counter()
     peak_total = 0
     peak_by_channel: Counter[int] = Counter()
 
-    def release_channel(channel: int, *, all_sound: bool = False) -> None:
-        nonlocal current_total
-        for store in (keyed, sustained):
-            for key in [key for key in store if key[0] == channel]:
-                count = store.pop(key)
-                current_total -= count
-                current_by_channel[channel] -= count
-        if all_sound:
-            sustain_on[channel] = False
+    def occupancy(channel: int) -> int:
+        return len(keyed[channel]) + len(sustained[channel])
+
+    def observe(channel: int, before: int) -> None:
+        """Fold one channel's change into the running totals.
+
+        Deriving the delta from set sizes keeps the total exact no matter how
+        the sets were mutated, which is what the counter arithmetic got wrong.
+        """
+        nonlocal current_total, peak_total
+        after = occupancy(channel)
+        current_total += after - before
+        peak_total = max(peak_total, current_total)
+        peak_by_channel[channel] = max(peak_by_channel[channel], after)
 
     for message in messages:
         if message.is_meta:
             continue
+
         if message.type == "note_on" and message.velocity > 0:
-            key = (message.channel, message.note)
-            keyed[key] += 1
-            current_total += 1
-            current_by_channel[message.channel] += 1
-            peak_total = max(peak_total, current_total)
-            peak_by_channel[message.channel] = max(
-                peak_by_channel[message.channel], current_by_channel[message.channel]
-            )
+            channel = message.channel
+            before = occupancy(channel)
+            # Retrigger in place: a pitch already sounding claims no new voice,
+            # and a sustained note comes back under the key.
+            sustained[channel].discard(message.note)
+            keyed[channel].add(message.note)
+            observe(channel, before)
             continue
 
         if message.type in {"note_off", "note_on"}:
-            if message.type == "note_on" and message.velocity > 0:
+            channel = message.channel
+            if message.note not in keyed[channel]:
                 continue
-            key = (message.channel, message.note)
-            if keyed[key] > 0:
-                keyed[key] -= 1
-                if keyed[key] == 0:
-                    del keyed[key]
-                if sustain_on[message.channel]:
-                    sustained[key] += 1
-                else:
-                    current_total -= 1
-                    current_by_channel[message.channel] -= 1
+            before = occupancy(channel)
+            keyed[channel].discard(message.note)
+            if sustain_on[channel]:
+                sustained[channel].add(message.note)
+            observe(channel, before)
             continue
 
-        if message.type == "control_change":
-            channel = message.channel
-            if message.control == 64:
-                was_on = sustain_on[channel]
-                sustain_on[channel] = message.value >= 64
-                if was_on and not sustain_on[channel]:
-                    for key in [key for key in sustained if key[0] == channel]:
-                        count = sustained.pop(key)
-                        current_total -= count
-                        current_by_channel[channel] -= count
-            elif message.control in {120, 123}:
-                release_channel(channel, all_sound=message.control == 120)
-            elif message.control == 121 and sustain_on[channel]:
-                sustain_on[channel] = False
-                for key in [key for key in sustained if key[0] == channel]:
-                    count = sustained.pop(key)
-                    current_total -= count
-                    current_by_channel[channel] -= count
+        if message.type != "control_change":
+            continue
+
+        channel = message.channel
+        before = occupancy(channel)
+
+        if message.control == 64:
+            sustain_on[channel] = message.value >= 64
+            if not sustain_on[channel]:
+                sustained[channel].clear()
+        elif message.control == 120:
+            # All Sound Off: silence immediately, pedal included.
+            keyed[channel].clear()
+            sustained[channel].clear()
+            sustain_on[channel] = False
+        elif message.control == 123:
+            # All Notes Off releases the keys. Notes the pedal is holding keep
+            # sounding until it lifts, exactly as releasing every key by hand
+            # would; only treating this as instant silence would under-count.
+            if sustain_on[channel]:
+                sustained[channel].update(keyed[channel])
+            keyed[channel].clear()
+        elif message.control == 121:
+            # Reset All Controllers returns the pedal to its default (up).
+            sustain_on[channel] = False
+            sustained[channel].clear()
+        else:
+            continue
+
+        observe(channel, before)
 
     return peak_total, {
         str(_human_channel(channel)): peak_by_channel[channel]
