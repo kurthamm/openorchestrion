@@ -136,6 +136,31 @@ def test_report_counts_round_trip_to_json(collection: Path, tmp_path: Path) -> N
     assert len(payload["failed"]) == 3
 
 
+def test_explicit_missing_source_is_reported(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.mid"
+    report = import_paths([missing], tmp_path / "lib")
+    assert report.imported == ()
+    assert len(report.failed) == 1
+    assert report.failed[0].error_type == "FileNotFoundError"
+    assert report.failed[0].source == str(missing)
+    assert "does not exist" in report.failed[0].reason
+
+
+def test_explicit_unsupported_file_is_reported(tmp_path: Path) -> None:
+    wrong = tmp_path / "notes.txt"
+    wrong.write_text("not midi", encoding="utf-8")
+    report = import_paths([wrong], tmp_path / "lib")
+    assert report.imported == ()
+    assert len(report.failed) == 1
+    assert report.failed[0].error_type == "ValueError"
+    assert "unsupported MIDI extension" in report.failed[0].reason
+
+
+def test_programmatic_negative_max_bytes_is_rejected(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="max_bytes must be non-negative"):
+        import_paths([], tmp_path / "lib", max_bytes=-1)
+
+
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-m", "openorchestrion.library.importer", *args],
@@ -160,3 +185,19 @@ def test_cli_exits_zero_on_a_clean_collection(tmp_path: Path) -> None:
     result = _run_cli(str(source), "--library-root", str(tmp_path / "lib"))
     assert result.returncode == 0
     assert "skipped:" not in result.stdout
+
+
+def test_cli_missing_source_exits_non_zero(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.mid"
+    result = _run_cli(str(missing), "--library-root", str(tmp_path / "lib"))
+    assert result.returncode == 1
+    assert "path does not exist" in result.stdout
+
+
+def test_cli_rejects_negative_max_bytes(tmp_path: Path) -> None:
+    source = tmp_path / "clean"
+    source.mkdir()
+    single_note().save(source / "one.mid")
+    result = _run_cli(str(source), "--max-bytes", "-1")
+    assert result.returncode == 2
+    assert "--max-bytes must be non-negative" in result.stderr
