@@ -36,11 +36,21 @@ The first implementation reports:
 
 ## Peak simultaneous notes
 
-The analyzer tracks Note On/Off state and sustain pedal state. Notes released while sustain is down continue to count until pedal release, so the estimate is more useful for piano material than a simple count of pressed keys.
+The analyzer models what a sound engine allocates: **one voice per `(channel, note)`**. Striking a pitch that is already sounding retriggers that voice rather than claiming a second one, so the estimate cannot inflate when ordinary piano writing repeats a pitch under a held pedal.
 
-The number is intentionally named **peak simultaneous MIDI notes**, not hardware polyphony. A synthesizer may consume multiple internal oscillator/sample voices for one MIDI note, and repeated notes under sustain can be implemented differently by different engines. The metric is therefore a useful workload estimate, not a promise that a 48-note file will consume exactly 48 voices on a keyboard.
+Two stores are tracked per channel — notes whose key is down, and notes whose key was released while sustain (CC64) was held. Notes released under sustain keep counting until the pedal lifts, so the estimate is more useful for piano material than a simple count of pressed keys. Channel-mode controllers are honoured per channel: All Sound Off (CC120) silences the channel and lifts its pedal; Reset All Controllers (CC121) returns the pedal to its default of up; All Notes Off (CC123) releases the keys but leaves pedal-held notes sounding, exactly as lifting every finger would.
+
+The number is intentionally named **peak simultaneous MIDI notes**, not hardware polyphony. A synthesizer may consume multiple internal oscillator/sample voices for one MIDI note, and voice-stealing behavior differs between engines. The metric is therefore a useful workload estimate, not a promise that a 48-note file will consume exactly 48 voices on a keyboard.
 
 The analysis emits convenience flags for peaks above 24, 32, 48, and 64 notes so the future compatibility engine can quickly identify potentially stressful material for candidate hardware.
+
+Because the figure gates device eligibility through `max_peak_simultaneous_notes`, an over-count does not merely mis-report — it silently removes music from stations. Libraries imported before an analyzer correction carry the old values, so `deterministic_analysis` is re-derived in place with:
+
+```bash
+openorchestrion-reanalyze --library-root var/library
+```
+
+The MIDI objects are immutable and content-addressed, so nothing is re-imported: only the derived block changes. Curated metadata, provenance and AI enrichment are left untouched, and the catalog is reconciled for each repaired asset. Pass a single asset ID to repair one, or `--no-reindex` to defer the catalog update to `openorchestrion-reindex`.
 
 ## General MIDI assessment
 
