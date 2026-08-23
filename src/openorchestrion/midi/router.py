@@ -54,11 +54,23 @@ class RoutingPlan:
         track_index: int | None = None,
     ) -> tuple[MidiRoute, ...]:
         matches = [route for route in self.routes if route.matches(channel, track_index)]
-        if not matches:
-            return ()
-        # A track+channel route overrides a broader channel-only/track-only route.
-        most_specific = max(route.specificity for route in matches)
-        return tuple(route for route in matches if route.specificity == most_specific)
+        if matches:
+            # A track+channel route overrides a broader channel-only/track-only route.
+            most_specific = max(route.specificity for route in matches)
+            return tuple(route for route in matches if route.specificity == most_specific)
+
+        if channel is not None and track_index is not None:
+            # SMF files sometimes place Program Change/CC state on a separate
+            # track from the notes. If no exact track route exists, fan that
+            # channel state to every track-specific part using the same channel.
+            # Note-bearing tracks are already present in the generated plan, so
+            # this fallback is normally exercised only by state-only tracks.
+            channel_routes = [
+                route for route in self.routes if route.source_channel == channel
+            ]
+            if channel_routes:
+                return tuple(channel_routes)
+        return ()
 
     def destination_for(self, channel: int) -> MidiRoute | None:
         """Backward-compatible single-route lookup used by older callers."""
