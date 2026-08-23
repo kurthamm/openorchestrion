@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -81,6 +82,15 @@ def test_deployment_files_are_exportable_from_package(tmp_path: Path) -> None:
     assert "Restart=on-failure" in service
     assert "PrivateDevices" not in service  # MIDI devices must remain visible.
 
+    discovery = by_name["openorchestrion-discovery.service"].read_text()
+    assert "Environment=OPENORCHESTRION_PORT=8000" in discovery
+    assert "EnvironmentFile=-/etc/openorchestrion/openorchestrion.env" in discovery
+    assert "avahi-publish-service" in discovery
+    assert "${OPENORCHESTRION_PORT}" in discovery
+    assert "_http._tcp" in discovery
+    assert "PartOf=openorchestrion.service" in discovery
+    assert "Requires=openorchestrion.service" not in discovery
+
     environment = by_name["openorchestrion.env"].read_text()
     assert "OPENORCHESTRION_LIBRARY_ROOT=/var/lib/openorchestrion/library" in environment
     assert "OPENORCHESTRION_VIRTUAL_MIDI=0" in environment
@@ -96,6 +106,26 @@ def test_deployment_files_are_exportable_from_package(tmp_path: Path) -> None:
     assert "systemctl stop openorchestrion.service" in text
     assert "systemctl restart openorchestrion.service" in text
     assert "rm -rf /var/lib/openorchestrion" not in text
+
+
+def test_discovery_installer_is_explicit_about_hostname_and_optional_avahi(tmp_path: Path) -> None:
+    files = {path.name: path for path in appliance.export_deployment_files(tmp_path / "deploy")}
+    installer = files["install-appliance.sh"]
+    text = installer.read_text()
+
+    syntax = subprocess.run(["sh", "-n", str(installer)], capture_output=True, text=True, check=False)
+    assert syntax.returncode == 0, syntax.stderr
+
+    assert "--hostname NAME" in text
+    assert "APPLIANCE_HOSTNAME=" in text
+    assert 'if [ -n "$APPLIANCE_HOSTNAME" ]; then' in text
+    assert 'hostnamectl set-hostname "$APPLIANCE_HOSTNAME"' in text
+    assert "never changed unless" in text
+
+    assert "command -v avahi-publish-service" in text
+    assert "openorchestrion-discovery.service" in text
+    assert "warning: Avahi discovery unavailable" in text
+    assert "systemctl restart openorchestrion.service" in text
 
 
 def test_reference_environment_uses_absolute_durable_paths(tmp_path: Path) -> None:
