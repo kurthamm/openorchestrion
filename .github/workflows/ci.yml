@@ -102,6 +102,7 @@ jobs:
           runtime=$(mktemp -d)
           /tmp/openorchestrion-wheel/bin/openorchestrion-deploy --output-dir "$runtime/deploy"
           test -f "$runtime/deploy/openorchestrion.service"
+          test -f "$runtime/deploy/openorchestrion-discovery.service"
           test -f "$runtime/deploy/openorchestrion-kiosk.desktop"
           test -x "$runtime/deploy/install-appliance.sh"
 
