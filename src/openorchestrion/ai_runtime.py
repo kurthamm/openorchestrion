@@ -48,6 +48,30 @@ def describe_intent(intent: PlaybackIntent) -> str:
     return (sentence + ".")[:500]
 
 
+class UnavailableConciergeProvider(MusicConciergeProvider):
+    """Configured hosted provider that cannot currently be used.
+
+    Keeping an explicit primary object means the existing `/api/status` contract
+    can expose a non-secret provider identity such as
+    `openai:unavailable:api_key_missing` without widening the API schema. A call
+    through this provider raises immediately, and `MusicConcierge` then uses the
+    deterministic fallback for the request.
+    """
+
+    def __init__(self, provider: str, reason_code: str, detail: str) -> None:
+        self.name = f"{provider}:unavailable:{reason_code}"
+        self.detail = detail
+
+    async def interpret(
+        self,
+        prompt: str,
+        *,
+        current_intent: PlaybackIntent | None = None,
+    ) -> PlaybackIntent:
+        del prompt, current_intent
+        raise RuntimeError(self.detail)
+
+
 class ConfiguredMusicConcierge(MusicConcierge):
     """MusicConcierge that normalizes explanation and exposes safe status metadata."""
 
@@ -87,6 +111,18 @@ class ConfiguredMusicConcierge(MusicConcierge):
         )
 
 
+def _unavailable(
+    provider: str,
+    reason_code: str,
+    detail: str,
+) -> ConfiguredMusicConcierge:
+    return ConfiguredMusicConcierge(
+        primary=UnavailableConciergeProvider(provider, reason_code, detail),
+        configured_provider=provider,
+        unavailable_reason=detail,
+    )
+
+
 def create_configured_concierge(
     settings: Settings,
     *,
@@ -103,16 +139,18 @@ def create_configured_concierge(
         )
 
     if provider != "openai":
-        return ConfiguredMusicConcierge(
-            configured_provider=provider,
-            unavailable_reason=f"unsupported_provider_{provider}_using_offline_interpreter",
+        return _unavailable(
+            provider,
+            "unsupported_provider",
+            f"unsupported_provider_{provider}_using_offline_interpreter",
         )
 
     api_key = env.get("OPENAI_API_KEY", "").strip()
     if not api_key:
-        return ConfiguredMusicConcierge(
-            configured_provider="openai",
-            unavailable_reason="openai_api_key_missing_using_offline_interpreter",
+        return _unavailable(
+            "openai",
+            "api_key_missing",
+            "openai_api_key_missing_using_offline_interpreter",
         )
 
     try:
@@ -125,9 +163,10 @@ def create_configured_concierge(
             client=openai_client,
         )
     except (ImportError, RuntimeError, ValueError) as exc:
-        return ConfiguredMusicConcierge(
-            configured_provider="openai",
-            unavailable_reason=f"openai_unavailable_{type(exc).__name__}_using_offline_interpreter",
+        return _unavailable(
+            "openai",
+            "sdk_or_configuration_error",
+            f"openai_unavailable_{type(exc).__name__}_using_offline_interpreter",
         )
 
     return ConfiguredMusicConcierge(
@@ -137,4 +176,9 @@ def create_configured_concierge(
     )
 
 
-__all__ = ["ConfiguredMusicConcierge", "create_configured_concierge", "describe_intent"]
+__all__ = [
+    "ConfiguredMusicConcierge",
+    "UnavailableConciergeProvider",
+    "create_configured_concierge",
+    "describe_intent",
+]
