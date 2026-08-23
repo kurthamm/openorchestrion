@@ -4,6 +4,7 @@ set -eu
 MODE=headless
 KIOSK_USER=
 PACKAGE_SPEC=.
+WITH_OPENAI=0
 SERVICE_USER=openorchestrion
 INSTALL_ROOT=/opt/openorchestrion
 VENV="$INSTALL_ROOT/venv"
@@ -18,10 +19,12 @@ Options:
   --package PATH_OR_SPEC   Checkout, wheel, or pip package spec (default: .)
   --mode headless|kiosk    Install backend only or backend + desktop kiosk
   --kiosk-user USER        Desktop login that should autostart the kiosk
+  --with-openai            Install optional OpenAI SDK for hosted Concierge
   -h, --help               Show this help
 
-The script is intentionally safe to re-run for updates. It preserves an existing
-/etc/openorchestrion/openorchestrion.env and all data under /var/lib/openorchestrion.
+The script is intentionally safe to re-run for updates. It preserves existing
+configuration/secrets under /etc/openorchestrion and all data under
+/var/lib/openorchestrion.
 EOF
 }
 
@@ -41,6 +44,10 @@ while [ "$#" -gt 0 ]; do
             [ "$#" -ge 2 ] || { echo "--kiosk-user needs a value" >&2; exit 2; }
             KIOSK_USER=$2
             shift 2
+            ;;
+        --with-openai)
+            WITH_OPENAI=1
+            shift
             ;;
         -h|--help)
             usage
@@ -98,6 +105,9 @@ if [ ! -x "$VENV/bin/python" ]; then
 fi
 "$VENV/bin/python" -m pip install --upgrade pip
 "$VENV/bin/python" -m pip install --upgrade "$PACKAGE_SPEC"
+if [ "$WITH_OPENAI" -eq 1 ]; then
+    "$VENV/bin/python" -m pip install --upgrade "openai>=2.0"
+fi
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT INT TERM
@@ -106,13 +116,23 @@ trap 'rm -rf "$TMP"' EXIT INT TERM
 install -m 0644 "$TMP/openorchestrion.service" /etc/systemd/system/openorchestrion.service
 if [ ! -f "$CONFIG_DIR/openorchestrion.env" ]; then
     # This reference env file contains paths/network/runtime flags only. It is
-    # intentionally readable by the desktop kiosk and smoke command. Do not put
-    # provider API keys or other secrets here.
+    # intentionally readable by the desktop kiosk and smoke command.
     install -m 0644 -o root -g root \
         "$TMP/openorchestrion.env" "$CONFIG_DIR/openorchestrion.env"
 else
     echo "preserving existing $CONFIG_DIR/openorchestrion.env"
     chmod 0644 "$CONFIG_DIR/openorchestrion.env"
+fi
+
+# Hosted-provider credentials are service-only. The installer never asks for or
+# prints an API key; the operator edits this file explicitly after installation.
+SECRETS="$CONFIG_DIR/openorchestrion.secrets.env"
+if [ ! -f "$SECRETS" ]; then
+    install -m 0640 -o root -g "$SERVICE_USER" /dev/null "$SECRETS"
+else
+    echo "preserving existing $SECRETS"
+    chown root:"$SERVICE_USER" "$SECRETS"
+    chmod 0640 "$SECRETS"
 fi
 
 if [ "$MODE" = kiosk ]; then
@@ -142,9 +162,13 @@ systemctl restart openorchestrion.service
 echo
 echo "OpenOrchestrion installed in $VENV"
 echo "Configuration: $CONFIG_DIR/openorchestrion.env"
+echo "Service secrets: $SECRETS"
 echo "Durable data: $STATE_DIR"
 echo "Logs: journalctl -u openorchestrion.service"
 echo "Smoke check: $VENV/bin/openorchestrion-smoke"
+if [ "$WITH_OPENAI" -eq 1 ]; then
+    echo "OpenAI SDK installed; set OPENAI_API_KEY in $SECRETS and enable the provider in openorchestrion.env."
+fi
 if [ "$MODE" = kiosk ]; then
     echo "Kiosk autostart installed for $KIOSK_USER; log out/in or reboot to launch Chromium."
 fi

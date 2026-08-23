@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 
 from .ai import MusicConcierge
+from .ai_runtime import create_configured_concierge
 from .api.errors import install_error_handlers
 from .api.routes import router
 from .api.sessions import ConciergeSessions
@@ -28,7 +29,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if not hasattr(app.state, "settings"):
         app.state.settings = Settings.from_env()
     if not hasattr(app.state, "concierge"):
-        app.state.concierge = MusicConcierge()
+        app.state.concierge = create_configured_concierge(app.state.settings)
     if not hasattr(app.state, "concierge_sessions"):
         app.state.concierge_sessions = ConciergeSessions(app.state.concierge)
     if not hasattr(app.state, "playback"):

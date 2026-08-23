@@ -15,6 +15,7 @@ This directory contains the living design and implementation specification.
 
 - [UX and control surfaces](ux-and-control-surfaces.md)
 - [AI Music Concierge](ai-music-concierge.md)
+- [Hosted AI Music Concierge](hosted-ai-concierge.md) — optional OpenAI Responses API provider, secrets, privacy boundary and offline fallback.
 - [Smart stations and selection](stations-and-selection.md)
 
 ## Application interface
