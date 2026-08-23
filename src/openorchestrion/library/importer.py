@@ -344,6 +344,17 @@ def import_manifest(
         if not source.is_absolute():
             source = root / source
         try:
+            if not source.exists():
+                # The commonest curation mistake is a manifest that sits beside
+                # the directory of files rather than inside it, which silently
+                # resolves every row one level too high. A bare "no such file"
+                # sends the curator hunting for a missing download instead.
+                raise FileNotFoundError(
+                    f"{source} does not exist. Manifest paths resolve against "
+                    f"{root if str(root) else '.'}; put the manifest beside the "
+                    f"files, include the directory in the path column, or pass "
+                    f"--manifest-base"
+                )
             if entry.expected_sha256 is not None:
                 actual = _file_digest(source)
                 if actual != entry.expected_sha256:

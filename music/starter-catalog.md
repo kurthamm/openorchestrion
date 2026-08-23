@@ -16,6 +16,39 @@ Candidates arrive as raw input first: the files, plus a manifest carrying one ro
 of evidence per file. Only what passes is promoted. What fails stays out of the
 starter set and remains perfectly usable as a personal import.
 
+### How committed repertoire is laid out
+
+```text
+music/starter/
+├── catalog.csv          the evidence: one row per file
+├── maple-leaf-rag.mid
+└── …
+```
+
+The manifest is the evidence, and there are deliberately **no per-file sidecars
+committed beside it**. The manifest is what the installer reads, so making it the
+same artifact the contract check reads means the claim CI verifies is the claim
+the appliance acts on. A sidecar committed alongside would be a second copy of
+the same assertion, free to drift from the one that actually takes effect.
+
+Installing the starter catalog is therefore the ordinary manifest import:
+
+```bash
+openorchestrion-import-midi --from-csv music/starter/catalog.csv --library-root var/library
+openorchestrion-reindex var/library
+```
+
+That matters more than it looks. Importing the directory *without* the manifest
+would land every file as `personal` with no license, giving an appliance a
+starter catalog its own stations cannot see — invisible to every `verified-open`
+query. The evidence has to travel with the bytes or committing them achieves
+nothing.
+
+Because each row records a `sha256`, replacing a committed file without updating
+its row is caught by CI: the row would otherwise keep vouching for bytes that are
+no longer there, which is how a starter catalog ends up shipping something nobody
+checked.
+
 ## The two questions
 
 A candidate clears only when both are answered, and answering one says nothing

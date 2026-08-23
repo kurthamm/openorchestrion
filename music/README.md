@@ -14,6 +14,8 @@ That means a user gets playable, legally clean repertoire on clone, and the appl
 
 Candidates arrive as raw input first — files plus a curation manifest — and are promoted here only after the audit passes. Anything that fails stays out of the starter set; it remains fine as a personal import on someone's own appliance.
 
+Committed repertoire keeps its evidence in the manifest beside it (`catalog.csv`) rather than in a sidecar per file, because the manifest is what the installer reads: the claim CI checks is then the same claim the appliance acts on. Install it with `openorchestrion-import-midi --from-csv`, never by importing the directory — a plain directory import discards the evidence and lands everything as `personal`, invisible to the stations the catalog exists to feed.
+
 See [starter-catalog.md](starter-catalog.md) for the worklist, the curation procedure, and the sources still to be evaluated.
 
 ## The one exception: generated fixtures

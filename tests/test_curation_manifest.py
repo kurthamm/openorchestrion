@@ -15,12 +15,14 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+from openorchestrion.library.policy import audit_committed_music
 from openorchestrion.library.importer import (
     ManifestError,
     import_manifest,
@@ -441,3 +443,151 @@ def test_manifest_values_are_normalized_before_they_are_stored(
     provenance = json.loads(Path(report.imported[0].metadata_path).read_text())["provenance"]
     assert provenance["source_reference"] == "https://example.org/padded"
     assert provenance["verified_by"] is None
+
+
+# ------------------------------------------- the manifest as committed evidence
+
+
+def _commit(directory: Path, fixtures: Path, names: list[str], **overrides: str) -> Path:
+    """A committed starter directory: the files, plus the manifest vouching for them."""
+    directory.mkdir(parents=True, exist_ok=True)
+    rows = []
+    for name in names:
+        shutil.copy2(fixtures / name, directory / name)
+        rows.append(
+            {
+                "path": name,
+                "sha256": digest(fixtures / name),
+                **CLEARED,
+                **overrides,
+            }
+        )
+    write_manifest(directory / "catalog.csv", rows)
+    return directory
+
+
+def test_committed_music_may_be_vouched_for_by_its_manifest(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    """The manifest is what the installer reads, so it is what CI should check.
+
+    A per-file sidecar committed alongside would be a second copy of the same
+    assertion, free to drift from the one that actually takes effect.
+    """
+    music = tmp_path / "music"
+    _commit(music / "starter", fixtures, ["single-note.mid", "two-piano-split.mid"])
+    assert audit_committed_music(music) == []
+
+
+def test_committed_music_with_neither_sidecar_nor_manifest_row_is_refused(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    music = tmp_path / "music"
+    starter = _commit(music / "starter", fixtures, ["single-note.mid"])
+    shutil.copy2(fixtures / "gm-ensemble.mid", starter / "gm-ensemble.mid")
+
+    offenders = audit_committed_music(music)
+    assert len(offenders) == 1
+    assert "gm-ensemble.mid" in offenders[0]
+    assert "no sidecar or manifest row" in offenders[0]
+
+
+def test_a_manifest_row_that_does_not_clear_the_audit_is_refused(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    music = tmp_path / "music"
+    _commit(music / "starter", fixtures, ["single-note.mid"], license="Free for personal use")
+
+    offenders = audit_committed_music(music)
+    assert len(offenders) == 1
+    assert "not one this project has established terms for" in offenders[0]
+
+
+def test_a_personal_manifest_row_cannot_smuggle_a_file_into_the_repository(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    """Recording research is not the same as clearing redistribution."""
+    music = tmp_path / "music"
+    _commit(
+        music / "starter",
+        fixtures,
+        ["single-note.mid"],
+        rights_status="personal",
+        license="all-rights-reserved",
+        redistribution="prohibited",
+    )
+    offenders = audit_committed_music(music)
+    assert len(offenders) == 1
+    assert "not redistributable" in offenders[0]
+
+
+def test_swapping_a_committed_file_without_updating_its_row_is_caught(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    """How a starter catalog ends up shipping something nobody checked.
+
+    The row keeps vouching for bytes that are no longer there, and every other
+    check still passes, so without the digest comparison nothing notices.
+    """
+    music = tmp_path / "music"
+    starter = _commit(music / "starter", fixtures, ["single-note.mid"])
+    shutil.copy2(fixtures / "note-range.mid", starter / "single-note.mid")
+
+    offenders = audit_committed_music(music)
+    assert len(offenders) == 1
+    assert "does not match the digest its manifest row records" in offenders[0]
+
+
+def test_a_broken_manifest_surfaces_as_unestablished_rights(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    """Reported against the music, not as a parse error nobody connects to it."""
+    music = tmp_path / "music"
+    starter = _commit(music / "starter", fixtures, ["single-note.mid"])
+    (starter / "catalog.csv").write_text("path,licence\nsingle-note.mid,CC0-1.0\n")
+
+    offenders = audit_committed_music(music)
+    assert len(offenders) == 1
+    assert "no sidecar or manifest row" in offenders[0]
+
+
+def test_a_sidecar_still_works_and_takes_precedence(tmp_path: Path, fixtures: Path) -> None:
+    """The library's own durable format keeps working where it is used."""
+    music = tmp_path / "music"
+    starter = music / "starter"
+    starter.mkdir(parents=True)
+    shutil.copy2(fixtures / "single-note.mid", starter / "single-note.mid")
+
+    report = import_manifest(
+        [read_curation_manifest(
+            write_manifest(tmp_path / "m.csv", [{"path": "single-note.mid", **CLEARED}])
+        )[0]],
+        tmp_path / "library",
+        base_dir=fixtures,
+    )
+    (starter / "single-note.json").write_text(Path(report.imported[0].metadata_path).read_text())
+
+    assert audit_committed_music(music) == []
+
+
+def test_the_committed_layout_installs_with_its_evidence_intact(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    """The point of all of it.
+
+    Committing files whose evidence the installer discards would give an
+    appliance a starter catalog its own stations cannot see: imported as
+    personal, invisible to every verified-open query.
+    """
+    starter = _commit(tmp_path / "music" / "starter", fixtures, ["single-note.mid"])
+
+    report = import_manifest(
+        read_curation_manifest(starter / "catalog.csv"),
+        tmp_path / "library",
+        base_dir=starter,
+    )
+    assert not report.failed
+
+    provenance = json.loads(Path(report.imported[0].metadata_path).read_text())["provenance"]
+    assert provenance["rights_status"] == "verified-open"
+    assert provenance["license"] == "CC0-1.0"
