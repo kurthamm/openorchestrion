@@ -9,6 +9,7 @@ import pytest
 from pydantic import ValidationError
 
 from openorchestrion import appliance
+from openorchestrion.ai import DeterministicConciergeProvider
 from openorchestrion.ai_openai import (
     OpenAIPlaybackIntent,
     OpenAIRoutingPreference,
@@ -312,6 +313,19 @@ def test_deterministic_description_is_a_complete_sentence() -> None:
         )
     )
     assert text == "The request is for familiar Christmas piano music for about 120 minutes."
+
+
+@pytest.mark.asyncio
+async def test_deterministic_provider_itself_emits_readable_prose() -> None:
+    intent = await DeterministicConciergeProvider().interpret(
+        "popular Christmas piano music for dinner for two hours"
+    )
+
+    assert intent.interpretation is not None
+    assert intent.interpretation.endswith(".")
+    assert intent.interpretation.startswith("The request is for ")
+    assert "Christmas" in intent.interpretation
+    assert "120 minutes" in intent.interpretation
 
 
 def test_appliance_packaging_keeps_provider_secret_service_only(tmp_path: Path) -> None:
