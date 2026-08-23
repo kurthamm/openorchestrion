@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=OpenOrchestrion
+Comment=OpenOrchestrion appliance kiosk
+Exec=/opt/openorchestrion/venv/bin/openorchestrion-kiosk
+Terminal=false
+X-GNOME-Autostart-enabled=true
