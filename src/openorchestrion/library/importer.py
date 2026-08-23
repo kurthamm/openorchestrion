@@ -246,6 +246,13 @@ class CurationEntry:
     rights: RightsEvidence
     expected_sha256: str | None = None
     row: int = 0
+    error: str | None = None
+    """A problem with this row alone, carried rather than raised.
+
+    A malformed cell is one curator's typo, not a broken manifest. Raising
+    would cost every other row in the file, including the thirty-nine that
+    were fine, which is the opposite of what a curation run needs.
+    """
 
 
 def read_curation_manifest(csv_path: str | Path) -> list[CurationEntry]:
@@ -302,10 +309,14 @@ def read_curation_manifest(csv_path: str | Path) -> list[CurationEntry]:
                 for name, value in cells.items()
                 if name in EVIDENCE_FIELDS and value
             }
+            error: str | None = None
             try:
                 evidence = RightsEvidence(**normalize(values))
             except RightsError as exc:
-                raise ManifestError(f"{path}: row {number}: {exc}") from None
+                # Scoped to the row. ManifestError stays for problems that make
+                # the whole file unusable — no header, a misspelled column —
+                # where continuing would mean guessing at every row alike.
+                evidence, error = RightsEvidence(), str(exc)
 
             digest = cells.get("sha256") or None
             entries.append(
@@ -314,6 +325,7 @@ def read_curation_manifest(csv_path: str | Path) -> list[CurationEntry]:
                     rights=evidence,
                     expected_sha256=digest.lower() if digest else None,
                     row=number,
+                    error=error,
                 )
             )
     return entries
@@ -340,6 +352,16 @@ def import_manifest(
     failed: list[ImportFailure] = []
 
     for entry in entries:
+        if entry.error is not None:
+            failed.append(
+                ImportFailure(
+                    source=f"row {entry.row}: {entry.path}",
+                    reason=entry.error,
+                    error_type="RightsError",
+                )
+            )
+            continue
+
         source = Path(entry.path)
         if not source.is_absolute():
             source = root / source
@@ -356,6 +378,15 @@ def import_manifest(
                     f"--manifest-base"
                 )
             if entry.expected_sha256 is not None:
+                # Before hashing, not after. The size limit exists because these
+                # archives are full of mis-named files, and a multi-gigabyte one
+                # would otherwise be read end to end only to be rejected on the
+                # next line for being too large.
+                size = source.stat().st_size
+                if max_bytes is not None and size > max_bytes:
+                    raise ValueError(
+                        f"file is {size} bytes, above the {max_bytes} byte import limit"
+                    )
                 actual = _file_digest(source)
                 if actual != entry.expected_sha256:
                     # The claim was researched against specific bytes. Different

@@ -22,6 +22,7 @@ from pathlib import Path
 
 import pytest
 
+from openorchestrion.library import importer as importer_module
 from openorchestrion.library.policy import audit_committed_music
 from openorchestrion.library.importer import (
     ManifestError,
@@ -137,12 +138,55 @@ def test_an_unknown_column_is_refused_and_names_the_alternatives(tmp_path: Path)
     assert "composition_rights_basis" in str(caught.value)
 
 
-def test_an_invalid_enum_names_the_row(tmp_path: Path) -> None:
+def test_an_invalid_cell_is_carried_on_its_row_not_raised(tmp_path: Path) -> None:
+    """A malformed cell is one curator's typo, not a broken manifest."""
     manifest = write_manifest(
         tmp_path / "m.csv", [{"path": "a.mid", **CLEARED, "redistribution": "probably"}]
     )
-    with pytest.raises(ManifestError, match="row 2"):
-        read_curation_manifest(manifest)
+    entry = read_curation_manifest(manifest)[0]
+    assert entry.row == 2
+    assert entry.error is not None
+    assert "redistribution must be one of" in entry.error
+
+
+def test_one_malformed_row_does_not_cost_the_others(tmp_path: Path, fixtures: Path) -> None:
+    """The failure this fix is about.
+
+    A typo in row 3 of a forty-row spreadsheet used to abort the parse, losing
+    the thirty-nine rows that were fine — the opposite of what the per-row
+    audit is for.
+    """
+    manifest = write_manifest(
+        tmp_path / "m.csv",
+        [
+            {"path": "single-note.mid", **CLEARED},
+            {"path": "gm-ensemble.mid", **CLEARED, "redistribution": "probably"},
+            {"path": "two-piano-split.mid", **CLEARED},
+        ],
+    )
+    report = import_manifest(
+        read_curation_manifest(manifest), tmp_path / "library", base_dir=fixtures
+    )
+
+    assert len(report.imported) == 2
+    assert len(report.failed) == 1
+    assert "row 3" in report.failed[0].source
+    assert "redistribution must be one of" in report.failed[0].reason
+
+
+def test_a_malformed_row_is_reported_before_its_file_is_touched(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    """The row cannot be acted on, so a missing file is not the interesting fact."""
+    manifest = write_manifest(
+        tmp_path / "m.csv",
+        [{"path": "not-downloaded-yet.mid", **CLEARED, "rights_status": "maybe"}],
+    )
+    report = import_manifest(
+        read_curation_manifest(manifest), tmp_path / "library", base_dir=fixtures
+    )
+    assert report.failed[0].error_type == "RightsError"
+    assert "rights_status must be one of" in report.failed[0].reason
 
 
 def test_an_empty_manifest_is_not_an_error(tmp_path: Path) -> None:
@@ -277,6 +321,46 @@ def test_a_file_that_is_not_the_researched_one_is_refused(
     assert not report.imported
     assert "evidence was gathered about a different file" in report.failed[0].reason
     assert not (tmp_path / "library" / "assets").exists()
+
+
+def test_an_oversized_file_is_rejected_without_being_hashed(
+    tmp_path: Path, fixtures: Path
+) -> None:
+    """The size limit exists because these archives are full of mis-named files.
+
+    Hashing a multi-gigabyte one end to end only to reject it on the next line
+    would defeat the guard it is there to provide.
+    """
+    manifest = write_manifest(
+        tmp_path / "m.csv",
+        [
+            {
+                "path": "single-note.mid",
+                "sha256": digest(fixtures / "single-note.mid"),
+                **CLEARED,
+            }
+        ],
+    )
+    entries = read_curation_manifest(manifest)
+
+    hashed: list[Path] = []
+    real_digest = importer_module._file_digest
+
+    def spy(path: Path) -> str:
+        hashed.append(path)
+        return real_digest(path)
+
+    importer_module._file_digest = spy
+    try:
+        report = import_manifest(
+            entries, tmp_path / "library", base_dir=fixtures, max_bytes=8
+        )
+    finally:
+        importer_module._file_digest = real_digest
+
+    assert not report.imported
+    assert "above the 8 byte import limit" in report.failed[0].reason
+    assert hashed == [], "the file was hashed before its size was checked"
 
 
 def test_the_digest_is_optional(tmp_path: Path, fixtures: Path) -> None:
