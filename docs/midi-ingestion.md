@@ -88,17 +88,35 @@ openorchestrion-import-midi ~/Music/MIDI \
 
 Directories are scanned recursively by default. Multiple files/directories may be supplied in one command.
 
-For verified/open material, provenance can be supplied during import:
+For verified/open material, the evidence is supplied during import and is audited
+before anything is written:
 
 ```bash
 openorchestrion-import-midi piece.mid \
   --library-root var/library \
   --rights-status verified-open \
   --source-label "Mutopia Project" \
-  --source-reference "source record or URL" \
-  --license "Public Domain" \
-  --attribution "Attribution text if required"
+  --source-reference "https://example.org/piece-record" \
+  --license CC0-1.0 \
+  --license-url "https://creativecommons.org/publicdomain/zero/1.0/" \
+  --composition-rights public-domain \
+  --composition-rights-basis "Composer died 1917; published 1899" \
+  --redistribution permitted \
+  --verified-by "curation pass 1"
 ```
+
+Two rights questions are recorded separately because conflating them is how a
+library ends up redistributing something it may not. A Joplin rag is a
+public-domain **composition**; a particular MIDI sequencing of it made in 2003 is
+a separate copyrightable **work** whose author may reserve every right. Both must
+clear before the file is redistributable.
+
+`--license` takes an established license id rather than free text, because
+free text cannot be checked. A string like `Free for personal use` — the
+characteristic MIDI-archive grant — is refused, not because it is known to be
+restrictive but because it is unestablished, and the audit never reads absence
+of evidence as permission. Establishing a new license means adding it to the
+table in `openorchestrion.library.rights` after actually reviewing it.
 
 ## Content-addressed storage
 
@@ -151,9 +169,40 @@ The importer defaults to:
 rights_status = personal
 ```
 
-OpenOrchestrion never upgrades an unknown/personal file to redistributable merely because it imported successfully. `verified-open` is an explicit provenance assertion that should be supported by source/license evidence.
+OpenOrchestrion never upgrades an unknown/personal file to redistributable merely because it imported successfully. `verified-open` is an explicit provenance assertion, and it is refused unless the recorded evidence supports it:
 
-If a content-addressed asset already has a sidecar, re-import does not silently overwrite its rights metadata. Rights/provenance editing and multi-source provenance will be handled by the library-management layer rather than by accidental re-import.
+- `source_reference`, so the claim can be re-checked against where the file came from;
+- `composition_rights` established as public-domain or licensed, with a stated basis when public-domain — a bare "public domain" is an opinion, and the basis is what makes it reviewable by someone who was not there;
+- `license`, an established id for the MIDI file or arrangement itself;
+- `redistribution` consistent with that license, and attribution text recorded whenever the license obliges us to credit someone.
+
+A refused claim fails the whole import rather than writing a weaker one, so a
+partially-evidenced library is never produced by accident. `personal` and
+`unknown` assert nothing about redistribution and therefore carry no research
+burden, which is the right default for a user's own collection.
+
+If a content-addressed asset already has a sidecar, re-import does not silently overwrite its rights metadata. Rights research genuinely arrives after the bytes do, so revising a claim is a first-class operation rather than an accidental re-import:
+
+```python
+from openorchestrion.library.metadata import set_rights
+
+set_rights(library_root, asset_id, {
+    "rights_status": "verified-open",
+    "source_reference": "https://example.org/piece-record",
+    "license": "CC0-1.0",
+    "composition_rights": "public-domain",
+    "composition_rights_basis": "Composer died 1917",
+    "redistribution": "permitted",
+})
+```
+
+`provenance` remains a protected block that ordinary curation cannot touch, and
+`set_rights` goes through the same advisory lock, atomic write and revision
+check as every other sidecar edit. The audit runs against the **merged** result,
+so a claim cannot be raised to `verified-open` by an edit that leaves the
+supporting evidence behind. `imported_at` records when the bytes arrived and is
+not editable; withdrawing a claim back to `personal` never requires evidence,
+since only asserting one does.
 
 ## Privacy / portability
 

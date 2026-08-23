@@ -29,7 +29,13 @@
         "source_reference": {"type": ["string", "null"]},
         "source_label": {"type": ["string", "null"]},
         "license": {"type": ["string", "null"]},
-        "attribution": {"type": ["string", "null"]}
+        "license_url": {"type": ["string", "null"]},
+        "attribution": {"type": ["string", "null"]},
+        "composition_rights": {"type": "string", "enum": ["public-domain", "licensed", "in-copyright", "unknown"]},
+        "composition_rights_basis": {"type": ["string", "null"]},
+        "redistribution": {"type": "string", "enum": ["permitted", "permitted-with-attribution", "prohibited", "unknown"]},
+        "verified_at": {"type": ["string", "null"]},
+        "verified_by": {"type": ["string", "null"]}
       }
     },
     "deterministic_analysis": {"$ref": "midi-analysis.schema.json"},

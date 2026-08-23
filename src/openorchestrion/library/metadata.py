@@ -32,6 +32,8 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator, Mapping
 from uuid import uuid4
 
+from . import rights
+
 try:  # POSIX advisory locking; the appliance targets Raspberry Pi OS/Linux.
     import fcntl
 except ImportError:  # pragma: no cover - Windows development only
@@ -458,6 +460,93 @@ def set_favorite(
         {"favorite": bool(favorite)},
         expected_revision=expected_revision,
     )
+
+
+# --------------------------------------------------------------- rights
+
+
+@dataclass(frozen=True, slots=True)
+class RightsRecord:
+    """One asset's provenance block plus the revision it was read at."""
+
+    asset_id: str
+    revision: str
+    provenance: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "asset_id": self.asset_id,
+            "revision": self.revision,
+            "provenance": dict(self.provenance),
+        }
+
+
+def read_rights(library_root: str | Path, asset_id: str) -> RightsRecord:
+    """Read the provenance block and the revision needed to safely write it back."""
+    canonical = normalize_asset_id(asset_id)
+    path = sidecar_path(library_root, canonical)
+    document, revision = _load_document(path, canonical)
+    provenance = document.get("provenance") or {}
+    if not isinstance(provenance, dict):
+        raise MetadataError(f"{path}: provenance must be an object")
+    return RightsRecord(asset_id=canonical, revision=revision, provenance=provenance)
+
+
+def set_rights(
+    library_root: str | Path,
+    asset_id: str,
+    changes: Mapping[str, Any],
+    *,
+    expected_revision: str | None = None,
+) -> RightsRecord:
+    """Record or revise one asset's rights evidence.
+
+    ``provenance`` is a protected block precisely because it must not drift with
+    ordinary curation, but rights research genuinely does arrive after import —
+    a license is tracked down, a source is re-checked, a claim turns out to be
+    wrong. This is the one supported way to change it, and it goes through the
+    same lock, atomic write and revision check as every other sidecar edit.
+
+    The audit runs against the *merged* result rather than the changes alone, so
+    a claim cannot be raised to ``verified-open`` by an edit that leaves the
+    supporting evidence behind in the stored block.
+
+    ``imported_at`` is not writable: it records when the bytes arrived, which no
+    later research changes.
+    """
+    canonical = normalize_asset_id(asset_id)
+    path = sidecar_path(library_root, canonical)
+
+    if "imported_at" in changes:
+        raise MetadataValidationError(
+            "imported_at records when the file arrived and is not editable"
+        )
+    try:
+        normalized = rights.normalize(dict(changes))
+    except rights.RightsError as exc:
+        raise MetadataValidationError(str(exc)) from None
+
+    with _asset_write_lock(path):
+        document, revision = _load_document(path, canonical)
+        if expected_revision is not None and expected_revision != revision:
+            raise MetadataConflictError(canonical, expected_revision, revision)
+
+        stored = dict(document.get("provenance") or {})
+        imported_at = stored.get("imported_at")
+        merged = {**stored, **normalized}
+        merged.pop("imported_at", None)
+
+        try:
+            evidence = rights.RightsEvidence.from_mapping(merged)
+            rights.verify(evidence)
+        except rights.RightsError as exc:
+            raise MetadataValidationError(str(exc)) from None
+
+        provenance = {"imported_at": imported_at, **evidence.to_dict()}
+        document["provenance"] = provenance
+        new_revision = _write_atomic(path, document)
+
+    return RightsRecord(asset_id=canonical, revision=new_revision, provenance=provenance)
 
 
 # --------------------------------------------------------- re-analysis

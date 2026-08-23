@@ -11,6 +11,7 @@ from .metadata import (
     set_favorite,
     update_metadata,
 )
+from .rights import RightsError, RightsEvidence
 from .importer import (
     ImportFailure,
     ImportReport,
@@ -30,6 +31,8 @@ __all__ = [
     "reanalyze_library",
     "set_favorite",
     "update_metadata",
+    "RightsError",
+    "RightsEvidence",
     "ImportFailure",
     "ImportReport",
     "ImportResult",
