@@ -10,7 +10,13 @@ from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 
 from ..ai import ConciergeResult, MusicConcierge
 from ..history import apply_no_repeat_window
-from ..library.catalog import catalog_stats, get_asset, search_catalog
+from ..library.catalog import catalog_stats, get_asset, reindex_asset, search_catalog
+from ..library.metadata import (
+    AssetNotFoundError,
+    MetadataConflictError,
+    MetadataError,
+    set_favorite,
+)
 from ..models import PlaybackIntent
 from ..playback import (
     PlaybackConflict,
@@ -60,17 +66,6 @@ from .settings import Settings
 
 router = APIRouter(prefix="/api")
 Connection = Request | WebSocket
-
-_PENDING_METADATA_WRITER: dict[int | str, dict[str, Any]] = {
-    501: {
-        "model": ErrorResponse,
-        "description": (
-            "Not yet implemented: awaiting a descriptive_metadata writer. "
-            "Independent of #14."
-        ),
-    }
-}
-
 
 def _settings(connection: Connection) -> Settings:
     return connection.app.state.settings
@@ -403,15 +398,48 @@ async def library_asset(request: Request, asset_id: str) -> LibraryAssetDetail:
 @router.post(
     "/library/assets/{asset_id}/favorite",
     response_model=LibraryAssetDetail,
-    responses=_PENDING_METADATA_WRITER,
+    responses={
+        404: {"model": ErrorResponse, "description": "No such asset in the catalog"},
+        409: {"model": ErrorResponse, "description": "The asset changed since it was read"},
+    },
 )
-async def set_favorite(asset_id: str, payload: FavoriteRequest) -> LibraryAssetDetail:
-    raise ApiError(
-        "not_implemented",
-        "Favorites need a descriptive_metadata writer before they can persist.",
-        status_code=501,
-        detail={"asset_id": asset_id, "requested": payload.favorite},
-    )
+async def set_favorite_endpoint(
+    request: Request,
+    asset_id: str,
+    payload: FavoriteRequest,
+) -> LibraryAssetDetail:
+    """Persist a favorite on the durable sidecar, then reconcile the index.
+
+    The sidecar is the source of truth, so it is written first; the catalog is
+    refreshed afterwards and would be rebuilt from the sidecar anyway.
+    """
+    settings = _settings(request)
+    try:
+        set_favorite(settings.library_root, asset_id, payload.favorite)
+    except AssetNotFoundError as exc:
+        raise ApiError(
+            "asset_not_found",
+            str(exc),
+            status_code=404,
+            detail={"asset_id": asset_id},
+        ) from exc
+    except MetadataConflictError as exc:
+        raise ApiError(
+            "request_invalid",
+            str(exc),
+            status_code=409,
+            detail={"asset_id": asset_id},
+        ) from exc
+    except MetadataError as exc:
+        raise ApiError(
+            "request_invalid",
+            str(exc),
+            status_code=422,
+            detail={"asset_id": asset_id},
+        ) from exc
+
+    reindex_asset(settings.catalog_db, settings.library_root, asset_id)
+    return await library_asset(request, asset_id)
 
 
 @router.get("/queue", response_model=QueueState)
