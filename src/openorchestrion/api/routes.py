@@ -67,6 +67,7 @@ from .settings import Settings
 router = APIRouter(prefix="/api")
 Connection = Request | WebSocket
 
+
 def _settings(connection: Connection) -> Settings:
     return connection.app.state.settings
 
@@ -161,7 +162,19 @@ def _translate_playback_error(exc: Exception) -> ApiError:
     raise exc
 
 
-def _asset_spec(record: dict[str, Any], settings: Settings) -> QueueItemSpec:
+def _asset_spec(
+    record: dict[str, Any],
+    settings: Settings,
+    *,
+    intent: PlaybackIntent | None = None,
+) -> QueueItemSpec:
+    """Translate catalog data and validated intent hints into a playback item.
+
+    The API does not make routing decisions. It only carries the curated
+    performance type and validated device/role preferences to the playback
+    engine, whose planner remains authoritative. Untagged assets therefore keep
+    ``performance_type=None`` and fall back to MIDI/GM analysis in the planner.
+    """
     relative_path = Path(str(record["midi_path"]))
     midi_path = relative_path if relative_path.is_absolute() else settings.library_root / relative_path
     title = record.get("title") or record.get("original_filename") or record["asset_id"]
@@ -172,6 +185,9 @@ def _asset_spec(record: dict[str, Any], settings: Settings) -> QueueItemSpec:
         composer=record.get("composer"),
         duration_seconds=float(record["duration_seconds"]),
         midi_path=str(midi_path),
+        performance_type=record.get("performance_type"),
+        device_preferences=tuple(intent.device_preferences) if intent else (),
+        routing_preferences=dict(intent.routing_preferences) if intent else {},
     )
 
 
@@ -208,18 +224,18 @@ def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[Queue
             )
         specs: list[QueueItemSpec] = []
         for item in station.items:
-            path = Path(item.midi_path)
-            midi_path = path if path.is_absolute() else settings.library_root / path
-            specs.append(
-                QueueItemSpec(
-                    asset_id=item.asset_id,
-                    composition_id=item.composition_id,
-                    title=item.title,
-                    composer=item.composer,
-                    duration_seconds=item.duration_seconds,
-                    midi_path=str(midi_path),
+            # Station selection already chose the asset. Re-read its catalog row
+            # here so playback receives the curated performance_type without
+            # widening the public StationQueue response model.
+            record = get_asset(catalog_db, item.asset_id)
+            if record is None:
+                raise ApiError(
+                    "asset_not_found",
+                    f"selected station asset disappeared from the catalog: {item.asset_id}",
+                    status_code=404,
+                    detail={"asset_id": item.asset_id},
                 )
-            )
+            specs.append(_asset_spec(record, settings, intent=payload.intent))
         return specs
 
     specs = []
