@@ -3,7 +3,7 @@ Description=Advertise OpenOrchestrion on the local network
 Documentation=https://github.com/kurthamm/openorchestrion
 After=network.target avahi-daemon.service openorchestrion.service
 Wants=avahi-daemon.service
-BindsTo=openorchestrion.service
+PartOf=openorchestrion.service
 
 [Service]
 Type=simple
