@@ -8,7 +8,6 @@ Wants=sound.target
 Type=simple
 User=openorchestrion
 Group=openorchestrion
-SupplementaryGroups=audio
 EnvironmentFile=-/etc/openorchestrion/openorchestrion.env
 WorkingDirectory=/var/lib/openorchestrion
 ExecStart=/opt/openorchestrion/venv/bin/openorchestrion-serve
