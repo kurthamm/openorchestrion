@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 
-from .ai import ConciergeResult, MusicConcierge
+from .ai import ConciergeResult, MusicConcierge, MusicConciergeProvider
 from .api.settings import Settings
 from .models import PlaybackIntent
 
@@ -29,9 +29,7 @@ def describe_intent(intent: PlaybackIntent) -> str:
     descriptors.extend(intent.instrumentation[:2])
 
     if intent.performance_types and not intent.instrumentation:
-        descriptors.append(
-            intent.performance_types[0].value.replace("_", " ").casefold()
-        )
+        descriptors.append(intent.performance_types[0].value.replace("_", " ").casefold())
 
     # Preserve order while removing case-insensitive duplicates.
     seen: set[str] = set()
@@ -51,16 +49,17 @@ def describe_intent(intent: PlaybackIntent) -> str:
 
 
 class ConfiguredMusicConcierge(MusicConcierge):
-    """MusicConcierge that normalizes UI explanation and exposes safe status metadata."""
+    """MusicConcierge that normalizes explanation and exposes safe status metadata."""
 
     def __init__(
         self,
-        *args: object,
+        primary: MusicConciergeProvider | None = None,
+        *,
+        fallback: MusicConciergeProvider | None = None,
         configured_provider: str | None = None,
         unavailable_reason: str | None = None,
-        **kwargs: object,
     ) -> None:
-        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+        super().__init__(primary=primary, fallback=fallback)
         self.configured_provider = configured_provider
         self.unavailable_reason = unavailable_reason
 
@@ -73,11 +72,18 @@ class ConfiguredMusicConcierge(MusicConcierge):
         result = await super().interpret(prompt, current_intent=current_intent)
         intent = result.intent.model_copy(deep=True)
         intent.interpretation = describe_intent(intent)
+
+        configured_but_unavailable = self.configured_provider is not None and self.primary is None
+        fallback_used = result.fallback_used or configured_but_unavailable
+        primary_error = result.primary_error
+        if configured_but_unavailable and primary_error is None:
+            primary_error = self.unavailable_reason
+
         return ConciergeResult(
             intent=intent,
             provider=result.provider,
-            fallback_used=result.fallback_used,
-            primary_error=result.primary_error,
+            fallback_used=fallback_used,
+            primary_error=primary_error,
         )
 
 
