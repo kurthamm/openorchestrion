@@ -10,7 +10,7 @@ from referencing import Registry, Resource
 
 from openorchestrion.library.catalog import rebuild_catalog
 from openorchestrion.library.importer import import_paths
-from openorchestrion.library.policy import audit_committed_music, count_committed_music
+from openorchestrion.library.policy import audit_tracked_music, count_tracked_music
 from openorchestrion.midi.analyzer import analyze_midi
 from openorchestrion.models import PlaybackIntent
 from openorchestrion.stations import build_station
@@ -161,15 +161,20 @@ def validate_generated_pipeline() -> None:
 
 
 def validate_committed_music() -> None:
-    """No MIDI enters the repository without a rights record beside it."""
-    music = ROOT / "music"
-    offenders = audit_committed_music(music)
+    """No tracked MIDI anywhere in the repository without established rights.
+
+    Repository-wide, not one directory. The rule is about what this project
+    distributes, and Git does not care which folder a file sits in: a rejected
+    candidate parked in a research directory is published the moment it is
+    pushed, which is exactly the case a music/-only check would have waved past.
+    """
+    offenders = audit_tracked_music(ROOT)
     if offenders:
         raise SystemExit(
-            "committed MIDI without established redistribution rights:\n  "
+            "tracked MIDI without established redistribution rights:\n  "
             + "\n  ".join(offender.replace(f"{ROOT}/", "") for offender in offenders)
         )
-    print(f"committed music ok: {count_committed_music(music)} MIDI file(s) with established rights")
+    print(f"tracked music ok: {count_tracked_music(ROOT)} MIDI file(s) with established rights")
 
 
 def main() -> None:

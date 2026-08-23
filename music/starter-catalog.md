@@ -9,8 +9,14 @@ whose terms are written down and re-checkable.
 repertoire is committed, so a user has playable, legally clean music on clone and
 the appliance install has nothing to fetch — but a file earns its place by
 clearing the audit, not by being convenient to add. The repository contract check
-fails CI on any committed MIDI whose sidecar does not support a `verified-open`
-claim.
+fails CI on any Git-tracked MIDI, anywhere in the repository, whose sidecar or
+manifest row does not support a `verified-open` claim.
+
+That check is repository-wide on purpose. Rejected candidates keep their
+research row so nobody repeats the work, but **their bytes are never pushed** —
+publishing a file whose terms we just established as non-redistributable would
+be the audit's own conclusion ignored. If a rejected file needs exercising
+through the importer, that handoff stays local.
 
 Candidates arrive as raw input first: the files, plus a manifest carrying one row
 of evidence per file. Only what passes is promoted. What fails stays out of the

@@ -2,13 +2,15 @@
 
 The public repository intentionally does **not** contain a large general-purpose MIDI collection.
 
-Only music with clearly documented redistribution rights may be committed here, and that is now a repository contract rather than an honour system: `.github/scripts/validate_repo.py` fails CI on any `.mid` or `.midi` file under this directory that is not accompanied by a `.json` sidecar whose provenance supports a `verified-open` claim. A file with no sidecar, a sidecar marked `personal`, and a `verified-open` claim with nothing behind it are all rejected.
+Only music with clearly documented redistribution rights may be committed, and that is a repository contract rather than an honour system: `.github/scripts/validate_repo.py` fails CI on any **Git-tracked** `.mid` or `.midi` file **anywhere in the repository** that is not covered by a `.json` sidecar or a curation manifest row supporting a `verified-open` claim. No evidence at all, evidence marked `personal`, and a `verified-open` claim with nothing behind it are all rejected.
+
+The check is repository-wide rather than scoped to this directory because the rule is about what the project distributes, and Git does not care which folder a file sits in — a rejected candidate parked in a research directory is published the moment it is pushed. It is scoped to *tracked* files for the same reason: an untracked download in someone's working copy is theirs, and the conformance suite generated into ignored `build/` is not something the repository carries.
 
 Personal or commercially licensed MIDI belongs in the user's local library and is excluded from source control. The importer brings it onto the appliance without it ever entering Git.
 
 ## The starter catalog
 
-Verified repertoire **is committed here**, once — and only once — its rights are established. A file reaches this directory by clearing the audit, never by being convenient to add: `.github/scripts/validate_repo.py` fails CI on any `.mid` here without a sidecar supporting a `verified-open` claim, so the gate is enforced rather than remembered.
+Verified repertoire **is committed here**, once — and only once — its rights are established. A file reaches this directory by clearing the audit, never by being convenient to add, and the gate is enforced rather than remembered.
 
 That means a user gets playable, legally clean repertoire on clone, and the appliance install has nothing to download. It also means every future addition faces the same evidence bar, which is the point rather than the cost.
 
