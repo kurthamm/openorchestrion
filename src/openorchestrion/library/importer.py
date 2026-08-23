@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import hashlib
 import json
 import shutil
 import sys
@@ -14,11 +16,13 @@ from openorchestrion.midi.analyzer import MidiAnalysis, analyze_midi
 
 from .rights import (
     COMPOSITION_RIGHTS,
+    EVIDENCE_FIELDS,
     ESTABLISHED_LICENSES,
     REDISTRIBUTION,
     RIGHTS_STATUSES,
     RightsError,
     RightsEvidence,
+    normalize,
     verify,
 )
 
@@ -133,6 +137,15 @@ def _sidecar_document(
     }
 
 
+def _file_digest(path: Path) -> str:
+    """SHA-256 of a file, read in chunks so a large import stays bounded."""
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(_COMPARE_CHUNK), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def _same_contents(left: Path, right: Path) -> bool:
     """Compare two files in chunks rather than loading both into memory."""
     if left.stat().st_size != right.stat().st_size:
@@ -216,6 +229,145 @@ def import_midi(
         created=created,
         analysis=analysis,
     )
+
+
+# --------------------------------------------------------- curation manifest
+
+
+class ManifestError(ValueError):
+    """Raised when a curation manifest cannot be read at all."""
+
+
+@dataclass(frozen=True, slots=True)
+class CurationEntry:
+    """One researched candidate: a file, and the evidence gathered about it."""
+
+    path: str
+    rights: RightsEvidence
+    expected_sha256: str | None = None
+    row: int = 0
+
+
+def read_curation_manifest(csv_path: str | Path) -> list[CurationEntry]:
+    """Parse a curation manifest: one row per file, columns are evidence fields.
+
+    A starter catalog is not one rights claim applied to a folder. Every file
+    has its own source, its own license and its own composer, so evidence has to
+    arrive per file or it is not evidence at all — it is a guess averaged over a
+    directory.
+
+    ``path`` names the file. An optional ``sha256`` column records the digest of
+    the file whose terms were actually read, which is what makes the research
+    transferable: the person who verified the license and the machine that
+    imports the bytes are usually not the same, and without the digest there is
+    nothing tying the claim to any particular sequence of bytes.
+
+    Blank cells are omitted rather than written, so a spreadsheet exported with
+    every column does not stamp empty strings over fields nobody filled in.
+    """
+    path = Path(csv_path)
+    try:
+        handle = path.open("r", encoding="utf-8-sig", newline="")
+    except OSError as exc:
+        raise ManifestError(f"{path}: cannot be read ({exc})") from None
+
+    with handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None:
+            raise ManifestError(f"{path}: file has no header row")
+
+        columns = {name.strip() for name in reader.fieldnames if name}
+        if "path" not in columns:
+            raise ManifestError(f"{path}: needs a 'path' column naming each file")
+        unknown = sorted(columns - {"path", "sha256"} - set(EVIDENCE_FIELDS))
+        if unknown:
+            raise ManifestError(
+                f"{path}: unknown column(s): {', '.join(unknown)}. "
+                f"Evidence columns are: {', '.join(EVIDENCE_FIELDS)}"
+            )
+
+        entries: list[CurationEntry] = []
+        for number, row in enumerate(reader, start=2):
+            cells = {
+                (name or "").strip(): (value or "").strip()
+                for name, value in row.items()
+                if name
+            }
+            source = cells.get("path", "")
+            if not source:
+                continue
+
+            values = {
+                name: value
+                for name, value in cells.items()
+                if name in EVIDENCE_FIELDS and value
+            }
+            try:
+                evidence = RightsEvidence(**normalize(values))
+            except RightsError as exc:
+                raise ManifestError(f"{path}: row {number}: {exc}") from None
+
+            digest = cells.get("sha256") or None
+            entries.append(
+                CurationEntry(
+                    path=source,
+                    rights=evidence,
+                    expected_sha256=digest.lower() if digest else None,
+                    row=number,
+                )
+            )
+    return entries
+
+
+def import_manifest(
+    entries: Iterable[CurationEntry],
+    library_root: str | Path,
+    *,
+    base_dir: str | Path | None = None,
+    max_bytes: int | None = DEFAULT_MAX_BYTES,
+) -> ImportReport:
+    """Import each researched candidate under its own evidence.
+
+    Failures are per entry and reported as data. A curation run is exactly the
+    situation where aborting on the first bad row is wrong: the rest of the
+    research is still good, and re-running after a fix must not re-litigate the
+    files that already landed. Content addressing makes that safe — importing a
+    file twice resolves to the same asset.
+    """
+    _validate_max_bytes(max_bytes)
+    root = Path(base_dir) if base_dir is not None else Path()
+    imported: list[ImportResult] = []
+    failed: list[ImportFailure] = []
+
+    for entry in entries:
+        source = Path(entry.path)
+        if not source.is_absolute():
+            source = root / source
+        try:
+            if entry.expected_sha256 is not None:
+                actual = _file_digest(source)
+                if actual != entry.expected_sha256:
+                    # The claim was researched against specific bytes. Different
+                    # bytes may be a different arrangement under different terms,
+                    # so this is a rights failure, not a checksum nicety.
+                    raise ValueError(
+                        f"file does not match the researched digest "
+                        f"(manifest {entry.expected_sha256[:12]}, file {actual[:12]}): "
+                        "the evidence was gathered about a different file"
+                    )
+            imported.append(
+                import_midi(source, library_root, rights=entry.rights, max_bytes=max_bytes)
+            )
+        except Exception as exc:  # noqa: BLE001 - one bad row is not the whole run
+            failed.append(
+                ImportFailure(
+                    source=f"row {entry.row}: {entry.path}",
+                    reason=_describe(exc),
+                    error_type=type(exc).__name__,
+                )
+            )
+
+    return ImportReport(imported=tuple(imported), failed=tuple(failed))
 
 
 def _describe(exc: Exception) -> str:
@@ -338,7 +490,22 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Import MIDI files into an OpenOrchestrion content-addressed library."
     )
-    parser.add_argument("sources", nargs="+", help="MIDI file(s) or directories")
+    parser.add_argument(
+        "sources", nargs="*", help="MIDI file(s) or directories (omit when using --from-csv)"
+    )
+    parser.add_argument(
+        "--from-csv",
+        help=(
+            "Curation manifest: one row per file with its own evidence. Use this "
+            "for a curated set, where every file has a different source, license "
+            "and composer. Columns: path, sha256 (optional), plus evidence fields."
+        ),
+    )
+    parser.add_argument(
+        "--manifest-base",
+        help="Directory that relative manifest paths are resolved against "
+        "(default: alongside the manifest)",
+    )
     parser.add_argument(
         "--library-root",
         default="var/library",
@@ -397,9 +564,14 @@ def main() -> None:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
+    if args.from_csv and args.sources:
+        parser.error("give sources or --from-csv, not both")
+    if not args.from_csv and not args.sources:
+        parser.error("give at least one source, or --from-csv")
+
     try:
         report = _run_import(args)
-    except RightsError as exc:
+    except (RightsError, ManifestError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(2) from None
 
@@ -412,6 +584,13 @@ def main() -> None:
 
 
 def _run_import(args: argparse.Namespace) -> ImportReport:
+    if args.from_csv:
+        entries = read_curation_manifest(args.from_csv)
+        base = args.manifest_base or Path(args.from_csv).parent
+        return import_manifest(
+            entries, args.library_root, base_dir=base, max_bytes=args.max_bytes
+        )
+
     return import_paths(
         args.sources,
         args.library_root,

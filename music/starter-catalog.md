@@ -34,6 +34,37 @@ Everything goes through the production pipeline. There is no separate catalog
 format to keep in sync — the sidecars written here are the same sidecars any
 user's import produces.
 
+### A curated set: one row of evidence per file
+
+A starter catalog is not one rights claim applied to a folder. Every file has a
+different source, a different license and a different composer, so evidence
+applied per directory is not evidence at all — it is a guess averaged over a
+folder. Fill in [starter-catalog-template.csv](starter-catalog-template.csv),
+one row per candidate, and import the set in one command:
+
+```bash
+openorchestrion-import-midi --from-csv candidates.csv --library-root var/library
+```
+
+Relative `path` values resolve alongside the manifest, so the CSV travels with
+the files it describes. Each row is audited on its own: a row whose evidence
+does not hold up is reported with its line number and skipped, while the rest of
+the set still lands. Re-running after a fix is safe — content addressing means an
+already-imported file resolves to the same asset rather than a duplicate.
+
+The optional `sha256` column is what makes researched evidence transferable.
+Whoever read the license and whatever machine imports the bytes are usually not
+the same person; without the digest, nothing ties a claim to any particular
+sequence of bytes. A file that does not match its researched digest is refused as
+a **rights** failure rather than a checksum nicety, because different bytes may
+be a different arrangement under different terms.
+
+A row may also record `rights_status: personal` — curation includes deciding
+that something is *not* redistributable. The research is still stored, so nobody
+repeats it, and the file simply does not join the starter set.
+
+Then curate the descriptive metadata and index, as below.
+
 ```bash
 # 1. Import with the evidence attached. Refused unless it holds up.
 openorchestrion-import-midi ~/downloads/maple-leaf-rag.mid \
