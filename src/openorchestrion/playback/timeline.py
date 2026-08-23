@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import mido
 from mido import Message, MidiFile
@@ -26,8 +27,10 @@ class MidiTimeline:
         if not source.is_file():
             raise FileNotFoundError(source)
         midi = MidiFile(source)
+        if midi.type == 2:
+            raise ValueError("SMF type 2 contains asynchronous tracks and has no single master timeline")
 
-        absolute: list[tuple[int, int, int, object]] = []
+        absolute: list[tuple[int, int, int, Any]] = []
         for track_index, track in enumerate(midi.tracks):
             tick = 0
             for sequence_index, message in enumerate(track):
