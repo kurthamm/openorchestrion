@@ -50,6 +50,22 @@ openorchestrion-fixtures build/midi-fixtures --long-run-minutes 240
 
 The generated directory is intentionally ignored by Git. The source generator and assertions are versioned; binary output is reproducible. Unit tests verify the expected velocities, sustain values, GM channels/percussion, full MIDI note range, simultaneous polyphony loads, independent two-piano channels, synchronized click timestamps, and parser-safe noncritical event content.
 
+## Rights in the generated fixtures
+
+The MIDI files this generator produces are **offered under the project's MIT
+license**, the same terms as the repository itself (see `LICENSE`). This is an
+explicit grant covering the generated output, not an inference from the licence
+of the generator's source code.
+
+They contain no third-party composition: every note is written by
+`openorchestrion.testing.midi_fixtures`, so no separate composition-level
+permission is involved. That makes the suite the one body of content this
+project can clear from first principles, and it is imported under a real rights
+record — `SUITE_RIGHTS` in that module — which the repository contract check
+audits like any other claim. MIT permits redistribution provided the copyright
+notice travels with the files, so the record carries the attribution text and is
+classified `permitted-with-attribution` rather than `permitted`.
+
 ## Synthetic MIDI conformance suite
 
 The repository should generate its own tiny Standard MIDI Files for testing. A generator script is preferable to committing opaque binary fixtures wherever practical.

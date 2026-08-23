@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from openorchestrion.library.catalog import rebuild_catalog, search_catalog
+from openorchestrion.library.catalog import get_asset, rebuild_catalog, search_catalog
 from openorchestrion.library.importer import import_paths
 from openorchestrion.library.policy import audit_committed_music
 from openorchestrion.library.metadata import (
@@ -138,13 +138,36 @@ def test_public_domain_needs_a_stated_basis() -> None:
     assert "composition_rights_basis is required" in _reasons(composition_rights_basis=None)
 
 
-def test_a_licensed_composition_needs_no_public_domain_basis() -> None:
+def test_a_licensed_composition_needs_a_basis_of_its_own() -> None:
+    """The file's license cannot stand in for the composition's permission.
+
+    ``license`` describes the MIDI file. A composition marked ``licensed`` with
+    no basis names no licensor and no terms, so the two-question model would be
+    satisfied on paper while the composition side stayed unevidenced.
+    """
+    reasons = audit(
+        RightsEvidence(
+            rights_status="verified-open",
+            source_reference="https://example.org/x.mid",
+            license="CC0-1.0",
+            composition_rights="licensed",
+            redistribution="permitted",
+        )
+    )
+    assert any("composition_rights_basis is required" in reason for reason in reasons)
+
+
+def test_a_licensed_composition_passes_once_its_terms_are_stated() -> None:
     assert audit(
         RightsEvidence(
             rights_status="verified-open",
             source_reference="https://example.org/x.mid",
             license="CC0-1.0",
             composition_rights="licensed",
+            composition_rights_basis=(
+                "Arrangement licensed by the arranger under CC-BY-4.0; "
+                "see https://example.org/permission"
+            ),
             redistribution="permitted",
         )
     ) == ()
@@ -171,8 +194,23 @@ def test_a_known_restrictive_license_is_refused() -> None:
     assert "does not permit redistribution" in _reasons(license="all-rights-reserved")
 
 
-def test_a_noncommercial_license_is_refused() -> None:
-    assert "does not permit redistribution" in _reasons(license="CC-BY-NC-4.0")
+@pytest.mark.parametrize(
+    "license_id",
+    ["CC-BY-NC-4.0", "CC-BY-NC-SA-4.0", "CC-BY-NC-ND-4.0", "CC-BY-ND-4.0"],
+)
+def test_a_noncommercial_or_noderivatives_license_is_refused(license_id: str) -> None:
+    """Named rather than merely unfamiliar, so the curator gets a settled answer.
+
+    CC-BY-NC-SA-4.0 is MAESTRO's dataset license, which makes it the case most
+    likely to be reached for: musically it is the most attractive source this
+    project has, and it still cannot go in the redistributable set.
+    """
+    assert "does not permit redistribution" in _reasons(license=license_id)
+
+
+def test_a_restrictive_license_is_reported_as_settled_not_unknown() -> None:
+    assert implied_redistribution("CC-BY-NC-SA-4.0") == "prohibited"
+    assert implied_redistribution("Some-Unfamiliar-2.0") == "unknown"
 
 
 def test_a_redistribution_claim_contradicting_the_license_is_refused() -> None:
@@ -549,3 +587,129 @@ def test_the_generated_fixtures_carry_a_real_record() -> None:
     assert audit(SUITE_RIGHTS) == ()
     assert SUITE_RIGHTS.attribution
 
+
+
+# ------------------------------------------------- the operator-facing path
+
+
+def _rights(*args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-W", "ignore", "-m", "openorchestrion.library.provenance", *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _catalog_status(library: Path, asset_id: str) -> str | None:
+    row = get_asset(library / "catalog.db", asset_id)
+    return None if row is None else row["rights_status"]
+
+
+COMPLETE = (
+    "--rights-status", "verified-open",
+    "--source-reference", "https://example.org/scores/rag.mid",
+    "--license", "CC0-1.0",
+    "--composition-rights", "public-domain",
+    "--composition-rights-basis", "Composer died 1917; published 1899",
+    "--redistribution", "permitted",
+)
+
+
+def test_the_rights_cli_reconciles_the_catalog(library: Path, asset_id: str) -> None:
+    """The reason this command exists.
+
+    rights_status gates what a station may play. A sidecar saying verified-open
+    while the catalog still says personal means the research had no effect on
+    what the appliance actually plays, and nothing would say so.
+    """
+    assert _catalog_status(library, asset_id) == "personal"
+
+    result = _rights(asset_id, "--library-root", str(library), *COMPLETE)
+    assert result.returncode == 0, result.stderr
+
+    assert _catalog_status(library, asset_id) == "verified-open"
+    stored = read_rights(library, asset_id).provenance
+    assert stored["rights_status"] == "verified-open"
+
+
+def test_the_rights_cli_refuses_an_unsupported_claim(library: Path, asset_id: str) -> None:
+    before = read_rights(library, asset_id).provenance
+    result = _rights(asset_id, "--library-root", str(library), "--rights-status", "verified-open")
+
+    assert result.returncode == 2
+    assert "not supported by the recorded evidence" in result.stderr
+    assert read_rights(library, asset_id).provenance == before
+    assert _catalog_status(library, asset_id) == "personal"
+
+
+def test_the_rights_cli_changes_only_what_was_passed(library: Path, asset_id: str) -> None:
+    """Omitting a flag must leave stored evidence alone.
+
+    Defaulting the enum flags to 'unknown' would erase established evidence
+    every time someone corrected a typo in one other field.
+    """
+    assert _rights(asset_id, "--library-root", str(library), *COMPLETE).returncode == 0
+    assert (
+        _rights(asset_id, "--library-root", str(library), "--source-label", "Example").returncode
+        == 0
+    )
+
+    stored = read_rights(library, asset_id).provenance
+    assert stored["source_label"] == "Example"
+    assert stored["rights_status"] == "verified-open"
+    assert stored["license"] == "CC0-1.0"
+    assert stored["composition_rights"] == "public-domain"
+
+
+def test_the_rights_cli_stamps_when_the_claim_was_established(
+    library: Path, asset_id: str
+) -> None:
+    assert read_rights(library, asset_id).provenance.get("verified_at") is None
+    assert _rights(asset_id, "--library-root", str(library), *COMPLETE).returncode == 0
+    assert read_rights(library, asset_id).provenance["verified_at"]
+
+
+def test_the_rights_cli_does_not_overwrite_a_supplied_timestamp(
+    library: Path, asset_id: str
+) -> None:
+    stamp = "2020-01-01T00:00:00+00:00"
+    assert (
+        _rights(asset_id, "--library-root", str(library), *COMPLETE, "--verified-at", stamp)
+    ).returncode == 0
+    assert read_rights(library, asset_id).provenance["verified_at"] == stamp
+
+
+def test_the_rights_cli_respects_optimistic_concurrency(library: Path, asset_id: str) -> None:
+    stale = read_rights(library, asset_id).revision
+    first = _rights(asset_id, "--library-root", str(library), "--source-label", "First")
+    assert first.returncode == 0
+
+    result = _rights(
+        asset_id, "--library-root", str(library), "--source-label", "Second",
+        "--expect-revision", stale,
+    )
+    assert result.returncode == 2
+    assert "modified by someone else" in result.stderr
+
+
+def test_the_rights_cli_shows_the_stored_record(library: Path, asset_id: str) -> None:
+    result = _rights(asset_id, "--library-root", str(library), "--show", "--json")
+    assert result.returncode == 0
+    assert json.loads(result.stdout)["provenance"]["rights_status"] == "personal"
+
+
+def test_the_rights_cli_requires_something_to_do(library: Path, asset_id: str) -> None:
+    result = _rights(asset_id, "--library-root", str(library))
+    assert result.returncode == 2
+    assert "nothing to change" in result.stderr
+
+
+def test_the_rights_cli_can_defer_the_catalog_update(library: Path, asset_id: str) -> None:
+    """--no-reindex is for scripted bulk runs that reindex once at the end."""
+    assert (
+        _rights(asset_id, "--library-root", str(library), *COMPLETE, "--no-reindex").returncode == 0
+    )
+    assert _catalog_status(library, asset_id) == "personal"
+    rebuild_catalog(library)
+    assert _catalog_status(library, asset_id) == "verified-open"

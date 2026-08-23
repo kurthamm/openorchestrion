@@ -62,8 +62,25 @@ openorchestrion-reindex var/library
 ```
 
 If research arrives after the import — the usual case, since the file is often
-in hand before its terms are — use `set_rights` rather than re-importing.
-Re-import never overwrites a stored rights record.
+in hand before its terms are — use `openorchestrion-rights` rather than
+re-importing, which never overwrites a stored rights record:
+
+```bash
+openorchestrion-rights <asset-id> \
+  --library-root var/library \
+  --rights-status verified-open \
+  --source-reference "<url of the item record>" \
+  --license CC0-1.0 \
+  --composition-rights public-domain \
+  --composition-rights-basis "Composer died 1917; published 1899" \
+  --redistribution permitted \
+  --verified-by "<who checked>"
+```
+
+That writes the sidecar and reconciles the catalog in one step. Only the fields
+you pass are changed, and the claim is refused unless the merged result supports
+it, so an incomplete revision fails rather than producing a claim that outruns
+its evidence.
 
 ## Candidate compositions
 
@@ -173,11 +190,14 @@ inside them must still be checked individually.
 - **Wikimedia Commons** — per-file license templates, often with attribution or
   share-alike obligations that must be captured as `attribution` text.
 - **MAESTRO** — expressive Disklavier performance captures, musically the most
-  attractive option for this project because the MIDI carries real timing,
-  velocity and pedalling. Its dataset terms must be read before any of it is
-  treated as redistributable; a non-commercial restriction would exclude it from
-  the starter set regardless of how good the performances are, though it would
-  remain fine as a personal import.
+  attractive option this project has, because the MIDI carries real performance
+  timing, velocity and pedalling rather than quantized note entry. Its dataset
+  is published under **CC-BY-NC-SA-4.0**, and the non-commercial term puts it
+  outside the redistributable starter set no matter how good the performances
+  are. It remains perfectly usable as a **Personal Library** import on an
+  operator's own appliance. The audit recognizes this license id specifically,
+  so a curator who reaches for it is told the answer is settled rather than
+  merely unfamiliar.
 
 **Not source-worthy for the starter set:** BitMidi, VGMusic and similar archives.
 Free download is not a grant, and the characteristic "free for personal use"

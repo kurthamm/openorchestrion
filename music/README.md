@@ -12,6 +12,12 @@ The curated starter repertoire is **assembled on the appliance**, not committed 
 
 See [starter-catalog.md](starter-catalog.md) for the worklist, the curation procedure, and the sources still to be evaluated.
 
+## The one exception: generated fixtures
+
+The conformance suite produced by `openorchestrion.testing.midi_fixtures` is the only MIDI this project holds a `verified-open` record for. Those files are **offered under the project's MIT license**, the same terms as the repository itself — an explicit grant covering the generated output, not an inference from the generator source code's license. They contain no third-party composition, so no separate composition-level permission is involved.
+
+They are not committed here either: the suite is generated on demand and the output directory is ignored by Git. See [../docs/test-strategy.md](../docs/test-strategy.md#rights-in-the-generated-fixtures).
+
 ## Why the file matters as much as the composition
 
 A public-domain composition and a redistributable MIDI file are different questions. A Joplin rag is unambiguously out of copyright; a MIDI sequencing of it made in 2003 is a new copyrightable work whose author may reserve every right. Being free to download grants nothing.

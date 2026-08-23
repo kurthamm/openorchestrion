@@ -181,20 +181,30 @@ partially-evidenced library is never produced by accident. `personal` and
 `unknown` assert nothing about redistribution and therefore carry no research
 burden, which is the right default for a user's own collection.
 
-If a content-addressed asset already has a sidecar, re-import does not silently overwrite its rights metadata. Rights research genuinely arrives after the bytes do, so revising a claim is a first-class operation rather than an accidental re-import:
+If a content-addressed asset already has a sidecar, re-import does not silently overwrite its rights metadata. Rights research genuinely arrives after the bytes do, so revising a claim is a first-class operation with its own command:
 
-```python
-from openorchestrion.library.metadata import set_rights
-
-set_rights(library_root, asset_id, {
-    "rights_status": "verified-open",
-    "source_reference": "https://example.org/piece-record",
-    "license": "CC0-1.0",
-    "composition_rights": "public-domain",
-    "composition_rights_basis": "Composer died 1917",
-    "redistribution": "permitted",
-})
+```bash
+openorchestrion-rights <asset-id> \
+  --library-root var/library \
+  --rights-status verified-open \
+  --source-reference "https://example.org/piece-record" \
+  --license CC0-1.0 \
+  --composition-rights public-domain \
+  --composition-rights-basis "Composer died 1917; published 1899" \
+  --redistribution permitted \
+  --verified-by "curation pass 1"
 ```
+
+This writes the sidecar **and reconciles the catalog** in one step. That matters
+because `rights_status` gates what a station may play: a sidecar saying
+`verified-open` while `catalog.db` still says `personal` means the research had
+no effect on what the appliance actually plays, and nothing would say so. Pass
+`--no-reindex` only for scripted bulk runs that reindex once at the end.
+
+Only the fields you pass are changed — omitting a flag leaves stored evidence
+alone rather than resetting it to `unknown`. `--show` prints the current record,
+and `--expect-revision` refuses the write if the sidecar moved underneath you.
+The underlying `set_rights()` remains available for programmatic use.
 
 `provenance` remains a protected block that ordinary curation cannot touch, and
 `set_rights` goes through the same advisory lock, atomic write and revision

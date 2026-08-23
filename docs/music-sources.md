@@ -68,5 +68,16 @@ about the file.
 An unrecognized license is treated as **unestablished**, not as permissive.
 Adding one to the table in `openorchestrion.library.rights` is a deliberate edit
 that records the review, rather than something a curator can assert in passing.
+Licenses known to be incompatible with a redistributable set — anything
+non-commercial or no-derivatives, including MAESTRO's `CC-BY-NC-SA-4.0` — are
+named explicitly so the audit reports a settled answer rather than an unfamiliar
+one. Such material is still fine as a Personal Library import.
+
+`redistribution` is deliberately coarse: it distinguishes "credit required" from
+"no credit required" and nothing more. It is **not** a distribution-compliance
+engine, and `attribution_required()` should never be presented as one. A license
+can oblige far more than a credit line — ShareAlike terms on a derived work, for
+one. The stored `license` and `license_url` remain the source of truth for
+license-specific obligations.
 
 The public project should favor a smaller, high-quality, legally clean starter catalog over an enormous mystery archive. See [../music/starter-catalog.md](../music/starter-catalog.md) for the curation worklist and procedure.

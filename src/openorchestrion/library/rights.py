@@ -68,8 +68,21 @@ _LICENSE_TERMS: dict[str, str] = {
     "MIT": "permitted-with-attribution",
 }
 
-# Recorded so a file can be catalogued honestly rather than left ambiguous.
-_KNOWN_RESTRICTIVE: frozenset[str] = frozenset({"all-rights-reserved", "CC-BY-NC-4.0"})
+# Recognized so the audit can give the specific reason rather than the generic
+# "unestablished" one. Failing closed is not the same as explaining why: a
+# curator who is told a license is merely unfamiliar will go and look it up,
+# while one told it is non-commercial knows the answer is settled. The
+# non-commercial entries are here because this project's starter catalog is
+# redistributable material; they remain perfectly usable as personal imports.
+_KNOWN_RESTRICTIVE: frozenset[str] = frozenset(
+    {
+        "all-rights-reserved",
+        "CC-BY-NC-4.0",
+        "CC-BY-NC-SA-4.0",
+        "CC-BY-NC-ND-4.0",
+        "CC-BY-ND-4.0",
+    }
+)
 
 #: License ids a curator may claim, for help text and validation messages.
 ESTABLISHED_LICENSES: tuple[str, ...] = tuple(sorted(_LICENSE_TERMS))
@@ -204,14 +217,20 @@ def audit(evidence: RightsEvidence) -> tuple[str, ...]:
             "composition_rights must be established as public-domain or licensed "
             f"(found {evidence.composition_rights!r})"
         )
-    elif evidence.composition_rights == "public-domain" and not (
-        evidence.composition_rights_basis or ""
-    ).strip():
-        # A bare "public domain" is an opinion. The basis is the reasoning that
-        # makes it reviewable by someone who was not there.
+    elif not (evidence.composition_rights_basis or "").strip():
+        # A bare "public domain" is an opinion, and a bare "licensed" is worse:
+        # it names no licensor and no terms. The basis is the reasoning that
+        # makes either reviewable by someone who was not there. ``license``
+        # cannot stand in for it, because that field is the terms of the MIDI
+        # file, and the entire point of the model is that the two are separate.
+        example = (
+            "composer died 1917, published 1899"
+            if evidence.composition_rights == "public-domain"
+            else "licensed by the arranger under CC-BY-4.0, see <url>"
+        )
         reasons.append(
-            "composition_rights_basis is required for a public-domain composition "
-            "(for example: composer died 1917, published 1899)"
+            "composition_rights_basis is required for a "
+            f"{evidence.composition_rights} composition (for example: {example})"
         )
 
     license_id = (evidence.license or "").strip()
@@ -263,5 +282,12 @@ def verify(evidence: RightsEvidence) -> None:
 
 
 def attribution_required(evidence: RightsEvidence) -> bool:
-    """Whether this asset obliges the player to credit someone."""
+    """Whether this asset obliges the player to credit someone.
+
+    Deliberately coarse, and not a distribution-compliance check. A license can
+    oblige far more than a credit line — ShareAlike terms on a derived work, for
+    one — and this returns nothing about that. The stored ``license`` and
+    ``license_url`` remain the source of license-specific obligations; this only
+    answers whether a credit must be shown alongside playback.
+    """
     return evidence.redistribution == "permitted-with-attribution"
