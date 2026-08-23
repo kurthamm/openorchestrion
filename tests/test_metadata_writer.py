@@ -10,21 +10,32 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 import pytest
 
-from openorchestrion.library.catalog import get_asset, rebuild_catalog, reindex_asset, search_catalog
+from openorchestrion.library.catalog import (
+    catalog_stats,
+    get_asset,
+    rebuild_catalog,
+    reindex_asset,
+    search_catalog,
+)
 from openorchestrion.library.importer import import_paths
 from openorchestrion.library.metadata import (
     CURATED_FIELDS,
     AssetNotFoundError,
     MetadataConflictError,
+    MetadataError,
     MetadataValidationError,
     apply_edits,
+    midi_path,
     normalize_asset_id,
     read_csv_edits,
     read_metadata,
+    reanalyze_asset,
+    reanalyze_library,
     set_favorite,
     sidecar_path,
     update_metadata,
@@ -476,3 +487,175 @@ def test_set_favorite_helper_matches_the_endpoint_path(library: Path, asset_id: 
     record = set_favorite(library, asset_id, True)
     assert record.descriptive_metadata["favorite"] is True
     assert set_favorite(library, asset_id, False).descriptive_metadata["favorite"] is False
+
+
+# ------------------------------------------------- concurrent writers (review)
+
+
+def test_two_concurrent_writers_on_the_same_revision_leave_one_winner(
+    library: Path, asset_id: str
+) -> None:
+    """The revision check alone is a time-of-check/time-of-use race.
+
+    Without a lock held across read -> check -> write, both writers read
+    revision R, both pass the check, and the second os.replace silently
+    discards the first edit. Exactly one must succeed.
+    """
+    shared = read_metadata(library, asset_id).revision
+    start = threading.Barrier(2)
+    outcomes: list[object] = []
+    lock = threading.Lock()
+
+    def writer(name: str) -> None:
+        start.wait(timeout=10)
+        try:
+            update_metadata(library, asset_id, {"title": name}, expected_revision=shared)
+            result: object = name
+        except MetadataConflictError as exc:
+            result = exc
+        with lock:
+            outcomes.append(result)
+
+    threads = [threading.Thread(target=writer, args=(name,)) for name in ("first", "second")]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=15)
+
+    winners = [item for item in outcomes if isinstance(item, str)]
+    conflicts = [item for item in outcomes if isinstance(item, MetadataConflictError)]
+    assert len(winners) == 1, f"expected exactly one winner, got {outcomes}"
+    assert len(conflicts) == 1
+    # The surviving sidecar is the winner's, not a silent overwrite.
+    assert read_metadata(library, asset_id).descriptive_metadata["title"] == winners[0]
+
+
+def test_concurrent_writers_without_a_revision_do_not_corrupt_the_sidecar(
+    library: Path, asset_id: str
+) -> None:
+    """Forced writes still serialize, so the file is never left half-written."""
+    start = threading.Barrier(4)
+
+    def writer(index: int) -> None:
+        start.wait(timeout=10)
+        update_metadata(library, asset_id, {"title": f"writer-{index}"})
+
+    threads = [threading.Thread(target=writer, args=(index,)) for index in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=15)
+
+    stored = read_metadata(library, asset_id).descriptive_metadata
+    assert stored["title"].startswith("writer-")
+    json.loads(sidecar_path(library, asset_id).read_text())  # parses: not truncated
+
+
+# --------------------------------------- composition pruning (review item 2)
+
+
+def test_retitling_does_not_leave_an_orphaned_composition(
+    library: Path, asset_id: str
+) -> None:
+    """A changed title derives a new composition_id; the old row must go."""
+    update_metadata(library, asset_id, {"title": "First Title", "composer": "A Composer"})
+    reindex_asset(library / "catalog.db", library, asset_id)
+    assert catalog_stats(library / "catalog.db")["compositions"] == 1
+
+    for title in ("Second Title", "Third Title", "Fourth Title"):
+        update_metadata(library, asset_id, {"title": title})
+        reindex_asset(library / "catalog.db", library, asset_id)
+        assert catalog_stats(library / "catalog.db")["compositions"] == 1
+
+    assert get_asset(library / "catalog.db", asset_id)["title"] == "Fourth Title"
+
+
+def test_changing_composer_also_prunes_the_old_composition(
+    library: Path, asset_id: str
+) -> None:
+    update_metadata(library, asset_id, {"title": "Same Title", "composer": "First"})
+    reindex_asset(library / "catalog.db", library, asset_id)
+    update_metadata(library, asset_id, {"composer": "Second"})
+    reindex_asset(library / "catalog.db", library, asset_id)
+    assert catalog_stats(library / "catalog.db")["compositions"] == 1
+
+
+def test_pruning_does_not_remove_compositions_other_assets_still_use(
+    library: Path,
+) -> None:
+    """Two performances of one work share a composition; retitling one keeps it."""
+    first, second = (row["asset_id"] for row in search_catalog(library / "catalog.db", limit=2))
+    for asset in (first, second):
+        update_metadata(library, asset, {"title": "Shared Work", "composer": "One Composer"})
+        reindex_asset(library / "catalog.db", library, asset)
+    assert catalog_stats(library / "catalog.db")["compositions"] == 1
+
+    update_metadata(library, first, {"title": "Moved Away"})
+    reindex_asset(library / "catalog.db", library, first)
+    # One row for each distinct work; the shared one survives for `second`.
+    assert catalog_stats(library / "catalog.db")["compositions"] == 2
+    assert get_asset(library / "catalog.db", second)["title"] == "Shared Work"
+
+
+# ------------------------------------------ re-analysis primitive (review 3)
+
+
+def test_reanalysis_replaces_deterministic_facts_only(library: Path, asset_id: str) -> None:
+    """The primitive #21 will call to repair existing sidecars."""
+    update_metadata(
+        library, asset_id, {"title": "Curated", "composer": "Kept", "favorite": True}
+    )
+    document = json.loads(sidecar_path(library, asset_id).read_text())
+    provenance = document["provenance"]
+
+    # Corrupt the stored analysis the way a superseded analyzer would leave it.
+    document["deterministic_analysis"]["peak_simultaneous_notes"] = 9999
+    sidecar_path(library, asset_id).write_text(json.dumps(document, indent=2, sort_keys=True))
+
+    record = reanalyze_asset(library, asset_id)
+
+    after = json.loads(sidecar_path(library, asset_id).read_text())
+    assert after["deterministic_analysis"]["peak_simultaneous_notes"] != 9999
+    assert after["descriptive_metadata"]["title"] == "Curated"
+    assert after["descriptive_metadata"]["favorite"] is True
+    assert after["provenance"] == provenance
+    assert record.descriptive_metadata["composer"] == "Kept"
+
+
+def test_reanalysis_does_not_persist_a_machine_path(library: Path, asset_id: str) -> None:
+    reanalyze_asset(library, asset_id)
+    source = json.loads(sidecar_path(library, asset_id).read_text())
+    assert source["deterministic_analysis"]["source"] == f"{asset_id.split(':', 1)[1]}.mid"
+
+
+def test_reanalysis_refuses_when_the_stored_object_does_not_match_its_id(
+    library: Path, asset_id: str
+) -> None:
+    """Content addressing is the integrity check; a mismatch is corruption."""
+    other = search_catalog(library / "catalog.db", limit=2)[1]["asset_id"]
+    stored = midi_path(library, asset_id)
+    before = sidecar_path(library, asset_id).read_bytes()
+    stored.write_bytes(midi_path(library, other).read_bytes())
+
+    with pytest.raises(MetadataError, match="refusing to rewrite analysis"):
+        reanalyze_asset(library, asset_id)
+    assert sidecar_path(library, asset_id).read_bytes() == before
+
+
+def test_reanalysis_honours_optimistic_concurrency(library: Path, asset_id: str) -> None:
+    stale = read_metadata(library, asset_id).revision
+    update_metadata(library, asset_id, {"title": "Moved on"})
+    with pytest.raises(MetadataConflictError):
+        reanalyze_asset(library, asset_id, expected_revision=stale)
+
+
+def test_library_wide_reanalysis_isolates_a_broken_object(library: Path) -> None:
+    """A repair sweep must not stop at the first unreadable file."""
+    rows = search_catalog(library / "catalog.db", limit=100)
+    broken = rows[0]["asset_id"]
+    midi_path(library, broken).write_bytes(b"not a midi file")
+
+    result = reanalyze_library(library)
+    assert len(result.failed) == 1
+    assert result.failed[0].asset_id == broken
+    assert len(result.updated) == len(rows) - 1

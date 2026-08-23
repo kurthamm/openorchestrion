@@ -26,9 +26,16 @@ import csv
 import hashlib
 import json
 import os
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Iterator, Mapping
+from uuid import uuid4
+
+try:  # POSIX advisory locking; the appliance targets Raspberry Pi OS/Linux.
+    import fcntl
+except ImportError:  # pragma: no cover - Windows development only
+    fcntl = None  # type: ignore[assignment]
 
 LEVELS = {"low": 1, "medium": 3, "high": 5}
 PERFORMANCE_TYPES = (
@@ -301,6 +308,39 @@ def normalize_metadata(changes: Mapping[str, Any]) -> dict[str, Any]:
 # ------------------------------------------------------------------- I/O
 
 
+@contextmanager
+def _asset_write_lock(path: Path) -> Iterator[None]:
+    """Serialize writers for one sidecar.
+
+    The revision check alone is a time-of-check/time-of-use race: two processes
+    can both read revision R, both find it current, and the second ``os.replace``
+    then silently discards the first edit. Holding an exclusive advisory lock
+    across read → check → write closes that window, so the second writer re-reads
+    the *new* revision and is correctly rejected as stale.
+
+    The lock file lives beside the sidecar and is deliberately not removed:
+    unlinking it would let a waiting process acquire a lock on a file nobody
+    else can see any more.
+    """
+    if fcntl is None:  # pragma: no cover - non-POSIX development host
+        # Without advisory locking the revision check still rejects sequential
+        # stale writes; only the concurrent case degrades.
+        yield
+        return
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = path.with_name(path.name + ".lock")
+    handle = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+    finally:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+        finally:
+            os.close(handle)
+
+
 def _load_document(path: Path, asset_id: str) -> tuple[dict[str, Any], str]:
     try:
         payload = path.read_bytes()
@@ -334,7 +374,11 @@ def _write_atomic(path: Path, document: Mapping[str, Any]) -> str:
     a power loss cannot leave a truncated file in place.
     """
     payload = (json.dumps(document, indent=2, sort_keys=True) + "\n").encode("utf-8")
-    temporary = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    # Unique per write, not merely per process: two threads sharing one temp
+    # name would let the first os.replace consume the second's file. The write
+    # lock prevents that today, but a foot-gun that only a lock defuses is one
+    # refactor away from being live.
+    temporary = path.with_name(f"{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
     try:
         with temporary.open("wb") as handle:
             handle.write(payload)
@@ -366,30 +410,33 @@ def update_metadata(
     """
     canonical = normalize_asset_id(asset_id)
     path = sidecar_path(library_root, canonical)
-    document, revision = _load_document(path, canonical)
-
-    if expected_revision is not None and expected_revision != revision:
-        raise MetadataConflictError(canonical, expected_revision, revision)
 
     removals = tuple(remove)
     for name in removals:
         if name not in CURATED_FIELDS:
             raise MetadataValidationError(f"cannot remove unknown field: {name}")
 
-    # Validate the entire change set before touching the document.
+    # Validate the entire change set before touching the document, and before
+    # taking the lock: a malformed edit should not make other writers wait.
     normalized = normalize_metadata(changes or {})
 
-    curated = dict(document.get("descriptive_metadata") or {})
-    curated.update(normalized)
-    for name in removals:
-        curated.pop(name, None)
-    # An empty list carries no information and would otherwise linger forever.
-    for name in LIST_FIELDS:
-        if name in curated and not curated[name]:
-            curated.pop(name)
+    with _asset_write_lock(path):
+        document, revision = _load_document(path, canonical)
+        if expected_revision is not None and expected_revision != revision:
+            raise MetadataConflictError(canonical, expected_revision, revision)
 
-    document["descriptive_metadata"] = curated
-    new_revision = _write_atomic(path, document)
+        curated = dict(document.get("descriptive_metadata") or {})
+        curated.update(normalized)
+        for name in removals:
+            curated.pop(name, None)
+        # An empty list carries no information and would otherwise linger.
+        for name in LIST_FIELDS:
+            if name in curated and not curated[name]:
+                curated.pop(name)
+
+        document["descriptive_metadata"] = curated
+        new_revision = _write_atomic(path, document)
+
     return MetadataRecord(
         asset_id=canonical,
         revision=new_revision,
@@ -411,6 +458,96 @@ def set_favorite(
         {"favorite": bool(favorite)},
         expected_revision=expected_revision,
     )
+
+
+# --------------------------------------------------------- re-analysis
+
+
+def midi_path(library_root: str | Path, asset_id: str) -> Path:
+    digest = normalize_asset_id(asset_id).split(":", 1)[1]
+    return Path(library_root) / "assets" / f"{digest}.mid"
+
+
+def reanalyze_asset(
+    library_root: str | Path,
+    asset_id: str,
+    *,
+    expected_revision: str | None = None,
+) -> MetadataRecord:
+    """Recompute ``deterministic_analysis`` from the stored MIDI bytes.
+
+    Deterministic facts are derived, so a corrected analyzer makes every
+    existing sidecar stale. This is how a library is repaired in place: rerun
+    the analyzer over the immutable stored object and replace only that block,
+    leaving curated metadata, provenance and AI enrichment untouched.
+
+    Issue #21 uses this to repair ``peak_simultaneous_notes`` after correcting
+    how sustained notes are counted.
+
+    The stored object is content-addressed, so its digest must still match the
+    asset id; a mismatch means library corruption and is refused rather than
+    written over.
+    """
+    from ..midi.analyzer import analyze_midi  # local: avoids a cycle at import
+
+    canonical = normalize_asset_id(asset_id)
+    path = sidecar_path(library_root, canonical)
+    source = midi_path(library_root, canonical)
+    if not source.is_file():
+        raise AssetNotFoundError(f"no stored MIDI object for {canonical}")
+
+    analysis = analyze_midi(source)
+    digest = analysis.sha256
+    if digest is None or f"sha256:{digest}" != canonical:
+        raise MetadataError(
+            f"{canonical}: stored object hashes to {digest}; refusing to rewrite analysis"
+        )
+
+    document_analysis = analysis.to_dict()
+    # Never persist this machine's absolute path in durable metadata.
+    document_analysis["source"] = source.name
+
+    with _asset_write_lock(path):
+        document, revision = _load_document(path, canonical)
+        if expected_revision is not None and expected_revision != revision:
+            raise MetadataConflictError(canonical, expected_revision, revision)
+        document["deterministic_analysis"] = document_analysis
+        new_revision = _write_atomic(path, document)
+
+    curated = document.get("descriptive_metadata") or {}
+    return MetadataRecord(
+        asset_id=canonical,
+        revision=new_revision,
+        descriptive_metadata=curated,
+    )
+
+
+def reanalyze_library(library_root: str | Path) -> BulkResult:
+    """Re-analyze every stored asset, isolating failures to the asset at fault.
+
+    A repair sweep over a large collection must not stop at the first
+    unreadable object.
+    """
+    assets = Path(library_root) / "assets"
+    updated: list[MetadataRecord] = []
+    failed: list[BulkFailure] = []
+    for sidecar in sorted(assets.glob("*.json")):
+        asset_id = f"sha256:{sidecar.stem}"
+        try:
+            updated.append(reanalyze_asset(library_root, asset_id))
+        except MetadataError as exc:
+            failed.append(
+                BulkFailure(asset_id=asset_id, reason=str(exc), error_type=type(exc).__name__)
+            )
+        except Exception as exc:  # noqa: BLE001 - one unreadable object, not a sweep
+            failed.append(
+                BulkFailure(
+                    asset_id=asset_id,
+                    reason=str(exc) or type(exc).__name__,
+                    error_type=type(exc).__name__,
+                )
+            )
+    return BulkResult(updated=tuple(updated), failed=tuple(failed))
 
 
 # ------------------------------------------------------------------ bulk

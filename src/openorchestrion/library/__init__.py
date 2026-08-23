@@ -6,6 +6,8 @@ from .metadata import (
     MetadataRecord,
     MetadataValidationError,
     read_metadata,
+    reanalyze_asset,
+    reanalyze_library,
     set_favorite,
     update_metadata,
 )
@@ -24,6 +26,8 @@ __all__ = [
     "MetadataRecord",
     "MetadataValidationError",
     "read_metadata",
+    "reanalyze_asset",
+    "reanalyze_library",
     "set_favorite",
     "update_metadata",
     "ImportFailure",

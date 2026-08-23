@@ -457,6 +457,17 @@ def reindex_asset(
         # ON DELETE CASCADE clears tags, channels, programs and tracks.
         conn.execute("DELETE FROM assets WHERE asset_id = ?", (document["asset_id"],))
         _index_document(conn, document, sidecar_path=sidecar, library_root=root)
+        # Retitling an asset changes its derived composition_id, so the row it
+        # used to point at can be left with nothing referencing it. Without
+        # this, repeated edits inflate the composition count indefinitely.
+        conn.execute(
+            """
+            DELETE FROM compositions
+            WHERE composition_id NOT IN (
+                SELECT composition_id FROM assets WHERE composition_id IS NOT NULL
+            )
+            """
+        )
     return True
 
 
