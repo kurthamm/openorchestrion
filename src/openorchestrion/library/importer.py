@@ -145,6 +145,11 @@ def _same_contents(left: Path, right: Path) -> bool:
                 return True
 
 
+def _validate_max_bytes(max_bytes: int | None) -> None:
+    if max_bytes is not None and max_bytes < 0:
+        raise ValueError("max_bytes must be non-negative or None")
+
+
 def import_midi(
     source: str | Path,
     library_root: str | Path,
@@ -156,6 +161,7 @@ def import_midi(
     attribution: str | None = None,
     max_bytes: int | None = DEFAULT_MAX_BYTES,
 ) -> ImportResult:
+    _validate_max_bytes(max_bytes)
     source_path = Path(source).resolve()
     if not source_path.is_file():
         raise FileNotFoundError(source_path)
@@ -226,6 +232,30 @@ def _describe(exc: Exception) -> str:
     return f"unreadable MIDI data ({type(exc).__name__})"
 
 
+def _rejected_explicit_source(source: str | Path) -> ImportFailure | None:
+    """Return a failure for an explicit source that discovery would otherwise hide."""
+    path = Path(source)
+    if not path.exists():
+        return ImportFailure(
+            source=str(path),
+            reason="path does not exist",
+            error_type="FileNotFoundError",
+        )
+    if path.is_file() and path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        return ImportFailure(
+            source=str(path),
+            reason=f"unsupported MIDI extension: {path.suffix}",
+            error_type="ValueError",
+        )
+    if not path.is_file() and not path.is_dir():
+        return ImportFailure(
+            source=str(path),
+            reason="path is not a regular file or directory",
+            error_type="ValueError",
+        )
+    return None
+
+
 def import_paths(
     sources: Iterable[str | Path],
     library_root: str | Path,
@@ -245,13 +275,29 @@ def import_paths(
     discovery is sorted, everything after it was silently never imported. Each
     file is now attempted independently and failures are reported as data.
 
+    Explicit source arguments that are missing or not MIDI files are failures,
+    rather than disappearing during discovery. Empty directories remain valid
+    zero-file imports.
+
     Pass ``fail_fast=True`` to restore stop-on-first-error for scripted runs
     that would rather not proceed on a partially bad collection.
     """
-    files = discover_midi_files(sources, recursive=recursive)
+    _validate_max_bytes(max_bytes)
+    source_list = tuple(sources)
     imported: list[ImportResult] = []
     failed: list[ImportFailure] = []
+    discoverable: list[str | Path] = []
 
+    for source in source_list:
+        rejection = _rejected_explicit_source(source)
+        if rejection is not None:
+            failed.append(rejection)
+            if fail_fast:
+                return ImportReport(imported=(), failed=tuple(failed))
+        else:
+            discoverable.append(source)
+
+    files = discover_midi_files(discoverable, recursive=recursive)
     for source in files:
         try:
             imported.append(
@@ -278,6 +324,13 @@ def import_paths(
                 break
 
     return ImportReport(imported=tuple(imported), failed=tuple(failed))
+
+
+def _non_negative_int(value: str) -> int:
+    parsed = int(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("--max-bytes must be non-negative")
+    return parsed
 
 
 def main() -> None:
@@ -307,7 +360,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--max-bytes",
-        type=int,
+        type=_non_negative_int,
         default=DEFAULT_MAX_BYTES,
         help=f"Skip files larger than this (default: {DEFAULT_MAX_BYTES})",
     )
