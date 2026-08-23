@@ -1,0 +1,23 @@
+[Unit]
+Description=Advertise OpenOrchestrion on the local network
+Documentation=https://github.com/kurthamm/openorchestrion
+After=network.target avahi-daemon.service openorchestrion.service
+Wants=avahi-daemon.service
+BindsTo=openorchestrion.service
+
+[Service]
+Type=simple
+User=openorchestrion
+Group=openorchestrion
+Environment=OPENORCHESTRION_PORT=8000
+EnvironmentFile=-/etc/openorchestrion/openorchestrion.env
+ExecStart=/usr/bin/avahi-publish-service "OpenOrchestrion" _http._tcp ${OPENORCHESTRION_PORT} path=/ product=OpenOrchestrion
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
