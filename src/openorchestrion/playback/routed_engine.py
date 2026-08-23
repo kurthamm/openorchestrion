@@ -30,6 +30,8 @@ class PlaybackEngine(BasePlaybackEngine):
 
     async def _begin_current_locked(self, *, start_position: float) -> None:
         current = self._current_item_locked()
+        if start_position <= 0:
+            self.last_routing_decision = None
         if (
             current is not None
             and current.spec.routing_plan is None
