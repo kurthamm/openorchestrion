@@ -8,7 +8,11 @@ Personal or commercially licensed MIDI belongs in the user's local library and i
 
 ## The starter catalog
 
-The curated starter repertoire is **assembled on the appliance**, not committed here. What lives in this repository is the evidence and the procedure: which compositions are candidates, what has to be established about each file before it can be used, and the commands that record it.
+Verified repertoire **is committed here**, once — and only once — its rights are established. A file reaches this directory by clearing the audit, never by being convenient to add: `.github/scripts/validate_repo.py` fails CI on any `.mid` here without a sidecar supporting a `verified-open` claim, so the gate is enforced rather than remembered.
+
+That means a user gets playable, legally clean repertoire on clone, and the appliance install has nothing to download. It also means every future addition faces the same evidence bar, which is the point rather than the cost.
+
+Candidates arrive as raw input first — files plus a curation manifest — and are promoted here only after the audit passes. Anything that fails stays out of the starter set; it remains fine as a personal import on someone's own appliance.
 
 See [starter-catalog.md](starter-catalog.md) for the worklist, the curation procedure, and the sources still to be evaluated.
 

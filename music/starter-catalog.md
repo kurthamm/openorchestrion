@@ -5,10 +5,16 @@ stream without anyone having to take our word for it. It is deliberately not a
 bulk MIDI dump: a hundred files of unknown origin are worth less than a dozen
 whose terms are written down and re-checkable.
 
-**No third-party MIDI is committed to this repository.** The starter catalog is
-assembled on the appliance by fetching from the sources below and importing them
-through the ordinary pipeline. What lives in Git is the evidence and the
-procedure, not other people's files.
+**Nothing reaches this directory without established rights.** Verified
+repertoire is committed, so a user has playable, legally clean music on clone and
+the appliance install has nothing to fetch — but a file earns its place by
+clearing the audit, not by being convenient to add. The repository contract check
+fails CI on any committed MIDI whose sidecar does not support a `verified-open`
+claim.
+
+Candidates arrive as raw input first: the files, plus a manifest carrying one row
+of evidence per file. Only what passes is promoted. What fails stays out of the
+starter set and remains perfectly usable as a personal import.
 
 ## The two questions
 
