@@ -3,19 +3,95 @@
 The import of the OpenAI SDK is deliberately lazy. Offline appliances neither
 need nor install it, and merely importing :mod:`openorchestrion` must never make
 a hosted-provider dependency mandatory.
+
+The public :class:`PlaybackIntent` intentionally contains a free-form
+``routing_preferences`` mapping and friendly defaults. OpenAI Structured Outputs
+requires closed objects and every field to be required, so this module uses a
+strict provider-only transport model and converts it back to ``PlaybackIntent``.
+That keeps the public application contract unchanged while making the hosted
+boundary compatible with strict structured output.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .ai import ProviderOutputError, ValidatingJSONConciergeProvider
-from .models import PlaybackIntent
+from .models import PerformanceType, PlaybackIntent
 
 DEFAULT_OPENAI_MODEL = "gpt-5.6-luna"
 DEFAULT_OPENAI_TIMEOUT_SECONDS = 15.0
+
+
+class OpenAIRoutingPreference(BaseModel):
+    """One entry from PlaybackIntent.routing_preferences in strict-schema form."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str = Field(min_length=1)
+    value: str = Field(min_length=1)
+
+
+class OpenAIPlaybackIntent(BaseModel):
+    """Strict Responses-API transport schema for the public PlaybackIntent.
+
+    Every field is intentionally required. Domain fields that are optional are
+    nullable rather than omitted, and the free-form routing mapping becomes a
+    list of closed key/value objects so no schema object needs arbitrary
+    ``additionalProperties``.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: Literal["station", "queue", "single", "modify_current"]
+    duration_minutes: int | None = Field(ge=1, le=1440)
+    genres: list[str]
+    moods: list[str]
+    themes: list[str]
+    eras: list[str]
+    composers: list[str]
+    artists: list[str]
+    instrumentation: list[str]
+    performance_types: list[PerformanceType]
+    familiarity: Literal["low", "medium", "high"] | None
+    energy: Literal["low", "medium", "high"] | None
+    tempo_preference: Literal["slow", "medium", "fast", "mixed"] | None
+    include_tags: list[str]
+    exclude_tags: list[str]
+    avoid_recent_repeats: bool
+    repeat_window_days: int | None = Field(ge=0, le=3650)
+    device_preferences: list[str]
+    routing_preferences: list[OpenAIRoutingPreference]
+    continuation_behavior: Literal["replace", "refine", "append"] | None
+    interpretation: str | None = Field(max_length=500)
+
+    @model_validator(mode="after")
+    def _unique_routing_keys(self) -> OpenAIPlaybackIntent:
+        keys = [entry.key for entry in self.routing_preferences]
+        if len(keys) != len(set(keys)):
+            raise ValueError("routing preference keys must be unique")
+        return self
+
+    @classmethod
+    def from_playback_intent(cls, intent: PlaybackIntent) -> OpenAIPlaybackIntent:
+        payload = intent.model_dump(mode="python")
+        routing = payload.pop("routing_preferences")
+        payload["routing_preferences"] = [
+            {"key": key, "value": value} for key, value in routing.items()
+        ]
+        return cls.model_validate(payload)
+
+    def to_playback_intent(self) -> PlaybackIntent:
+        payload = self.model_dump(mode="json")
+        routing = payload.pop("routing_preferences")
+        payload["routing_preferences"] = {
+            entry["key"]: entry["value"] for entry in routing
+        }
+        return PlaybackIntent.model_validate(payload)
 
 
 class OpenAIIntentBackend:
@@ -58,23 +134,31 @@ class OpenAIIntentBackend:
         current_intent: Mapping[str, Any] | None,
         contract: str,
     ) -> Mapping[str, Any]:
-        context = (
-            "There is no current intent. Treat this as a replacement request."
-            if current_intent is None
-            else (
+        if current_intent is None:
+            context = "There is no current intent. Treat this as a replacement request."
+        else:
+            domain_intent = PlaybackIntent.model_validate(dict(current_intent))
+            transport_intent = OpenAIPlaybackIntent.from_playback_intent(domain_intent)
+            context = (
                 "Current validated intent JSON follows. Return the complete merged intent, "
                 "preserving unrelated preferences and hard include/exclude tags when this is "
-                "a refinement:\n"
-                + json.dumps(dict(current_intent), sort_keys=True)
+                "a refinement. In this provider schema routing_preferences is represented as "
+                "a list of {key, value} entries:\n"
+                + json.dumps(transport_intent.model_dump(mode="json"), sort_keys=True)
             )
-        )
         user_text = f"{context}\n\nUser music request:\n{prompt}"
+        instructions = (
+            contract
+            + "\nFor this provider's strict schema, routing_preferences is an array of "
+            "objects with required key and value strings. It maps losslessly to the "
+            "application's routing_preferences object after validation."
+        )
 
         response = await self.client.responses.parse(
             model=self.model,
-            instructions=contract,
+            instructions=instructions,
             input=[{"role": "user", "content": user_text}],
-            text_format=PlaybackIntent,
+            text_format=OpenAIPlaybackIntent,
         )
 
         refusal = _refusal_text(response)
@@ -83,13 +167,13 @@ class OpenAIIntentBackend:
 
         parsed = getattr(response, "output_parsed", None)
         if parsed is None:
-            raise ProviderOutputError("OpenAI returned no parsed PlaybackIntent")
-        if not isinstance(parsed, PlaybackIntent):
+            raise ProviderOutputError("OpenAI returned no parsed intent")
+        if not isinstance(parsed, OpenAIPlaybackIntent):
             try:
-                parsed = PlaybackIntent.model_validate(parsed)
+                parsed = OpenAIPlaybackIntent.model_validate(parsed)
             except Exception as exc:  # noqa: BLE001 - provider boundary
-                raise ProviderOutputError("OpenAI parsed output was not a PlaybackIntent") from exc
-        return parsed.model_dump(mode="json")
+                raise ProviderOutputError("OpenAI parsed output was not a valid intent") from exc
+        return parsed.to_playback_intent().model_dump(mode="json")
 
 
 def _refusal_text(response: Any) -> str | None:
@@ -127,5 +211,7 @@ __all__ = [
     "DEFAULT_OPENAI_MODEL",
     "DEFAULT_OPENAI_TIMEOUT_SECONDS",
     "OpenAIIntentBackend",
+    "OpenAIPlaybackIntent",
+    "OpenAIRoutingPreference",
     "create_openai_provider",
 ]
