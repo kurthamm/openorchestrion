@@ -249,7 +249,8 @@ async def test_configured_provider_without_key_uses_fallback_without_client_call
 
     result = await concierge.interpret("ragtime")
 
-    assert concierge.primary is None
+    assert concierge.primary is not None
+    assert concierge.primary.name == "openai:unavailable:api_key_missing"
     assert responses.calls == []
     assert result.fallback_used is True
     assert "api_key_missing" in (result.primary_error or "")
