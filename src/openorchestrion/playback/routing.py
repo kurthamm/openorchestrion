@@ -104,9 +104,14 @@ def analyze_part_demands(timeline: MidiTimeline) -> tuple[PartDemand, ...]:
 
     This intentionally counts currently keyed notes, not sustain-held voices. It
     is a routing load estimate, not the durable analyzer's compatibility fact.
+
+    Program Change is MIDI channel state, not track-local state. Type-1 files
+    commonly put channel setup on a dedicated control track while notes for the
+    same channel live elsewhere. Tracking the program by channel keeps family
+    affinity consistent with what the playback engine actually sends.
     """
 
-    programs: dict[tuple[int | None, int], int] = defaultdict(int)
+    programs: dict[int, int] = defaultdict(int)
     family_counts: dict[tuple[int | None, int], Counter[str]] = defaultdict(Counter)
     active: dict[tuple[int | None, int], set[int]] = defaultdict(set)
     peak: dict[tuple[int | None, int], int] = defaultdict(int)
@@ -119,10 +124,10 @@ def analyze_part_demands(timeline: MidiTimeline) -> tuple[PartDemand, ...]:
         channel = int(message.channel)
         key = (event.track_index, channel)
         if message.type == "program_change":
-            programs[key] = int(message.program)
+            programs[channel] = int(message.program)
             continue
         if message.type == "note_on" and message.velocity > 0:
-            family = "percussion" if channel == 9 else _gm_family(programs[key])
+            family = "percussion" if channel == 9 else _gm_family(programs[channel])
             family_counts[key][family] += 1
             note_counts[key] += 1
             active[key].add(int(message.note))

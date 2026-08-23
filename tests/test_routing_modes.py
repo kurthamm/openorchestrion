@@ -11,7 +11,12 @@ from openorchestrion.playback import RoutingEndpoint, plan_routing
 from openorchestrion.playback.timeline import MidiTimeline
 
 
-def _profile(ident: str, *, polyphony: int) -> DeviceProfile:
+def _profile(
+    ident: str,
+    *,
+    polyphony: int,
+    preferred_families: tuple[str, ...] = (),
+) -> DeviceProfile:
     return DeviceProfile(
         id=ident,
         manufacturer="Test",
@@ -19,6 +24,7 @@ def _profile(ident: str, *, polyphony: int) -> DeviceProfile:
         midi_receive=True,
         transport="usb-midi",
         max_polyphony=polyphony,
+        preferred_instrument_families=list(preferred_families),
     )
 
 
@@ -118,3 +124,46 @@ def test_device_and_role_preferences_are_deterministic(tmp_path: Path) -> None:
     second = max(decision.parts, key=lambda part: part.track_index or -1)
     assert decision.plan.destinations_for(first.channel, first.track_index)[0].destination_device == "Yamaha USB"
     assert decision.plan.destinations_for(second.channel, second.track_index)[0].destination_device == "Casio USB"
+
+
+def test_state_only_program_track_drives_note_track_family_affinity(tmp_path: Path) -> None:
+    """Program Change is channel state even when notes live on another SMF track."""
+    path = tmp_path / "state-track.mid"
+    midi = MidiFile(type=1, ticks_per_beat=480)
+
+    tempo = MidiTrack()
+    tempo.append(MetaMessage("set_tempo", tempo=mido.bpm2tempo(120), time=0))
+    midi.tracks.append(tempo)
+
+    state = MidiTrack()
+    state.append(Message("program_change", channel=0, program=40, time=0))  # Violin / strings
+    midi.tracks.append(state)
+
+    notes = MidiTrack()
+    notes.append(Message("note_on", channel=0, note=67, velocity=90, time=0))
+    notes.append(Message("note_off", channel=0, note=67, velocity=0, time=480))
+    midi.tracks.append(notes)
+    midi.save(path)
+
+    endpoints = [
+        RoutingEndpoint(
+            "Piano Engine",
+            _profile("piano", polyphony=48, preferred_families=("piano",)),
+        ),
+        RoutingEndpoint(
+            "String Engine",
+            _profile("strings", polyphony=48, preferred_families=("strings",)),
+        ),
+    ]
+
+    decision = plan_routing(
+        MidiTimeline.from_file(path),
+        endpoints,
+        performance_type=PerformanceType.MULTI_INSTRUMENT,
+    )
+
+    assert len(decision.parts) == 1
+    part = decision.parts[0]
+    assert part.family == "strings"
+    route = decision.plan.destinations_for(part.channel, part.track_index)[0]
+    assert route.destination_device == "String Engine"
