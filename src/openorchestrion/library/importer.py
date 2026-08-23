@@ -8,11 +8,20 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from openorchestrion.midi.analyzer import MidiAnalysis, analyze_midi
 
-RightsStatus = Literal["personal", "verified-open", "unknown"]
+from .rights import (
+    COMPOSITION_RIGHTS,
+    ESTABLISHED_LICENSES,
+    REDISTRIBUTION,
+    RIGHTS_STATUSES,
+    RightsError,
+    RightsEvidence,
+    verify,
+)
+
 SUPPORTED_EXTENSIONS = {".mid", ".midi"}
 
 # Public MIDI archives are full of truncated downloads and mislabeled files.
@@ -96,11 +105,7 @@ def _sidecar_document(
     stored_path: Path,
     analysis: MidiAnalysis,
     *,
-    rights_status: RightsStatus,
-    source_reference: str | None,
-    source_label: str | None,
-    license_name: str | None,
-    attribution: str | None,
+    rights: RightsEvidence,
 ) -> dict[str, Any]:
     if analysis.sha256 is None:
         raise ValueError("file-backed analysis must include sha256")
@@ -120,11 +125,7 @@ def _sidecar_document(
         },
         "provenance": {
             "imported_at": datetime.now(UTC).isoformat(),
-            "rights_status": rights_status,
-            "source_reference": source_reference,
-            "source_label": source_label,
-            "license": license_name,
-            "attribution": attribution,
+            **rights.to_dict(),
         },
         "deterministic_analysis": analysis_document,
         "descriptive_metadata": {},
@@ -154,14 +155,19 @@ def import_midi(
     source: str | Path,
     library_root: str | Path,
     *,
-    rights_status: RightsStatus = "personal",
-    source_reference: str | None = None,
-    source_label: str | None = None,
-    license_name: str | None = None,
-    attribution: str | None = None,
+    rights: RightsEvidence | None = None,
     max_bytes: int | None = DEFAULT_MAX_BYTES,
 ) -> ImportResult:
+    """Copy one MIDI file into the content-addressed library.
+
+    ``rights`` records where the file came from and what may be done with it.
+    A ``verified-open`` claim is audited before anything is written, so an
+    unsupported claim fails the import rather than becoming a durable assertion
+    that later readers have no way to distinguish from a researched one.
+    """
     _validate_max_bytes(max_bytes)
+    evidence = rights if rights is not None else RightsEvidence(rights_status="personal")
+    verify(evidence)
     source_path = Path(source).resolve()
     if not source_path.is_file():
         raise FileNotFoundError(source_path)
@@ -196,11 +202,7 @@ def import_midi(
             source_path,
             midi_path,
             analysis,
-            rights_status=rights_status,
-            source_reference=source_reference,
-            source_label=source_label,
-            license_name=license_name,
-            attribution=attribution,
+            rights=evidence,
         )
         metadata_path.write_text(
             json.dumps(document, indent=2, sort_keys=True) + "\n",
@@ -261,11 +263,7 @@ def import_paths(
     library_root: str | Path,
     *,
     recursive: bool = True,
-    rights_status: RightsStatus = "personal",
-    source_reference: str | None = None,
-    source_label: str | None = None,
-    license_name: str | None = None,
-    attribution: str | None = None,
+    rights: RightsEvidence | None = None,
     max_bytes: int | None = DEFAULT_MAX_BYTES,
     fail_fast: bool = False,
 ) -> ImportReport:
@@ -281,8 +279,15 @@ def import_paths(
 
     Pass ``fail_fast=True`` to restore stop-on-first-error for scripted runs
     that would rather not proceed on a partially bad collection.
+
+    ``rights`` applies to every file in the run and is audited once, up front:
+    an unsupported ``verified-open`` claim is a mistake about the run, not about
+    any one file, so it raises here rather than arriving as an identical failure
+    repeated once per file.
     """
     _validate_max_bytes(max_bytes)
+    evidence = rights if rights is not None else RightsEvidence(rights_status="personal")
+    verify(evidence)
     source_list = tuple(sources)
     imported: list[ImportResult] = []
     failed: list[ImportFailure] = []
@@ -304,11 +309,7 @@ def import_paths(
                 import_midi(
                     source,
                     library_root,
-                    rights_status=rights_status,
-                    source_reference=source_reference,
-                    source_label=source_label,
-                    license_name=license_name,
-                    attribution=attribution,
+                    rights=evidence,
                     max_bytes=max_bytes,
                 )
             )
@@ -345,13 +346,42 @@ def main() -> None:
     )
     parser.add_argument(
         "--rights-status",
-        choices=("personal", "verified-open", "unknown"),
+        choices=RIGHTS_STATUSES,
         default="personal",
     )
-    parser.add_argument("--source-reference")
-    parser.add_argument("--source-label")
-    parser.add_argument("--license", dest="license_name")
-    parser.add_argument("--attribution")
+    parser.add_argument(
+        "--source-reference",
+        help="Where this file came from: a URL or citation someone can re-check",
+    )
+    parser.add_argument("--source-label", help="Human-readable source name, e.g. 'Mutopia Project'")
+    parser.add_argument(
+        "--license",
+        dest="license_name",
+        help=(
+            "License of the MIDI file/arrangement itself, which is a separate work "
+            f"from the composition. Established ids: {', '.join(ESTABLISHED_LICENSES)}"
+        ),
+    )
+    parser.add_argument("--license-url", help="Where the license terms were read")
+    parser.add_argument("--attribution", help="Credit text this license obliges us to display")
+    parser.add_argument(
+        "--composition-rights",
+        choices=COMPOSITION_RIGHTS,
+        default="unknown",
+        help="Rights in the underlying musical work, independent of this file",
+    )
+    parser.add_argument(
+        "--composition-rights-basis",
+        help="Why the composition is clear, e.g. 'composer died 1917, published 1899'",
+    )
+    parser.add_argument(
+        "--redistribution",
+        choices=REDISTRIBUTION,
+        default="unknown",
+        help="Whether this file may be redistributed",
+    )
+    parser.add_argument("--verified-by", help="Who established these terms")
+    parser.add_argument("--verified-at", help="When these terms were established (ISO 8601)")
     parser.add_argument("--no-recursive", action="store_true")
     parser.add_argument(
         "--fail-fast",
@@ -367,20 +397,45 @@ def main() -> None:
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
-    report = import_paths(
+    try:
+        report = _run_import(args)
+    except RightsError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
+
+    _report_import(report, as_json=args.json)
+
+    # Non-zero exit so a scripted import surfaces partial failure rather than
+    # looking successful because most of the collection happened to parse.
+    if report.failed:
+        raise SystemExit(1)
+
+
+def _run_import(args: argparse.Namespace) -> ImportReport:
+    return import_paths(
         args.sources,
         args.library_root,
         recursive=not args.no_recursive,
-        rights_status=args.rights_status,
-        source_reference=args.source_reference,
-        source_label=args.source_label,
-        license_name=args.license_name,
-        attribution=args.attribution,
+        rights=RightsEvidence(
+            rights_status=args.rights_status,
+            source_reference=args.source_reference,
+            source_label=args.source_label,
+            license=args.license_name,
+            license_url=args.license_url,
+            attribution=args.attribution,
+            composition_rights=args.composition_rights,
+            composition_rights_basis=args.composition_rights_basis,
+            redistribution=args.redistribution,
+            verified_at=args.verified_at,
+            verified_by=args.verified_by,
+        ),
         max_bytes=args.max_bytes,
         fail_fast=args.fail_fast,
     )
 
-    if args.json:
+
+def _report_import(report: ImportReport, *, as_json: bool) -> None:
+    if as_json:
         print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
     else:
         for result in report.imported:
@@ -396,11 +451,6 @@ def main() -> None:
                 f"\n{len(report.imported)} imported, {len(report.failed)} skipped.",
                 file=sys.stderr,
             )
-
-    # Non-zero exit so a scripted import surfaces partial failure rather than
-    # looking successful because most of the collection happened to parse.
-    if report.failed:
-        raise SystemExit(1)
 
 
 if __name__ == "__main__":

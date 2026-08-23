@@ -41,14 +41,43 @@ The importer should record whether a file appears GM-compatible and which progra
 
 ## Library policy
 
-Every indexed or bundled file should track:
+Every indexed or bundled file tracks the following in its sidecar `provenance`
+block. These are no longer aspirational: `openorchestrion.library.rights` holds
+the model, and a `verified-open` claim that is not supported by them is refused
+at import rather than stored.
 
-- source URL/reference;
-- original creator/arranger when known;
-- composition rights status;
-- file/arrangement license;
-- attribution text if required;
-- redistribution status (`verified-open`, `personal`, `unknown`);
-- date imported/verified.
+| Field | What it records |
+| --- | --- |
+| `source_reference` | URL or citation, so the claim can be re-checked |
+| `source_label` | Human-readable archive name |
+| `composition_rights` | Rights in the underlying musical work |
+| `composition_rights_basis` | Why the composition is clear, e.g. "composer died 1917" |
+| `license` | License of this MIDI file/arrangement, an established id |
+| `license_url` | Where those terms were read |
+| `attribution` | Credit text the license obliges us to display |
+| `redistribution` | `permitted`, `permitted-with-attribution`, `prohibited`, `unknown` |
+| `rights_status` | `verified-open`, `personal`, `unknown` |
+| `verified_at` / `verified_by` | When the terms were established, and by whom |
+| `imported_at` | When the bytes arrived; not editable afterwards |
 
-The public project should favor a smaller, high-quality, legally clean starter catalog over an enormous mystery archive.
+The two rights questions stay separate on purpose. A public-domain composition
+sequenced by a named person in 2003 produces a new copyrightable work, and that
+person may reserve every right in it. Clearing the composition says nothing
+about the file.
+
+An unrecognized license is treated as **unestablished**, not as permissive.
+Adding one to the table in `openorchestrion.library.rights` is a deliberate edit
+that records the review, rather than something a curator can assert in passing.
+Licenses known to be incompatible with a redistributable set — anything
+non-commercial or no-derivatives, including MAESTRO's `CC-BY-NC-SA-4.0` — are
+named explicitly so the audit reports a settled answer rather than an unfamiliar
+one. Such material is still fine as a Personal Library import.
+
+`redistribution` is deliberately coarse: it distinguishes "credit required" from
+"no credit required" and nothing more. It is **not** a distribution-compliance
+engine, and `attribution_required()` should never be presented as one. A license
+can oblige far more than a credit line — ShareAlike terms on a derived work, for
+one. The stored `license` and `license_url` remain the source of truth for
+license-specific obligations.
+
+The public project should favor a smaller, high-quality, legally clean starter catalog over an enormous mystery archive. See [../music/starter-catalog.md](../music/starter-catalog.md) for the curation worklist and procedure.

@@ -27,6 +27,7 @@ openorchestrion-reindex = "openorchestrion.library.catalog:reindex_main"
 openorchestrion-catalog = "openorchestrion.library.catalog:query_main"
 openorchestrion-station = "openorchestrion.stations:main"
 openorchestrion-tag = "openorchestrion.library.tagging:main"
+openorchestrion-rights = "openorchestrion.library.provenance:main"
 openorchestrion-reanalyze = "openorchestrion.library.repair:main"
 openorchestrion-history = "openorchestrion.history:main"
 openorchestrion-concierge = "openorchestrion.ai:main"
@@ -41,7 +42,11 @@ dev = [
   "pytest>=8.0",
   "pytest-asyncio>=0.23",
   "httpx>=0.27",
-  "ruff>=0.6"
+  "ruff>=0.6",
+  # The sidecar schema tests validate against schemas/*.json. Without this the
+  # tests skip rather than fail, which is worse than either: the contract looks
+  # covered by the test jobs while nothing actually checks it there.
+  "jsonschema>=4.23"
 ]
 
 [tool.setuptools.packages.find]

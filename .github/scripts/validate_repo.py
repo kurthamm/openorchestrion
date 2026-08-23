@@ -10,10 +10,11 @@ from referencing import Registry, Resource
 
 from openorchestrion.library.catalog import rebuild_catalog
 from openorchestrion.library.importer import import_paths
+from openorchestrion.library.policy import audit_committed_music, count_committed_music
 from openorchestrion.midi.analyzer import analyze_midi
 from openorchestrion.models import PlaybackIntent
 from openorchestrion.stations import build_station
-from openorchestrion.testing.midi_fixtures import generate_suite
+from openorchestrion.testing.midi_fixtures import SUITE_RIGHTS, generate_suite
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "schemas"
@@ -120,7 +121,11 @@ def validate_generated_pipeline() -> None:
             )
         print(f"validated {len(midi_files)} generated MIDI analyses")
 
-        report = import_paths([fixtures], library, rights_status="verified-open")
+        # The generated suite is the one body of content this project can assert
+        # rights over from first principles: it is the output of a generator in
+        # this repository rather than anyone else's music. Importing it under a
+        # real evidence record exercises the verified-open path end to end.
+        report = import_paths([fixtures], library, rights=SUITE_RIGHTS)
         if report.failed:
             raise SystemExit(
                 "import reported failures: "
@@ -155,10 +160,23 @@ def validate_generated_pipeline() -> None:
         print(f"station queue schema ok: {len(queue.items)} tracks")
 
 
+def validate_committed_music() -> None:
+    """No MIDI enters the repository without a rights record beside it."""
+    music = ROOT / "music"
+    offenders = audit_committed_music(music)
+    if offenders:
+        raise SystemExit(
+            "committed MIDI without established redistribution rights:\n  "
+            + "\n  ".join(offender.replace(f"{ROOT}/", "") for offender in offenders)
+        )
+    print(f"committed music ok: {count_committed_music(music)} MIDI file(s) with established rights")
+
+
 def main() -> None:
     validate_schema_documents()
     validate_device_profiles()
     validate_generated_pipeline()
+    validate_committed_music()
     print("repository contracts: ok")
 
 

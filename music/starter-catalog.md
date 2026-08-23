@@ -1,0 +1,214 @@
+# Verified-Open Starter Catalog
+
+The starter catalog is the small body of music OpenOrchestrion can ship and
+stream without anyone having to take our word for it. It is deliberately not a
+bulk MIDI dump: a hundred files of unknown origin are worth less than a dozen
+whose terms are written down and re-checkable.
+
+**No third-party MIDI is committed to this repository.** The starter catalog is
+assembled on the appliance by fetching from the sources below and importing them
+through the ordinary pipeline. What lives in Git is the evidence and the
+procedure, not other people's files.
+
+## The two questions
+
+A candidate clears only when both are answered, and answering one says nothing
+about the other:
+
+1. **The composition** — is the underlying musical work out of copyright?
+2. **The file** — under what terms was this particular MIDI sequencing or
+   engraving released?
+
+The second is where curation actually fails. A Joplin rag is unambiguously
+public domain as a composition; a MIDI sequencing of it made in 2003 is a new
+copyrightable work, and the person who made it may reserve every right. A
+file being free to download says nothing at all about redistribution.
+
+`openorchestrion.library.rights` enforces this: a `verified-open` claim missing
+either half is refused at import. See
+[../docs/music-sources.md](../docs/music-sources.md) for the recorded fields.
+
+## Procedure
+
+Everything goes through the production pipeline. There is no separate catalog
+format to keep in sync — the sidecars written here are the same sidecars any
+user's import produces.
+
+```bash
+# 1. Import with the evidence attached. Refused unless it holds up.
+openorchestrion-import-midi ~/downloads/maple-leaf-rag.mid \
+  --library-root var/library \
+  --rights-status verified-open \
+  --source-label "<archive name>" \
+  --source-reference "<url of the item record>" \
+  --license <established id> \
+  --license-url "<url where the terms were read>" \
+  --composition-rights public-domain \
+  --composition-rights-basis "Composer died 1917; published 1899" \
+  --redistribution permitted \
+  --verified-by "<who checked>"
+
+# 2. Curate the descriptive metadata through the writer.
+openorchestrion-tag <asset-id> \
+  --library-root var/library \
+  --title "Maple Leaf Rag" \
+  --composer "Scott Joplin" \
+  --year-composed 1899 \
+  --genres ragtime --moods upbeat --themes parlor \
+  --performance-type SOLO_PIANO
+
+# 3. Index it.
+openorchestrion-reindex var/library
+```
+
+If research arrives after the import — the usual case, since the file is often
+in hand before its terms are — use `openorchestrion-rights` rather than
+re-importing, which never overwrites a stored rights record:
+
+```bash
+openorchestrion-rights <asset-id> \
+  --library-root var/library \
+  --rights-status verified-open \
+  --source-reference "<url of the item record>" \
+  --license CC0-1.0 \
+  --composition-rights public-domain \
+  --composition-rights-basis "Composer died 1917; published 1899" \
+  --redistribution permitted \
+  --verified-by "<who checked>"
+```
+
+That writes the sidecar and reconciles the catalog in one step. Only the fields
+you pass are changed, and the claim is refused unless the merged result supports
+it, so an incomplete revision fails rather than producing a claim that outruns
+its evidence.
+
+## Candidate compositions
+
+The composition-level column below is research that can be done without touching
+any archive, and it is the half that rarely changes. **Every file-level column
+is deliberately empty**: it can only be filled by visiting the source, reading
+the actual terms of the actual file, and recording where they were read.
+
+A row here is a candidate, not a clearance. Nothing in this table may be
+imported as `verified-open` until its file-level terms are established, and the
+audit will refuse it if anyone tries.
+
+### Solo piano — expressive
+
+| Composition | Composer | Died | Composed / published | Source candidate | File license |
+| --- | --- | --- | --- | --- | --- |
+| Gymnopédie No. 1 | Erik Satie | 1925 | 1888 | Mutopia | _unestablished_ |
+| Gnossienne No. 1 | Erik Satie | 1925 | composed 1890, published 1893 | Mutopia | _unestablished_ |
+| Clair de lune (Suite bergamasque) | Claude Debussy | 1918 | 1905 | Mutopia | _unestablished_ |
+| Rêverie | Claude Debussy | 1918 | composed 1890 | Mutopia | _unestablished_ |
+| Nocturne in E♭, Op. 9 No. 2 | Frédéric Chopin | 1849 | 1832 | Mutopia | _unestablished_ |
+| Prelude in D♭, Op. 28 No. 15 | Frédéric Chopin | 1849 | 1839 | Mutopia | _unestablished_ |
+| Träumerei (Kinderszenen) | Robert Schumann | 1856 | 1838 | Mutopia | _unestablished_ |
+| Für Elise | Ludwig van Beethoven | 1827 | composed 1810, published 1867 | Mutopia | _unestablished_ |
+
+### Ragtime
+
+| Composition | Composer | Died | Composed / published | Source candidate | File license |
+| --- | --- | --- | --- | --- | --- |
+| Maple Leaf Rag | Scott Joplin | 1917 | 1899 | Mutopia | _unestablished_ |
+| The Entertainer | Scott Joplin | 1917 | 1902 | Mutopia | _unestablished_ |
+| Pine Apple Rag | Scott Joplin | 1917 | 1908 | Mutopia | _unestablished_ |
+| Solace | Scott Joplin | 1917 | 1909 | Mutopia | _unestablished_ |
+
+### Classical / baroque
+
+| Composition | Composer | Died | Composed / published | Source candidate | File license |
+| --- | --- | --- | --- | --- | --- |
+| Prelude in C, BWV 846 | J. S. Bach | 1750 | composed 1722 | Mutopia | _unestablished_ |
+| Invention No. 1, BWV 772 | J. S. Bach | 1750 | composed 1723 | Mutopia | _unestablished_ |
+| Air on the G String (BWV 1068) | J. S. Bach | 1750 | composed c. 1730 | Mutopia | _unestablished_ |
+| Canon in D | Johann Pachelbel | 1706 | composed c. 1680, published 1919 | Mutopia | _unestablished_ |
+
+### Two-piano and duet
+
+The project's dueling-piano work needs genuine multi-performer repertoire rather
+than a solo part split in half. These are written for two players.
+
+| Composition | Composer | Died | Composed / published | Forces | File license |
+| --- | --- | --- | --- | --- | --- |
+| Sonata for Two Pianos in D, K. 448 | W. A. Mozart | 1791 | composed 1781 | Two pianos | _unestablished_ |
+| Fantasia in F minor, D. 940 | Franz Schubert | 1828 | 1829 | Piano four hands | _unestablished_ |
+| Slavonic Dances, Op. 46 | Antonín Dvořák | 1904 | 1878 | Piano four hands | _unestablished_ |
+| Hungarian Dances (Nos. 1, 5) | Johannes Brahms | 1897 | 1869 | Piano four hands | _unestablished_ |
+
+### Seasonal
+
+Carols are the sharpest trap in this whole exercise, because the tune and the
+arrangement are almost never the same age. The compositions below are old; the
+*harmonization or arrangement* in any particular file may be recent and fully in
+copyright.
+
+| Composition | Composer | Died | Composed / published | Note | File license |
+| --- | --- | --- | --- | --- | --- |
+| Silent Night | Franz Xaver Gruber | 1863 | 1818 | Melody only; check the arrangement | _unestablished_ |
+| O Holy Night | Adolphe Adam | 1856 | 1847 | Check the English translation used | _unestablished_ |
+| Joy to the World | Lowell Mason | 1872 | 1848 | — | _unestablished_ |
+| Hark! The Herald Angels Sing | Felix Mendelssohn | 1847 | 1840 | — | _unestablished_ |
+| God Rest Ye Merry, Gentlemen | Traditional | — | pre-1800 | Traditional English carol | _unestablished_ |
+| Deck the Halls | Traditional | — | 1862 (English text) | Welsh air, older | _unestablished_ |
+
+**Excluded deliberately:** *Carol of the Bells* is the instructive counterexample.
+Leontovych's *Shchedryk* is old enough, but the arrangement most people mean is
+Wilhousky's from 1936 and is not ours to redistribute. It belongs in a Personal
+Library import, not in the starter set.
+
+## Determining the composition
+
+Two independent tests, and the appliance operator's jurisdiction decides which
+governs:
+
+- **Life + 70** (EU, UK, and much of the world): the composer died more than 70
+  years ago. Every composer above except Satie (1925) and Debussy (1918) clears
+  this by a wide margin, and both of those cleared it years ago as well.
+- **US publication cutoff**: works published before 1931 are in the public
+  domain in the United States. Every publication date above precedes it.
+
+Record whichever applies as `composition_rights_basis` in the words that make it
+checkable — "composer died 1917; published 1899" — rather than the bare phrase
+"public domain", which tells a later reader nothing they can verify.
+
+Posthumous publication needs a second look rather than a reflex: several works
+above were first printed after their composer died, which is harmless when that
+printing is itself long past the cutoff, but a manuscript first published in
+living memory can carry a fresh term in some jurisdictions. Where the two tests
+disagree, or where first publication is recent, treat the composition as
+unestablished and leave the piece out rather than pick the favourable answer.
+
+## Sources still to be evaluated
+
+These are archives worth working through, not blanket clearances. Each item
+inside them must still be checked individually.
+
+- **Mutopia Project** — engravings typeset from public-domain scores, with
+  generated MIDI. Per-item terms vary between public domain, CC0, and CC-BY-SA,
+  which is precisely why the license belongs on the item and not on the archive.
+- **Wikimedia Commons** — per-file license templates, often with attribution or
+  share-alike obligations that must be captured as `attribution` text.
+- **MAESTRO** — expressive Disklavier performance captures, musically the most
+  attractive option this project has, because the MIDI carries real performance
+  timing, velocity and pedalling rather than quantized note entry. Its dataset
+  is published under **CC-BY-NC-SA-4.0**, and the non-commercial term puts it
+  outside the redistributable starter set no matter how good the performances
+  are. It remains perfectly usable as a **Personal Library** import on an
+  operator's own appliance. The audit recognizes this license id specifically,
+  so a curator who reaches for it is told the answer is settled rather than
+  merely unfamiliar.
+
+**Not source-worthy for the starter set:** BitMidi, VGMusic and similar archives.
+Free download is not a grant, and the characteristic "free for personal use"
+string is refused by the audit for exactly that reason.
+
+## Status
+
+Composition-level research above is complete and needs review. File-level terms
+are entirely outstanding: no candidate has had its actual MIDI file located,
+fetched, or its license read, so nothing here is yet importable as
+`verified-open`. The generated conformance suite in
+`openorchestrion.testing.midi_fixtures` is currently the only content the project
+holds a genuine `verified-open` record for, since it is our own output under our
+own license.

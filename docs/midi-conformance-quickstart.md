@@ -2,6 +2,8 @@
 
 OpenOrchestrion includes a generated, copyright-clean MIDI test laboratory. Use it before testing downloaded repertoire so software behavior and hardware behavior can be isolated.
 
+The generated files contain no third-party composition and are offered under the project's MIT license, the same terms as the repository itself. See [test-strategy.md](test-strategy.md#rights-in-the-generated-fixtures) for the explicit grant.
+
 ## Generate the suite
 
 After installing the project in editable mode:
