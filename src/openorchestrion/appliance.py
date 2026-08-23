@@ -1,6 +1,6 @@
 """Production runtime helpers for the Raspberry Pi appliance.
 
-The application remains one FastAPI process with server-owned playback.  This
+The application remains one FastAPI process with server-owned playback. This
 module only supplies production launch, kiosk, deployment-template export, and
 post-install smoke commands around that existing application.
 """
@@ -24,7 +24,7 @@ from .api.settings import Settings
 
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
-DEFAULT_KIOSK_URL = "http://127.0.0.1:8000"
+DEFAULT_ENV_FILE = Path("/etc/openorchestrion/openorchestrion.env")
 DEPLOYMENT_FILES = (
     "openorchestrion.service",
     "openorchestrion.env",
@@ -40,8 +40,47 @@ class ServerOptions:
     log_level: str
 
 
+def _unquote(value: str) -> str:
+    stripped = value.strip()
+    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {"'", '"'}:
+        return stripped[1:-1]
+    return stripped
+
+
+def load_appliance_environment(
+    environ: Mapping[str, str] | None = None,
+    *,
+    config_path: str | Path | None = None,
+) -> dict[str, str]:
+    """Load the systemd-style appliance env file, then apply process overrides.
+
+    systemd loads ``/etc/openorchestrion/openorchestrion.env`` for the backend,
+    but a desktop kiosk process and an administrator's smoke command do not
+    inherit that service environment. Reading the same simple ``KEY=value``
+    file here keeps all three entry points on one configuration.
+    """
+    process = dict(os.environ if environ is None else environ)
+    configured = config_path or process.get("OPENORCHESTRION_ENV_FILE") or DEFAULT_ENV_FILE
+    path = Path(configured)
+    merged: dict[str, str] = {}
+    if path.is_file():
+        for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                raise ValueError(f"{path}:{number}: expected KEY=value")
+            key, value = line.split("=", 1)
+            key = key.strip()
+            if not key:
+                raise ValueError(f"{path}:{number}: empty environment key")
+            merged[key] = _unquote(value)
+    merged.update(process)
+    return merged
+
+
 def server_options(environ: Mapping[str, str] | None = None) -> ServerOptions:
-    env = os.environ if environ is None else environ
+    env = load_appliance_environment(environ)
     host = env.get("OPENORCHESTRION_HOST", DEFAULT_HOST).strip() or DEFAULT_HOST
     try:
         port = int(env.get("OPENORCHESTRION_PORT", str(DEFAULT_PORT)))
@@ -83,6 +122,14 @@ def _base_url(value: str) -> str:
     return value.strip().rstrip("/")
 
 
+def _kiosk_url(environ: Mapping[str, str]) -> str:
+    explicit = environ.get("OPENORCHESTRION_KIOSK_URL")
+    if explicit:
+        return _base_url(explicit)
+    port = server_options(environ).port
+    return f"http://127.0.0.1:{port}"
+
+
 def wait_for_health(url: str, *, timeout_seconds: float = 60.0) -> None:
     """Wait for the local service without making boot depend on the Internet."""
     base = _base_url(url)
@@ -100,9 +147,8 @@ def wait_for_health(url: str, *, timeout_seconds: float = 60.0) -> None:
     raise RuntimeError(f"OpenOrchestrion did not become healthy within {timeout_seconds:g}s{detail}")
 
 
-def _find_chromium(environ: Mapping[str, str] | None = None) -> str:
-    env = os.environ if environ is None else environ
-    explicit = env.get("OPENORCHESTRION_CHROMIUM")
+def _find_chromium(environ: Mapping[str, str]) -> str:
+    explicit = environ.get("OPENORCHESTRION_CHROMIUM")
     if explicit:
         resolved = shutil.which(explicit) if os.sep not in explicit else explicit
         if resolved and Path(resolved).is_file():
@@ -117,17 +163,18 @@ def _find_chromium(environ: Mapping[str, str] | None = None) -> str:
 
 def kiosk_main() -> None:
     """Wait for the local service, then replace this process with Chromium kiosk."""
-    url = _base_url(os.environ.get("OPENORCHESTRION_KIOSK_URL", DEFAULT_KIOSK_URL))
     try:
-        timeout = float(os.environ.get("OPENORCHESTRION_KIOSK_TIMEOUT", "60"))
+        env = load_appliance_environment()
+        url = _kiosk_url(env)
+        timeout = float(env.get("OPENORCHESTRION_KIOSK_TIMEOUT", "60"))
     except ValueError as exc:
-        raise SystemExit("OPENORCHESTRION_KIOSK_TIMEOUT must be numeric") from exc
+        raise SystemExit(str(exc)) from None
     if timeout <= 0:
         raise SystemExit("OPENORCHESTRION_KIOSK_TIMEOUT must be positive")
 
     try:
         wait_for_health(url, timeout_seconds=timeout)
-        chromium = _find_chromium()
+        chromium = _find_chromium(env)
     except RuntimeError as exc:
         raise SystemExit(str(exc)) from None
 
@@ -194,7 +241,7 @@ def validate_durable_paths(settings: Settings) -> list[str]:
 def smoke(url: str, *, settings: Settings | None = None) -> dict[str, Any]:
     """Verify HTTP health, packaged web assets, and configured durable paths."""
     base = _base_url(url)
-    active_settings = settings or Settings.from_env()
+    active_settings = settings or Settings.from_env(load_appliance_environment())
     errors = validate_durable_paths(active_settings)
     checks: dict[str, Any] = {
         "url": base,
@@ -236,14 +283,15 @@ def smoke(url: str, *, settings: Settings | None = None) -> dict[str, Any]:
 
 
 def smoke_main() -> None:
+    try:
+        env = load_appliance_environment()
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from None
     parser = argparse.ArgumentParser(prog="openorchestrion-smoke")
-    parser.add_argument(
-        "--url",
-        default=os.environ.get("OPENORCHESTRION_KIOSK_URL", DEFAULT_KIOSK_URL),
-    )
+    parser.add_argument("--url", default=_kiosk_url(env))
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    result = smoke(args.url)
+    result = smoke(args.url, settings=Settings.from_env(env))
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:
