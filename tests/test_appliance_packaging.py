@@ -93,7 +93,8 @@ def test_deployment_files_are_exportable_from_package(tmp_path: Path) -> None:
     assert installer.stat().st_mode & 0o111
     text = installer.read_text()
     assert "preserving existing" in text
-    assert "systemctl enable --now openorchestrion.service" in text
+    assert "systemctl stop openorchestrion.service" in text
+    assert "systemctl restart openorchestrion.service" in text
     assert "rm -rf /var/lib/openorchestrion" not in text
 
 
