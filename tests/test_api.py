@@ -23,7 +23,7 @@ def _settings(tmp_path: Path, *, with_library: bool) -> Settings:
     if with_library:
         fixtures = tmp_path / "fixtures"
         generate_suite(fixtures, long_run_minutes=1)
-        import_paths([fixtures], root)
+        assert not import_paths([fixtures], root).failed
         rebuild_catalog(root)
     return Settings(
         library_root=root,
