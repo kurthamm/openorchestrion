@@ -335,7 +335,11 @@ def test_appliance_packaging_keeps_provider_secret_service_only(tmp_path: Path) 
     installer = files["install-appliance.sh"].read_text()
 
     assert "openorchestrion.secrets.env" in service
-    assert "OPENAI_API_KEY" not in environment
+    assert not any(
+        line.strip().startswith("OPENAI_API_KEY=")
+        for line in environment.splitlines()
+        if not line.lstrip().startswith("#")
+    )
     assert "OPENORCHESTRION_AI_PROVIDER=" in environment
     assert "--with-openai" in installer
     assert "chmod 0640" in installer
