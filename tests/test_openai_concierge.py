@@ -3,17 +3,23 @@ from __future__ import annotations
 from dataclasses import asdict
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from openorchestrion import appliance
+from openorchestrion.ai_openai import (
+    OpenAIPlaybackIntent,
+    OpenAIRoutingPreference,
+)
 from openorchestrion.ai_runtime import create_configured_concierge, describe_intent
 from openorchestrion.api.settings import Settings
 from openorchestrion.models import PlaybackIntent
 
 
 class FakeResponses:
-    def __init__(self, *, parsed: PlaybackIntent | None = None, refusal: str | None = None) -> None:
+    def __init__(self, *, parsed: object | None = None, refusal: str | None = None) -> None:
         self.parsed = parsed
         self.refusal = refusal
         self.calls: list[dict[str, object]] = []
@@ -52,13 +58,67 @@ def _settings(tmp_path: Path, **overrides: object) -> Settings:
     return Settings(**values)  # type: ignore[arg-type]
 
 
+def _transport(intent: PlaybackIntent) -> OpenAIPlaybackIntent:
+    return OpenAIPlaybackIntent.from_playback_intent(intent)
+
+
+def _assert_strict_object_schema(node: Any) -> None:
+    """OpenAI strict output requires closed objects with every property required."""
+    if isinstance(node, dict):
+        if node.get("type") == "object":
+            properties = node.get("properties", {})
+            assert node.get("additionalProperties") is False
+            assert set(node.get("required", [])) == set(properties)
+        for value in node.values():
+            _assert_strict_object_schema(value)
+    elif isinstance(node, list):
+        for value in node:
+            _assert_strict_object_schema(value)
+
+
+def test_openai_transport_schema_is_strict_and_has_no_free_form_objects() -> None:
+    schema = OpenAIPlaybackIntent.model_json_schema()
+    _assert_strict_object_schema(schema)
+
+    routing = schema["properties"]["routing_preferences"]
+    assert routing["type"] == "array"
+    assert "additionalProperties" not in routing
+    assert set(schema["required"]) == set(schema["properties"])
+
+
+def test_openai_transport_round_trips_routing_preferences_losslessly() -> None:
+    intent = PlaybackIntent(
+        device_preferences=["Yamaha", "Casio"],
+        routing_preferences={"piano_1": "Yamaha", "piano_2": "Casio"},
+    )
+    transport = _transport(intent)
+
+    assert transport.routing_preferences == [
+        OpenAIRoutingPreference(key="piano_1", value="Yamaha"),
+        OpenAIRoutingPreference(key="piano_2", value="Casio"),
+    ]
+    assert transport.to_playback_intent() == intent
+
+
+def test_openai_transport_rejects_duplicate_routing_keys() -> None:
+    payload = _transport(PlaybackIntent()).model_dump(mode="python")
+    payload["routing_preferences"] = [
+        {"key": "piano", "value": "A"},
+        {"key": "piano", "value": "B"},
+    ]
+    with pytest.raises(ValidationError, match="routing preference keys must be unique"):
+        OpenAIPlaybackIntent.model_validate(payload)
+
+
 @pytest.mark.asyncio
 async def test_openai_structured_output_becomes_validated_intent(tmp_path: Path) -> None:
-    parsed = PlaybackIntent(
-        themes=["Christmas", "dinner"],
-        instrumentation=["piano"],
-        familiarity="high",
-        duration_minutes=120,
+    parsed = _transport(
+        PlaybackIntent(
+            themes=["Christmas", "dinner"],
+            instrumentation=["piano"],
+            familiarity="high",
+            duration_minutes=120,
+        )
     )
     responses = FakeResponses(parsed=parsed)
     concierge = create_configured_concierge(
@@ -75,7 +135,7 @@ async def test_openai_structured_output_becomes_validated_intent(tmp_path: Path)
     assert result.intent.themes == ["Christmas", "dinner"]
     assert result.intent.interpretation is not None
     assert result.intent.interpretation.endswith(".")
-    assert responses.calls[0]["text_format"] is PlaybackIntent
+    assert responses.calls[0]["text_format"] is OpenAIPlaybackIntent
     assert responses.calls[0]["model"] == "gpt-5.6-luna"
 
 
@@ -86,10 +146,11 @@ async def test_refinement_supplies_current_intent_and_preserves_hard_tags(tmp_pa
         include_tags=["piano"],
         exclude_tags=["dramatic"],
         energy="low",
+        routing_preferences={"piano": "preferred"},
     )
-    parsed = current.model_copy(deep=True)
-    parsed.energy = "medium"
-    responses = FakeResponses(parsed=parsed)
+    parsed_intent = current.model_copy(deep=True)
+    parsed_intent.energy = "medium"
+    responses = FakeResponses(parsed=_transport(parsed_intent))
     concierge = create_configured_concierge(
         _settings(tmp_path),
         environ={"OPENAI_API_KEY": "sk-test"},
@@ -101,16 +162,18 @@ async def test_refinement_supplies_current_intent_and_preserves_hard_tags(tmp_pa
     assert result.fallback_used is False
     assert result.intent.include_tags == ["piano"]
     assert result.intent.exclude_tags == ["dramatic"]
+    assert result.intent.routing_preferences == {"piano": "preferred"}
     sent = str(responses.calls[0]["input"])
     assert "Current validated intent JSON" in sent
     assert "dramatic" in sent
+    assert "'key': 'piano'" in sent or '"key": "piano"' in sent
     assert "more upbeat" in sent
 
 
 @pytest.mark.asyncio
 async def test_provider_cannot_drop_hard_tags_during_refinement(tmp_path: Path) -> None:
     current = PlaybackIntent(include_tags=["piano"], exclude_tags=["dramatic"], energy="low")
-    responses = FakeResponses(parsed=PlaybackIntent(energy="high"))
+    responses = FakeResponses(parsed=_transport(PlaybackIntent(energy="high")))
     concierge = create_configured_concierge(
         _settings(tmp_path),
         environ={"OPENAI_API_KEY": "sk-test"},
@@ -143,6 +206,21 @@ async def test_provider_refusal_falls_back_offline(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_provider_missing_parsed_output_falls_back_offline(tmp_path: Path) -> None:
+    responses = FakeResponses(parsed=None)
+    concierge = create_configured_concierge(
+        _settings(tmp_path),
+        environ={"OPENAI_API_KEY": "sk-test"},
+        openai_client=FakeOpenAIClient(responses),
+    )
+
+    result = await concierge.interpret("Christmas piano")
+
+    assert result.fallback_used is True
+    assert "no parsed intent" in (result.primary_error or "")
+
+
+@pytest.mark.asyncio
 async def test_provider_network_error_falls_back_offline(tmp_path: Path) -> None:
     responses = FakeResponses(parsed=None)
     responses.error = TimeoutError("network timeout")
@@ -161,7 +239,7 @@ async def test_provider_network_error_falls_back_offline(tmp_path: Path) -> None
 
 @pytest.mark.asyncio
 async def test_configured_provider_without_key_uses_fallback_without_client_call(tmp_path: Path) -> None:
-    responses = FakeResponses(parsed=PlaybackIntent())
+    responses = FakeResponses(parsed=_transport(PlaybackIntent()))
     concierge = create_configured_concierge(
         _settings(tmp_path),
         environ={},
@@ -174,6 +252,23 @@ async def test_configured_provider_without_key_uses_fallback_without_client_call
     assert responses.calls == []
     assert result.fallback_used is True
     assert "api_key_missing" in (result.primary_error or "")
+    assert result.intent.genres == ["ragtime"]
+
+
+@pytest.mark.asyncio
+async def test_unconfigured_provider_never_uses_available_key_or_client(tmp_path: Path) -> None:
+    responses = FakeResponses(parsed=_transport(PlaybackIntent(themes=["cloud"])))
+    concierge = create_configured_concierge(
+        _settings(tmp_path, ai_provider=None),
+        environ={"OPENAI_API_KEY": "sk-present-but-not-consent"},
+        openai_client=FakeOpenAIClient(responses),
+    )
+
+    result = await concierge.interpret("ragtime")
+
+    assert responses.calls == []
+    assert result.fallback_used is False
+    assert result.provider == "deterministic-fallback"
     assert result.intent.genres == ["ragtime"]
 
 
