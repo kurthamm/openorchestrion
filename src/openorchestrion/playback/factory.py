@@ -3,9 +3,9 @@ from __future__ import annotations
 from openorchestrion.midi.devices import list_output_ports
 
 from .clock import SystemClock
-from .engine import PlaybackEngine
 from .history_adapter import SqliteHistoryRecorder
 from .outputs import MidoMidiOutput, MidiOutputRouter, VirtualMidiOutput
+from .routed_engine import PlaybackEngine
 
 
 def create_default_playback(settings: object) -> PlaybackEngine:
