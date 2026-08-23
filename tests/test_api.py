@@ -197,15 +197,46 @@ def test_playback_routes_publish_real_success_models() -> None:
     assert "501" not in paths["/api/queue"]["get"]["responses"]
 
 
-def test_favorite_pending_reason_is_not_attributed_to_playback() -> None:
+def test_favorite_persists_and_is_visible_to_search(stocked_client: TestClient) -> None:
+    """Favorites are durable now; the endpoint no longer answers 501."""
+    asset = stocked_client.get("/api/library/search", params={"limit": 1}).json()["items"][0]
+    assert asset["favorite"] is False
+
+    response = stocked_client.post(
+        f"/api/library/assets/{asset['asset_id']}/favorite",
+        json={"favorite": True},
+    )
+    assert response.status_code == 200
+    assert response.json()["favorite"] is True
+
+    # The rebuildable index was reconciled, so browse reflects it immediately.
+    listed = stocked_client.get("/api/library/search", params={"limit": 100}).json()["items"]
+    assert next(row for row in listed if row["asset_id"] == asset["asset_id"])["favorite"] is True
+
+    cleared = stocked_client.post(
+        f"/api/library/assets/{asset['asset_id']}/favorite",
+        json={"favorite": False},
+    )
+    assert cleared.json()["favorite"] is False
+
+
+def test_favorite_on_unknown_asset_is_not_found(stocked_client: TestClient) -> None:
+    response = stocked_client.post(
+        "/api/library/assets/sha256:" + "0" * 64 + "/favorite",
+        json={"favorite": True},
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "asset_not_found"
+
+
+def test_favorite_route_no_longer_advertises_501() -> None:
     with TestClient(create_app()) as client:
         paths = client.get("/openapi.json").json()["paths"]
-    description = paths["/api/library/assets/{asset_id}/favorite"]["post"]["responses"]["501"][
-        "description"
-    ]
-    assert "descriptive_metadata" in description
-    assert "playback state machine" not in description.lower()
-    assert "independent of #14" in description.lower()
+    responses = paths["/api/library/assets/{asset_id}/favorite"]["post"]["responses"]
+    assert "501" not in responses
+    assert responses["200"]["content"]["application/json"]["schema"]["$ref"].endswith(
+        "/LibraryAssetDetail"
+    )
 
 
 def test_unknown_transport_action_is_rejected(empty_client: TestClient) -> None:

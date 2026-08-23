@@ -429,6 +429,48 @@ def rebuild_catalog(
     )
 
 
+def reindex_asset(
+    db_path: str | Path,
+    library_root: str | Path,
+    asset_id: str,
+) -> bool:
+    """Refresh one asset's index rows from its sidecar.
+
+    Curated edits land in the sidecar, which is authoritative; this brings the
+    rebuildable index back in step without the cost of a full rebuild. Returns
+    False when the catalog does not exist yet — an un-built index is a normal
+    state, and a metadata edit is not the moment to create one.
+
+    The delete and re-insert run in one transaction, so a failure mid-way
+    cannot leave the asset half-indexed.
+    """
+    catalog = Path(db_path)
+    if not catalog.is_file():
+        return False
+
+    root = Path(library_root).resolve()
+    digest = asset_id.split(":", 1)[-1]
+    sidecar = root / "assets" / f"{digest}.json"
+    document = _read_sidecar(sidecar, root)
+
+    with closing(_connect(catalog)) as conn, conn:
+        # ON DELETE CASCADE clears tags, channels, programs and tracks.
+        conn.execute("DELETE FROM assets WHERE asset_id = ?", (document["asset_id"],))
+        _index_document(conn, document, sidecar_path=sidecar, library_root=root)
+        # Retitling an asset changes its derived composition_id, so the row it
+        # used to point at can be left with nothing referencing it. Without
+        # this, repeated edits inflate the composition count indefinitely.
+        conn.execute(
+            """
+            DELETE FROM compositions
+            WHERE composition_id NOT IN (
+                SELECT composition_id FROM assets WHERE composition_id IS NOT NULL
+            )
+            """
+        )
+    return True
+
+
 def search_catalog(
     db_path: str | Path,
     *,

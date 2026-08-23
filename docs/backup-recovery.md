@@ -54,6 +54,14 @@ Playback continues from local storage even if the Internet is unavailable.
 
 OpenOrchestrion now has two deliberately different database classes.
 
+### `assets/*.json` sidecars: irreplaceable
+
+Each sidecar carries deterministic analysis, provenance/rights, and **curated
+descriptive metadata** — titles, composers, genres, moods, themes, favorites.
+The curated block is human judgement and cannot be reconstructed from the MIDI
+bytes by any amount of re-analysis, so sidecars must be included in every
+application-data backup. See [Curating descriptive metadata](metadata-curation.md).
+
 ### `catalog.db`: rebuildable
 
 The music catalog is an operational/search index. It can be deleted and regenerated from durable MIDI sidecars. It is convenient to back up, but it is not the only copy of irreplaceable music metadata.
