@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import validators
+from referencing import Registry, Resource
 
 from openorchestrion.library.catalog import rebuild_catalog
 from openorchestrion.library.importer import import_paths
@@ -32,11 +33,34 @@ def _schema(name: str) -> dict[str, Any]:
     return _load_json(SCHEMAS / name)
 
 
+def _registry() -> Registry:
+    """Resolve every schema $ref from disk instead of over the network.
+
+    midi-asset.schema.json refers to midi-analysis.schema.json relatively.
+    Resolved against the declared $id that becomes a URL under
+    openorchestrion.example — a reserved domain that cannot resolve anywhere —
+    so jsonschema would attempt a network fetch and fail. Each schema is
+    registered under both its $id and its bare filename so relative and
+    absolute references both land locally.
+
+    A local-first appliance must be able to validate its own schemas offline.
+    """
+    registry = Registry()
+    for path in sorted(SCHEMAS.glob("*.schema.json")):
+        document = _load_json(path)
+        resource = Resource.from_contents(document)
+        registry = registry.with_resource(path.name, resource)
+        identifier = document.get("$id")
+        if identifier:
+            registry = registry.with_resource(identifier, resource)
+    return registry
+
+
 def _validate(schema: dict[str, Any], instance: Any, label: str) -> None:
     validator_class = validators.validator_for(schema)
     validator_class.check_schema(schema)
     errors = sorted(
-        validator_class(schema).iter_errors(_json_native(instance)),
+        validator_class(schema, registry=_registry()).iter_errors(_json_native(instance)),
         key=lambda error: list(error.absolute_path),
     )
     if errors:
@@ -96,7 +120,13 @@ def validate_generated_pipeline() -> None:
             )
         print(f"validated {len(midi_files)} generated MIDI analyses")
 
-        imported = import_paths([fixtures], library, rights_status="verified-open")
+        report = import_paths([fixtures], library, rights_status="verified-open")
+        if report.failed:
+            raise SystemExit(
+                "import reported failures: "
+                + ", ".join(f"{f.source} ({f.error_type}: {f.reason})" for f in report.failed)
+            )
+        imported = report.imported
         if len(imported) != len(midi_files):
             raise SystemExit(
                 f"import count mismatch: expected {len(midi_files)}, imported {len(imported)}"
