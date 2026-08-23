@@ -6,7 +6,8 @@ from typing import Protocol
 import mido
 from mido import Message
 
-from openorchestrion.midi.router import RoutingPlan
+from openorchestrion.midi.router import MidiRoute, RoutingPlan
+from openorchestrion.models import DeviceProfile
 
 from .clock import Clock
 
@@ -32,9 +33,16 @@ class SentMidiMessage:
 class VirtualMidiOutput:
     """In-memory MIDI output used by tests and hardware-free development."""
 
-    def __init__(self, name: str, clock: Clock) -> None:
+    def __init__(
+        self,
+        name: str,
+        clock: Clock,
+        *,
+        profile: DeviceProfile | None = None,
+    ) -> None:
         self.name = name
         self.clock = clock
+        self.profile = profile
         self.sent: list[SentMidiMessage] = []
         self.closed = False
 
@@ -50,8 +58,9 @@ class VirtualMidiOutput:
 class MidoMidiOutput:
     """Lazy mido output wrapper so app startup does not seize hardware ports."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, *, profile: DeviceProfile | None = None) -> None:
         self.name = name
+        self.profile = profile
         self._port = None
 
     async def send(self, message: Message) -> None:
@@ -70,6 +79,7 @@ class RoutedMessage:
     output: MidiOutput
     message: Message
     latency_seconds: float
+    destination_device: str
 
 
 class MidiOutputRouter:
@@ -96,33 +106,84 @@ class MidiOutputRouter:
     def output_names(self) -> tuple[str, ...]:
         return tuple(self.outputs)
 
+    def profile_for(self, output_name: str) -> DeviceProfile | None:
+        output = self.outputs.get(output_name)
+        if output is None:
+            return None
+        profile = getattr(output, "profile", None)
+        return profile if isinstance(profile, DeviceProfile) else None
+
+    def route_messages(
+        self,
+        message: Message,
+        *,
+        track_index: int | None = None,
+        plan: RoutingPlan | None = None,
+    ) -> tuple[RoutedMessage, ...]:
+        """Route one source event to zero, one, or several output destinations."""
+        if message.type == "sysex" and not self.allow_sysex:
+            return ()
+
+        active_plan = plan or self.default_plan
+        channel = message.channel if hasattr(message, "channel") else None
+        routes: tuple[MidiRoute, ...] = ()
+        if active_plan is not None:
+            routes = active_plan.destinations_for(channel, track_index)
+
+        if not routes:
+            if self.default_device is None:
+                raise PlaybackOutputError("no MIDI output is available")
+            routes = (
+                MidiRoute(
+                    source_channel=channel,
+                    source_track=track_index,
+                    destination_device=self.default_device,
+                ),
+            )
+
+        routed_messages: list[RoutedMessage] = []
+        seen: set[tuple[str, int | None, float]] = set()
+        for route in routes:
+            destination = route.destination_device
+            output = self.outputs.get(destination)
+            if output is None:
+                if active_plan is not None and active_plan.failure_policy == "drop":
+                    continue
+                raise PlaybackOutputError(
+                    f"MIDI output disappeared or is not configured: {destination}"
+                )
+
+            latency = route.latency_offset_ms / 1000.0
+            if latency < 0:
+                raise PlaybackOutputError("negative latency offsets are not supported")
+            destination_channel = route.destination_channel
+            identity = (destination, destination_channel, latency)
+            if identity in seen:
+                continue
+            seen.add(identity)
+
+            routed = message.copy(time=0)
+            if destination_channel is not None and hasattr(routed, "channel"):
+                routed = routed.copy(channel=destination_channel)
+            routed_messages.append(
+                RoutedMessage(
+                    output=output,
+                    message=routed,
+                    latency_seconds=latency,
+                    destination_device=destination,
+                )
+            )
+        return tuple(routed_messages)
+
     def route_message(
         self,
         message: Message,
         *,
         plan: RoutingPlan | None = None,
     ) -> RoutedMessage | None:
-        if message.type == "sysex" and not self.allow_sysex:
-            return None
-        active_plan = plan or self.default_plan
-        route = None
-        if active_plan is not None and hasattr(message, "channel"):
-            route = active_plan.destination_for(message.channel)
-        destination = route.destination_device if route is not None else self.default_device
-        if destination is None:
-            raise PlaybackOutputError("no MIDI output is available")
-        output = self.outputs.get(destination)
-        if output is None:
-            raise PlaybackOutputError(f"MIDI output disappeared or is not configured: {destination}")
-        routed = message.copy(time=0)
-        latency = 0.0
-        if route is not None:
-            if route.destination_channel is not None:
-                routed = routed.copy(channel=route.destination_channel)
-            latency = route.latency_offset_ms / 1000.0
-            if latency < 0:
-                raise PlaybackOutputError("negative latency offsets are not supported")
-        return RoutedMessage(output, routed, latency)
+        """Backward-compatible single-destination routing helper."""
+        routed = self.route_messages(message, plan=plan)
+        return routed[0] if routed else None
 
     async def panic(self) -> None:
         """Release sustain and silence every channel on every configured output."""
