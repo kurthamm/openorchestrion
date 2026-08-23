@@ -118,6 +118,29 @@ restrictive but because it is unestablished, and the audit never reads absence
 of evidence as permission. Establishing a new license means adding it to the
 table in `openorchestrion.library.rights` after actually reviewing it.
 
+### Importing a curated set
+
+For a curated collection — where every file has its own source, license and
+composer — evidence goes in a manifest, one row per file:
+
+```bash
+openorchestrion-import-midi --from-csv candidates.csv --library-root var/library
+```
+
+Columns are `path`, an optional `sha256`, and the evidence fields. Each row is
+audited independently: a row that does not hold up is reported with its manifest
+line number and skipped rather than costing the rest of the run, and the command
+exits non-zero so a scripted run does not look successful because most rows
+parsed. An unknown column is refused outright and lists the valid ones — a
+misspelled `attribution` would otherwise be silently dropped, which means
+shipping a file without the credit its license requires.
+
+Where `sha256` is given, the file is checked against it before import. The
+person who read the license and the machine that imports the bytes are usually
+not the same, so this is what ties a researched claim to specific bytes; a
+mismatch is refused as a rights failure, since different bytes may be a
+different arrangement under different terms.
+
 ## Content-addressed storage
 
 Imported MIDI objects are stored by SHA-256:
