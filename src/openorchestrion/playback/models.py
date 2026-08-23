@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
-from typing import Any
+from dataclasses import asdict, dataclass, field
+from typing import Any, Mapping
 
 from openorchestrion.midi.router import RoutingPlan
 
@@ -15,6 +15,9 @@ class QueueItemSpec:
     composition_id: str | None = None
     composer: str | None = None
     routing_plan: RoutingPlan | None = None
+    performance_type: str | None = None
+    device_preferences: tuple[str, ...] = ()
+    routing_preferences: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

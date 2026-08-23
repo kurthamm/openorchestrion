@@ -1,5 +1,5 @@
 from .clock import ManualClock, SystemClock
-from .engine import PlaybackConflict, PlaybackEngine, PlaybackError
+from .engine import PlaybackConflict, PlaybackError
 from .events import PlaybackEvent, PlaybackEventBus
 from .history_adapter import HistoryRecorder, SqliteHistoryRecorder
 from .models import QueueItemSpec
@@ -8,6 +8,15 @@ from .outputs import (
     MidiOutputRouter,
     PlaybackOutputError,
     VirtualMidiOutput,
+)
+from .routed_engine import PlaybackEngine
+from .routing import (
+    PartDemand,
+    RoutingDecision,
+    RoutingEndpoint,
+    RoutingPlanError,
+    analyze_part_demands,
+    plan_routing,
 )
 
 __all__ = [
@@ -25,4 +34,10 @@ __all__ = [
     "MidiOutputRouter",
     "PlaybackOutputError",
     "VirtualMidiOutput",
+    "PartDemand",
+    "RoutingDecision",
+    "RoutingEndpoint",
+    "RoutingPlanError",
+    "analyze_part_demands",
+    "plan_routing",
 ]

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
+import mido
 from mido import Message, MidiFile
 
 
@@ -10,6 +12,7 @@ from mido import Message, MidiFile
 class MidiTimelineEvent:
     at_seconds: float
     message: Message
+    track_index: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,21 +22,50 @@ class MidiTimeline:
 
     @classmethod
     def from_file(cls, path: str | Path) -> "MidiTimeline":
+        """Build one tempo-aware timeline while preserving source track identity."""
         source = Path(path)
         if not source.is_file():
             raise FileNotFoundError(source)
         midi = MidiFile(source)
-        current = 0.0
-        events: list[MidiTimelineEvent] = []
-        for message in midi:
-            current += float(message.time)
-            if message.is_meta:
-                continue
-            events.append(MidiTimelineEvent(current, message.copy(time=0)))
-        return cls(tuple(events), current)
+        if midi.type == 2:
+            raise ValueError("SMF type 2 contains asynchronous tracks and has no single master timeline")
 
-    def priming_messages(self, position_seconds: float) -> tuple[Message, ...]:
-        """Return the most recent stateful channel messages before a resume point."""
+        absolute: list[tuple[int, int, int, Any]] = []
+        for track_index, track in enumerate(midi.tracks):
+            tick = 0
+            for sequence_index, message in enumerate(track):
+                tick += int(message.time)
+                absolute.append((tick, track_index, sequence_index, message))
+        absolute.sort(key=lambda value: (value[0], value[1], value[2]))
+
+        tempo = 500_000  # Standard MIDI default: 120 BPM.
+        current_tick = 0
+        current_seconds = 0.0
+        events: list[MidiTimelineEvent] = []
+        for tick, track_index, _, message in absolute:
+            delta_ticks = tick - current_tick
+            if delta_ticks:
+                current_seconds += mido.tick2second(delta_ticks, midi.ticks_per_beat, tempo)
+                current_tick = tick
+            if message.is_meta:
+                if message.type == "set_tempo":
+                    tempo = int(message.tempo)
+                continue
+            events.append(
+                MidiTimelineEvent(
+                    current_seconds,
+                    message.copy(time=0),
+                    track_index=track_index,
+                )
+            )
+        return cls(tuple(events), current_seconds)
+
+    def priming_events(self, position_seconds: float) -> tuple[MidiTimelineEvent, ...]:
+        """Return stateful events needed to resume at a position.
+
+        Track identity is retained so a track-specific route is primed on the
+        same destination that receives the subsequent musical events.
+        """
         if position_seconds <= 0:
             return ()
         latest: dict[tuple[object, ...], MidiTimelineEvent] = {}
@@ -43,14 +75,24 @@ class MidiTimeline:
             message = event.message
             key: tuple[object, ...] | None = None
             if message.type == "control_change":
-                key = ("control_change", message.channel, message.control)
+                key = (
+                    "control_change",
+                    event.track_index,
+                    message.channel,
+                    message.control,
+                )
             elif message.type == "program_change":
-                key = ("program_change", message.channel)
+                key = ("program_change", event.track_index, message.channel)
             elif message.type == "pitchwheel":
-                key = ("pitchwheel", message.channel)
+                key = ("pitchwheel", event.track_index, message.channel)
             elif message.type == "aftertouch":
-                key = ("aftertouch", message.channel)
+                key = ("aftertouch", event.track_index, message.channel)
             if key is not None:
                 latest[key] = event
-        ordered = sorted(latest.values(), key=lambda event: event.at_seconds)
-        return tuple(event.message.copy(time=0) for event in ordered)
+        return tuple(sorted(latest.values(), key=lambda event: event.at_seconds))
+
+    def priming_messages(self, position_seconds: float) -> tuple[Message, ...]:
+        """Backward-compatible message-only view of :meth:`priming_events`."""
+        return tuple(
+            event.message.copy(time=0) for event in self.priming_events(position_seconds)
+        )

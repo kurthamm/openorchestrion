@@ -45,6 +45,7 @@ This directory contains the living design and implementation specification.
 ## Multi-device and operations
 
 - [Multi-device playback](multi-device.md)
+- [Routing engine](routing-engine.md) — track/channel routing, device affinity, polyphony balancing, latency compensation and safe failure behavior.
 - [Backup and recovery](backup-recovery.md)
 - [Integrations and future extensions](integrations-and-future.md)
 
