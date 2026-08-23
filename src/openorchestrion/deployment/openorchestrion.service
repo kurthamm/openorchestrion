@@ -9,6 +9,7 @@ Type=simple
 User=openorchestrion
 Group=openorchestrion
 EnvironmentFile=-/etc/openorchestrion/openorchestrion.env
+EnvironmentFile=-/etc/openorchestrion/openorchestrion.secrets.env
 WorkingDirectory=/var/lib/openorchestrion
 ExecStart=/opt/openorchestrion/venv/bin/openorchestrion-serve
 Restart=on-failure
