@@ -222,25 +222,38 @@ def _looks_like_refinement(text: str, current: PlaybackIntent | None) -> bool:
 
 
 def _interpretation(intent: PlaybackIntent) -> str:
-    parts: list[str] = []
-    if intent.energy:
-        parts.append(f"{intent.energy}-energy")
-    if intent.familiarity:
-        parts.append(f"{intent.familiarity}-familiarity")
-    if intent.themes:
-        parts.append("/".join(intent.themes))
-    if intent.genres:
-        parts.append("/".join(intent.genres))
-    if intent.moods:
-        parts.append("/".join(intent.moods))
-    if intent.instrumentation:
-        parts.append("/".join(intent.instrumentation))
-    if intent.performance_types:
-        parts.append("/".join(value.value.replace("_", " ").lower() for value in intent.performance_types))
-    description = ", ".join(parts) if parts else "general music"
+    descriptors: list[str] = []
+    if intent.familiarity == "high":
+        descriptors.append("familiar")
+    elif intent.familiarity == "low":
+        descriptors.append("less familiar")
+
+    if intent.energy == "high":
+        descriptors.append("upbeat")
+    elif intent.energy == "low":
+        descriptors.append("relaxed")
+
+    descriptors.extend(intent.moods[:2])
+    descriptors.extend(intent.themes[:2])
+    descriptors.extend(intent.genres[:2])
+    descriptors.extend(intent.instrumentation[:2])
+    if intent.performance_types and not intent.instrumentation:
+        descriptors.append(intent.performance_types[0].value.replace("_", " ").casefold())
+
+    seen: set[str] = set()
+    unique: list[str] = []
+    for value in descriptors:
+        cleaned = str(value).strip()
+        key = cleaned.casefold()
+        if cleaned and key not in seen:
+            seen.add(key)
+            unique.append(cleaned)
+
+    subject = " ".join(unique) if unique else "a varied selection"
+    sentence = f"The request is for {subject} music"
     if intent.duration_minutes:
-        description += f" for about {intent.duration_minutes} minutes"
-    return description[:500]
+        sentence += f" for about {intent.duration_minutes} minutes"
+    return (sentence + ".")[:500]
 
 
 class DeterministicConciergeProvider(MusicConciergeProvider):
