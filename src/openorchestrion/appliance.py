@@ -101,7 +101,16 @@ def serve_main() -> None:
     """
     import uvicorn
 
-    options = server_options()
+    env = load_appliance_environment()
+    # Uvicorn imports ``openorchestrion.app:app`` after this function starts.
+    # Populate values from the shared env file so Settings.from_env() inside the
+    # FastAPI lifespan sees the same paths even when serve_main is launched
+    # manually rather than by systemd. Existing process variables already won
+    # during load_appliance_environment and are therefore preserved here.
+    for key, value in env.items():
+        os.environ[key] = value
+
+    options = server_options(env)
     uvicorn.run(
         "openorchestrion.app:app",
         host=options.host,
