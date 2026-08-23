@@ -38,6 +38,9 @@ openorchestrion-smoke = "openorchestrion.appliance:smoke_main"
 openorchestrion-deploy = "openorchestrion.appliance:deploy_main"
 
 [project.optional-dependencies]
+openai = [
+  "openai>=2.0"
+]
 dev = [
   "pytest>=8.0",
   "pytest-asyncio>=0.23",
