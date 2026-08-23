@@ -121,20 +121,38 @@ pricing should be checked before budgeting sustained usage.
 
 ## Structured output
 
-The adapter uses the current OpenAI Responses API SDK path:
+The adapter uses the current OpenAI Responses API SDK parse path, but it does not
+hand the public `PlaybackIntent` model directly to the provider:
 
 ```python
 response = await client.responses.parse(
     model=model,
     instructions=provider_contract,
     input=[...],
-    text_format=PlaybackIntent,
+    text_format=OpenAIPlaybackIntent,
 )
 ```
 
-The returned object is then passed through OpenOrchestrion's existing provider
-boundary again. Unknown fields remain forbidden, and conversational refinements
-cannot silently drop existing hard include/exclude tags.
+`OpenAIPlaybackIntent` is an internal transport schema. OpenAI Structured Outputs
+requires every object to be closed (`additionalProperties: false`) and every
+field to be required, with nullable fields used for optional values. The public
+application model intentionally has defaults and a free-form
+`routing_preferences: dict[str, str]`, which is useful inside OpenOrchestrion but
+is not a suitable strict provider schema.
+
+The transport therefore represents routing preferences as a required array of
+closed `{key, value}` objects. After the provider response is parsed, that array
+is converted losslessly back to the public mapping and the resulting object is
+validated again as `PlaybackIntent`. The public REST/API/domain contract does not
+change merely to satisfy a hosted provider's schema restrictions.
+
+A CI test walks the generated transport JSON Schema and asserts that every object
+is closed and every declared property is required. It also round-trips real
+routing preferences and rejects duplicate keys.
+
+The converted `PlaybackIntent` then passes through OpenOrchestrion's existing
+provider boundary again. Unknown fields remain forbidden, and conversational
+refinements cannot silently drop existing hard include/exclude tags.
 
 No legacy "please output JSON" prompting is used.
 
@@ -150,7 +168,7 @@ request:
 - provider exception;
 - safety refusal;
 - no parsed structured output;
-- invalid `PlaybackIntent`;
+- invalid provider transport or `PlaybackIntent`;
 - dropped hard include/exclude constraints during refinement.
 
 The Concierge response exposes `provider`, `fallback_used`, and a non-secret
@@ -161,7 +179,7 @@ functions remain available without Internet access.
 ## Testing
 
 CI never uses a live provider key. The adapter accepts an injected async client,
-so tests exercise the exact Responses API call shape, structured parsing,
+so tests exercise the exact Responses API call shape, strict structured schema,
 refusals, timeout fallback, refinement preservation, and status behavior with
 in-memory fakes.
 
