@@ -97,7 +97,10 @@ trap 'rm -rf "$TMP"' EXIT INT TERM
 
 install -m 0644 "$TMP/openorchestrion.service" /etc/systemd/system/openorchestrion.service
 if [ ! -f "$CONFIG_DIR/openorchestrion.env" ]; then
-    install -m 0640 -o root -g "$SERVICE_USER" \
+    # This reference env file contains paths/network/runtime flags only. It is
+    # intentionally readable by the desktop kiosk and smoke command. Do not put
+    # provider API keys or other secrets here.
+    install -m 0644 -o root -g root \
         "$TMP/openorchestrion.env" "$CONFIG_DIR/openorchestrion.env"
 else
     echo "preserving existing $CONFIG_DIR/openorchestrion.env"
