@@ -8,6 +8,7 @@ This directory contains the living design and implementation specification.
 - [Architecture](architecture.md) — major components and boundaries.
 - [Requirements](requirements.md) — stable FR/NFR IDs and acceptance tests.
 - [Reference build](reference-build.md) — Pi 5 4 GB, 7-inch appliance display, headless alternative.
+- [Raspberry Pi appliance installation](appliance-install.md) — boot-to-service systemd packaging, kiosk/headless install, updates, logs and recovery.
 - [Roadmap](../ROADMAP.md) — staged implementation plan.
 
 ## User experience and intelligence
