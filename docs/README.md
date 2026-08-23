@@ -42,6 +42,7 @@ This directory contains the living design and implementation specification.
 - [Hardware selection](hardware-selection.md)
 - [Supported/candidate hardware](supported-hardware.md)
 - [Casio CT-X700 reference profile](hardware/casio-ct-x700.md)
+- [Raspberry Pi timing benchmark protocol](pi-timing-benchmark.md) — reproducible loaded scheduler/jitter/drift evidence for Issue #6.
 - Machine-readable profiles: [`../device-profiles/`](../device-profiles/)
 
 ## Multi-device and operations
