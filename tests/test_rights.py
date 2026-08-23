@@ -17,10 +17,10 @@ import sys
 from pathlib import Path
 
 import pytest
-from jsonschema import validators
 
 from openorchestrion.library.catalog import rebuild_catalog, search_catalog
 from openorchestrion.library.importer import import_paths
+from openorchestrion.library.policy import audit_committed_music
 from openorchestrion.library.metadata import (
     MetadataConflictError,
     MetadataValidationError,
@@ -36,7 +36,7 @@ from openorchestrion.library.rights import (
     normalize,
     verify,
 )
-from openorchestrion.testing.midi_fixtures import generate_suite
+from openorchestrion.testing.midi_fixtures import SUITE_RIGHTS, generate_suite
 
 SCHEMAS = Path(__file__).resolve().parents[1] / "schemas"
 
@@ -311,9 +311,10 @@ def test_an_evidenced_sidecar_validates_against_the_published_schema(
     report = import_paths([fixtures / "single-note.mid"], library, rights=SOUND)
     document = json.loads(Path(report.imported[0].metadata_path).read_text())
 
+    jsonschema = pytest.importorskip("jsonschema")
     schema = json.loads((SCHEMAS / "midi-asset.schema.json").read_text())
     provenance = schema["properties"]["provenance"]
-    validators.validator_for(provenance)(provenance).validate(document["provenance"])
+    jsonschema.validators.validator_for(provenance)(provenance).validate(document["provenance"])
 
 
 def test_personal_remains_the_default(tmp_path: Path, fixtures: Path) -> None:
@@ -487,19 +488,6 @@ def test_the_cli_accepts_a_complete_record(tmp_path: Path, fixtures: Path) -> No
     assert json.loads(sidecar.read_text())["provenance"]["rights_status"] == "verified-open"
 
 
-def _validator_module():
-    from importlib import util
-
-    spec = util.spec_from_file_location(
-        "validate_repo",
-        Path(__file__).resolve().parents[1] / ".github" / "scripts" / "validate_repo.py",
-    )
-    assert spec and spec.loader
-    module = util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 @pytest.mark.parametrize(
     "damage",
     [
@@ -509,7 +497,7 @@ def _validator_module():
     ],
 )
 def test_the_repository_refuses_midi_without_established_rights(
-    tmp_path: Path, fixtures: Path, monkeypatch: pytest.MonkeyPatch, damage: str | None
+    tmp_path: Path, fixtures: Path, damage: str | None
 ) -> None:
     """The policy is only worth as much as the check behind it.
 
@@ -517,12 +505,10 @@ def test_the_repository_refuses_midi_without_established_rights(
     large diff nobody sees it. This is the guard, so it is tested against each
     way a file can arrive without rights rather than only against the clean tree.
     """
-    module = _validator_module()
-    root = tmp_path / "repo"
-    (root / "music").mkdir(parents=True)
-    monkeypatch.setattr(module, "ROOT", root)
+    music = tmp_path / "repo" / "music"
+    music.mkdir(parents=True)
 
-    midi = root / "music" / "smuggled.mid"
+    midi = music / "smuggled.mid"
     midi.write_bytes((fixtures / "single-note.mid").read_bytes())
     if damage is not None:
         report = import_paths([midi], tmp_path / "staging")
@@ -530,39 +516,36 @@ def test_the_repository_refuses_midi_without_established_rights(
         document["provenance"]["rights_status"] = damage
         midi.with_suffix(".json").write_text(json.dumps(document, indent=2))
 
-    with pytest.raises(SystemExit, match="without established redistribution rights"):
-        module.validate_committed_music()
+    offenders = audit_committed_music(music)
+    assert len(offenders) == 1
+    assert "smuggled.mid" in offenders[0]
 
 
 def test_the_repository_accepts_midi_that_carries_its_evidence(
-    tmp_path: Path, fixtures: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, fixtures: Path
 ) -> None:
-    module = _validator_module()
-    root = tmp_path / "repo"
-    (root / "music").mkdir(parents=True)
-    monkeypatch.setattr(module, "ROOT", root)
+    music = tmp_path / "repo" / "music"
+    music.mkdir(parents=True)
 
-    midi = root / "music" / "cleared.mid"
+    midi = music / "cleared.mid"
     midi.write_bytes((fixtures / "single-note.mid").read_bytes())
     report = import_paths([midi], tmp_path / "staging", rights=SOUND)
     midi.with_suffix(".json").write_text(Path(report.imported[0].metadata_path).read_text())
 
-    module.validate_committed_music()
+    assert audit_committed_music(music) == []
 
 
 def test_the_repository_currently_commits_no_third_party_midi() -> None:
     """The starter catalog is assembled on the appliance, not committed here."""
-    module = _validator_module()
-    module.validate_committed_music()
+    assert audit_committed_music(Path(__file__).resolve().parents[1] / "music") == []
 
 
-def test_the_generated_fixtures_carry_a_real_record(library: Path, asset_id: str) -> None:
+def test_the_generated_fixtures_carry_a_real_record() -> None:
     """The conformance suite is the project's own output, so its terms are ours.
 
     The repository contract check imports it as ``verified-open``; that claim now
     has to survive the same audit as anything else.
     """
-    module = _validator_module()
-    assert audit(module.FIXTURE_RIGHTS) == ()
-    assert module.FIXTURE_RIGHTS.attribution
+    assert audit(SUITE_RIGHTS) == ()
+    assert SUITE_RIGHTS.attribution
 
