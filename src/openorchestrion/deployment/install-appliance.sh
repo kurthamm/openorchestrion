@@ -5,6 +5,7 @@ MODE=headless
 KIOSK_USER=
 PACKAGE_SPEC=.
 WITH_OPENAI=0
+APPLIANCE_HOSTNAME=
 SERVICE_USER=openorchestrion
 INSTALL_ROOT=/opt/openorchestrion
 VENV="$INSTALL_ROOT/venv"
@@ -20,11 +21,13 @@ Options:
   --mode headless|kiosk    Install backend only or backend + desktop kiosk
   --kiosk-user USER        Desktop login that should autostart the kiosk
   --with-openai            Install optional OpenAI SDK for hosted Concierge
+  --hostname NAME          Explicitly set the appliance hostname (for example openorchestrion)
   -h, --help               Show this help
 
 The script is intentionally safe to re-run for updates. It preserves existing
 configuration/secrets under /etc/openorchestrion and all data under
-/var/lib/openorchestrion.
+/var/lib/openorchestrion. The system hostname is never changed unless
+--hostname is explicitly supplied.
 EOF
 }
 
@@ -49,6 +52,11 @@ while [ "$#" -gt 0 ]; do
             WITH_OPENAI=1
             shift
             ;;
+        --hostname)
+            [ "$#" -ge 2 ] || { echo "--hostname needs a value" >&2; exit 2; }
+            APPLIANCE_HOSTNAME=$2
+            shift 2
+            ;;
         -h|--help)
             usage
             exit 0
@@ -71,8 +79,27 @@ if [ "$MODE" = kiosk ] && [ -z "$KIOSK_USER" ]; then
     exit 2
 fi
 
+if [ -n "$APPLIANCE_HOSTNAME" ]; then
+    if [ "${#APPLIANCE_HOSTNAME}" -gt 63 ]; then
+        echo "--hostname must be 63 characters or fewer" >&2
+        exit 2
+    fi
+    case "$APPLIANCE_HOSTNAME" in
+        *[!a-z0-9-]*|-*|*-)
+            echo "--hostname must contain only lowercase letters, digits, and internal hyphens" >&2
+            exit 2
+            ;;
+    esac
+fi
+
 command -v python3 >/dev/null 2>&1 || { echo "python3 is required" >&2; exit 2; }
 command -v systemctl >/dev/null 2>&1 || { echo "systemd is required" >&2; exit 2; }
+if [ -n "$APPLIANCE_HOSTNAME" ]; then
+    command -v hostnamectl >/dev/null 2>&1 || {
+        echo "hostnamectl is required when --hostname is used" >&2
+        exit 2
+    }
+fi
 
 # Resolve local package paths before changing directories. Non-path values are
 # left alone so a packaged wheel/spec can still be supplied.
@@ -114,6 +141,8 @@ trap 'rm -rf "$TMP"' EXIT INT TERM
 "$VENV/bin/openorchestrion-deploy" --output-dir "$TMP"
 
 install -m 0644 "$TMP/openorchestrion.service" /etc/systemd/system/openorchestrion.service
+install -m 0644 "$TMP/openorchestrion-discovery.service" \
+    /etc/systemd/system/openorchestrion-discovery.service
 if [ ! -f "$CONFIG_DIR/openorchestrion.env" ]; then
     # This reference env file contains paths/network/runtime flags only. It is
     # intentionally readable by the desktop kiosk and smoke command.
@@ -155,9 +184,41 @@ else
     fi
 fi
 
+# Host identity belongs to the operator. A dedicated appliance may explicitly
+# opt into the reference name, which Avahi then exposes as openorchestrion.local.
+# Updates without --hostname leave the current host identity untouched.
+if [ -n "$APPLIANCE_HOSTNAME" ]; then
+    CURRENT_HOSTNAME=$(hostnamectl --static 2>/dev/null || hostname)
+    if [ "$CURRENT_HOSTNAME" != "$APPLIANCE_HOSTNAME" ]; then
+        echo "setting system hostname to $APPLIANCE_HOSTNAME"
+        hostnamectl set-hostname "$APPLIANCE_HOSTNAME"
+    fi
+fi
+
 systemctl daemon-reload
 systemctl enable openorchestrion.service
 systemctl restart openorchestrion.service
+
+DISCOVERY_STATE=unavailable
+if command -v avahi-publish-service >/dev/null 2>&1 \
+    && systemctl cat avahi-daemon.service >/dev/null 2>&1; then
+    systemctl enable avahi-daemon.service >/dev/null 2>&1 || true
+    if systemctl restart avahi-daemon.service >/dev/null 2>&1 \
+        && systemctl is-active --quiet avahi-daemon.service; then
+        systemctl enable openorchestrion-discovery.service >/dev/null 2>&1
+        if systemctl restart openorchestrion-discovery.service >/dev/null 2>&1; then
+            DISCOVERY_STATE=enabled
+        else
+            echo "warning: OpenOrchestrion is running, but the mDNS advertisement failed to start" >&2
+        fi
+    else
+        echo "warning: OpenOrchestrion is running, but avahi-daemon is not active" >&2
+    fi
+else
+    # Discovery is an optional LAN convenience. Never make playback depend on it.
+    systemctl disable --now openorchestrion-discovery.service >/dev/null 2>&1 || true
+    echo "warning: Avahi discovery unavailable; install avahi-daemon and avahi-utils for .local discovery" >&2
+fi
 
 echo
 echo "OpenOrchestrion installed in $VENV"
@@ -166,6 +227,10 @@ echo "Service secrets: $SECRETS"
 echo "Durable data: $STATE_DIR"
 echo "Logs: journalctl -u openorchestrion.service"
 echo "Smoke check: $VENV/bin/openorchestrion-smoke"
+if [ "$DISCOVERY_STATE" = enabled ]; then
+    CURRENT_HOSTNAME=$(hostnamectl --static 2>/dev/null || hostname)
+    echo "LAN discovery: enabled as $CURRENT_HOSTNAME.local (using the configured OpenOrchestrion port)"
+fi
 if [ "$WITH_OPENAI" -eq 1 ]; then
     echo "OpenAI SDK installed; set OPENAI_API_KEY in $SECRETS and enable the provider in openorchestrion.env."
 fi
