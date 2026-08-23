@@ -85,6 +85,14 @@ install -d -m 0750 -o "$SERVICE_USER" -g "$SERVICE_USER" "$STATE_DIR"
 install -d -m 0750 -o "$SERVICE_USER" -g "$SERVICE_USER" "$STATE_DIR/library"
 install -d -m 0755 "$CONFIG_DIR"
 
+# An update must not replace package files underneath a live playback process.
+# A normal systemd stop runs FastAPI's graceful shutdown and closes the active
+# history attempt before the virtual environment is modified.
+if systemctl is-active --quiet openorchestrion.service 2>/dev/null; then
+    echo "stopping running OpenOrchestrion for update"
+    systemctl stop openorchestrion.service
+fi
+
 if [ ! -x "$VENV/bin/python" ]; then
     python3 -m venv "$VENV"
 fi
@@ -104,6 +112,7 @@ if [ ! -f "$CONFIG_DIR/openorchestrion.env" ]; then
         "$TMP/openorchestrion.env" "$CONFIG_DIR/openorchestrion.env"
 else
     echo "preserving existing $CONFIG_DIR/openorchestrion.env"
+    chmod 0644 "$CONFIG_DIR/openorchestrion.env"
 fi
 
 if [ "$MODE" = kiosk ]; then
@@ -127,7 +136,8 @@ else
 fi
 
 systemctl daemon-reload
-systemctl enable --now openorchestrion.service
+systemctl enable openorchestrion.service
+systemctl restart openorchestrion.service
 
 echo
 echo "OpenOrchestrion installed in $VENV"
