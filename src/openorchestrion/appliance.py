@@ -27,6 +27,7 @@ DEFAULT_PORT = 8000
 DEFAULT_ENV_FILE = Path("/etc/openorchestrion/openorchestrion.env")
 DEPLOYMENT_FILES = (
     "openorchestrion.service",
+    "openorchestrion-discovery.service",
     "openorchestrion.env",
     "openorchestrion-kiosk.desktop",
     "install-appliance.sh",
