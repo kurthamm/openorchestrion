@@ -134,7 +134,17 @@ jobs:
               exit 1
             fi
             cat smoke.json
-            kill "$server_pid"
+
+            kill -TERM "$server_pid"
+            set +e
             wait "$server_pid"
+            shutdown_status=$?
+            set -e
+            if [ "$shutdown_status" -ne 0 ] && [ "$shutdown_status" -ne 143 ]; then
+              cat server.log >&2 || true
+              echo "unexpected server shutdown status: $shutdown_status" >&2
+              exit "$shutdown_status"
+            fi
+            grep -q "Application shutdown complete" server.log
             trap - EXIT
           )
