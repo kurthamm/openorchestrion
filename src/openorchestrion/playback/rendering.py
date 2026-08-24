@@ -7,10 +7,13 @@ master clock plus source track/channel identity used by routing.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 
 from mido import Message
+
+from openorchestrion.midi import GMProgramError, resolve_gm_program
 
 from .timeline import MidiTimeline, MidiTimelineEvent
 
@@ -47,6 +50,15 @@ class ProgramOverride:
         if not 0 <= self.program <= 127:
             raise RenderingError("override program must be between 0 and 127")
 
+    @classmethod
+    def from_value(cls, channel: int, program: int | str) -> "ProgramOverride":
+        """Resolve a MIDI-native integer or canonical GM patch name at the domain boundary."""
+        try:
+            resolved = resolve_gm_program(program)
+        except GMProgramError as exc:
+            raise RenderingError(str(exc)) from None
+        return cls(channel=channel, program=resolved)
+
 
 @dataclass(frozen=True, slots=True)
 class RenderingPolicy:
@@ -62,6 +74,41 @@ class RenderingPolicy:
             raise RenderingError("only one program override may target a MIDI channel")
         if self.mode is RenderingMode.OVERRIDE and not self.program_overrides:
             raise RenderingError("OVERRIDE rendering requires at least one program override")
+
+    @classmethod
+    def from_values(
+        cls,
+        *,
+        mode: RenderingMode | str = RenderingMode.ORIGINAL,
+        program_overrides: Iterable[tuple[int, int | str]] = (),
+        piano_program: int | str = 0,
+    ) -> "RenderingPolicy":
+        """Build a validated policy from request-friendly primitive selectors.
+
+        This is the application seam the eventual HTTP model should call.  GM
+        names are resolved here, not in a route handler, so CLI/automation/UI
+        callers all share one numbering and ambiguity policy.
+        """
+        try:
+            rendering_mode = mode if isinstance(mode, RenderingMode) else RenderingMode(mode)
+        except ValueError:
+            allowed = ", ".join(member.value for member in RenderingMode)
+            raise RenderingError(f"rendering mode must be one of {allowed}") from None
+
+        try:
+            resolved_piano = resolve_gm_program(piano_program)
+        except GMProgramError as exc:
+            raise RenderingError(str(exc)) from None
+
+        overrides = tuple(
+            ProgramOverride.from_value(channel, program)
+            for channel, program in program_overrides
+        )
+        return cls(
+            mode=rendering_mode,
+            program_overrides=overrides,
+            piano_program=resolved_piano,
+        )
 
     @property
     def is_identity(self) -> bool:
