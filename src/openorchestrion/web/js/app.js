@@ -269,7 +269,9 @@ async function loadSetup({ autoRoute = false } = {}) {
       },
     });
   } catch (error) {
-    setState((state) => ({ setup: { ...state.setup, loading: false, error, autoRouted: true } }));
+    // A failed first status call is not a routing decision. Keep autoRouted as
+    // it was so the first live WebSocket connection can retry first-run setup.
+    setState((state) => ({ setup: { ...state.setup, loading: false, error } }));
   }
 }
 
@@ -358,7 +360,10 @@ const socket = new StateSocket({
     setState({ connection });
     if (connection === 'live') {
       void loadStatus();
-      if (getState().view === 'setup') void loadSetup();
+      // A pre-socket setup request can fail simply because the backend is not
+      // ready yet. A live socket is the reliable signal to retry the one-shot
+      // first-run routing decision.
+      void loadSetup({ autoRoute: true });
     }
   },
 });
