@@ -1,0 +1,185 @@
+name: Fetch curation candidate
+
+# Curation research and file retrieval do not always happen in the same place.
+# The person who can read a license page may be unable to commit, and an agent
+# that can commit may have no route to the archive at all. This job is the
+# bridge: it fetches one candidate on a runner that does have network access,
+# checks it against the evidence supplied, and opens a pull request for review.
+#
+# Manual dispatch only. Nothing external can trigger it, the source host must be
+# one the project has agreed to work through, and the result is a pull request
+# rather than a push — a human still decides whether the music ships.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_url:
+        description: "Direct HTTPS download URL (allowed archive; redirects refused)"
+        required: true
+      filename:
+        description: "Store the file as this name, e.g. maple-leaf-rag.mid"
+        required: true
+      source_reference:
+        description: "URL of the item record where the license was read"
+        required: true
+      license:
+        description: "License of the FILE (not the composition): CC0-1.0, CC-BY-SA-4.0, public-domain, …"
+        required: true
+      composition_rights:
+        description: "public-domain | licensed"
+        required: true
+        default: public-domain
+      composition_rights_basis:
+        description: "Why the composition is clear, e.g. 'Composer died 1917; published 1899'"
+        required: true
+      redistribution:
+        description: "permitted | permitted-with-attribution (must agree with the license)"
+        required: true
+        default: permitted
+      expected_sha256:
+        description: "Digest of the file whose license was read. Omit only if it was not recorded."
+        required: false
+      source_label:
+        description: "Human-readable archive name"
+        required: false
+      license_url:
+        description: "Where the license terms were read"
+        required: false
+      attribution:
+        description: "Credit text (required by any CC-BY licence)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fetch:
+    name: fetch and verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      # Before the download, not after: a host we have not agreed to work
+      # through should never be contacted from a job that can open pull requests.
+      # check_source_host also requires HTTPS.
+      - name: Check the source host is one we work through
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+        run: |
+          python - <<'CHECK'
+          import os, sys
+          from openorchestrion.library.acquire import CandidateError, check_source_host
+
+          try:
+              check_source_host(os.environ["SOURCE_URL"])
+          except CandidateError as exc:
+              sys.exit(f"error: {exc}")
+          print("source host allowed")
+          CHECK
+
+      # Bounded on purpose. A Standard MIDI File is tiny; anything approaching
+      # this is far more likely to be a mis-named archive than music, and the
+      # runner should not spend minutes discovering that. The input is explicitly
+      # a direct URL: max-redirs=0 means an allowed archive cannot redirect this
+      # write-capable runner to a host that was never reviewed/allowlisted.
+      - name: Download the candidate
+        env:
+          SOURCE_URL: ${{ inputs.source_url }}
+        run: |
+          mkdir -p /tmp/candidate
+          curl --fail --location --max-redirs 0 --silent --show-error \
+               --proto '=https' --proto-redir '=https' \
+               --max-filesize 33554432 --max-time 120 \
+               --user-agent "OpenOrchestrion curation (+https://github.com/kurthamm/openorchestrion)" \
+               --output /tmp/candidate/download.mid \
+               "$SOURCE_URL"
+          ls -l /tmp/candidate/
+
+      - name: Verify and stage it
+        env:
+          FILENAME: ${{ inputs.filename }}
+          SOURCE_URL: ${{ inputs.source_url }}
+          EXPECTED_SHA256: ${{ inputs.expected_sha256 }}
+          SOURCE_REFERENCE: ${{ inputs.source_reference }}
+          SOURCE_LABEL: ${{ inputs.source_label }}
+          LICENSE: ${{ inputs.license }}
+          LICENSE_URL: ${{ inputs.license_url }}
+          ATTRIBUTION: ${{ inputs.attribution }}
+          COMPOSITION_RIGHTS: ${{ inputs.composition_rights }}
+          COMPOSITION_RIGHTS_BASIS: ${{ inputs.composition_rights_basis }}
+          REDISTRIBUTION: ${{ inputs.redistribution }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          openorchestrion-stage-candidate \
+            --file /tmp/candidate/download.mid \
+            --into music/candidates \
+            --filename "$FILENAME" \
+            --source-url "$SOURCE_URL" \
+            ${EXPECTED_SHA256:+--expected-sha256 "$EXPECTED_SHA256"} \
+            --rights-status verified-open \
+            --source-reference "$SOURCE_REFERENCE" \
+            ${SOURCE_LABEL:+--source-label "$SOURCE_LABEL"} \
+            --license "$LICENSE" \
+            ${LICENSE_URL:+--license-url "$LICENSE_URL"} \
+            ${ATTRIBUTION:+--attribution "$ATTRIBUTION"} \
+            --composition-rights "$COMPOSITION_RIGHTS" \
+            --composition-rights-basis "$COMPOSITION_RIGHTS_BASIS" \
+            --redistribution "$REDISTRIBUTION" \
+            --verified-by "$ACTOR via fetch-candidate workflow" \
+            --verified-at "$(date -u +%Y-%m-%dT%H:%M:%S+00:00)" \
+            | tee /tmp/candidate/staged.txt
+          {
+            echo "STAGED<<STAGED_EOF"
+            cat /tmp/candidate/staged.txt
+            echo "STAGED_EOF"
+          } >> "$GITHUB_ENV"
+
+      # The same check CI runs on every push, so a candidate that would fail the
+      # contract never becomes a pull request somebody has to work out how to close.
+      - name: Confirm the repository contract still holds
+        run: |
+          git add -A music/candidates
+          python .github/scripts/validate_repo.py
+
+      - name: Open a pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: curation/fetch-${{ inputs.filename }}
+          commit-message: "Stage curation candidate: ${{ inputs.filename }}"
+          title: "Stage curation candidate: ${{ inputs.filename }}"
+          add-paths: music/candidates
+          body: |
+            Fetched by the `fetch-candidate` workflow, dispatched by @${{ github.actor }}.
+
+            **Source:** ${{ inputs.source_url }}
+            **Item record:** ${{ inputs.source_reference }}
+            **File license:** `${{ inputs.license }}`
+            **Composition:** `${{ inputs.composition_rights }}` — ${{ inputs.composition_rights_basis }}
+
+            ```
+            ${{ env.STAGED }}
+            ```
+
+            The file was verified before this branch existed: allowed HTTPS source host,
+            digest, readable MIDI with actual notes, and a rights audit that the
+            evidence had to satisfy. The repository contract check also passed, so
+            merging this cannot introduce unevidenced music.
+
+            **Read the `digest:` line above before merging.** "matches the researched
+            value" means these are the bytes whose licence someone actually read.
+            "OBSERVED, not verified" means only that the download is internally
+            consistent — confirm it is the right file yourself.
+
+            Staged in `music/candidates/`. Promote to `music/starter/` once reviewed.
