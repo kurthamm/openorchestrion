@@ -7,22 +7,29 @@ on:
     branches: [curation/candidates]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   fetch-candidate:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch Wall Street Rag MIDI
+      - name: Check out curation branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && 'curation/candidates' || github.sha }}
+
+      - name: Fetch and verify Wall Street Rag MIDI
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p candidate
           url='https://upload.wikimedia.org/wikipedia/commons/f/f6/Scott_Joplin%27s_%22Wall_Street_Rag%22_%281909%29.mid'
+          expected='d8d84ab616241b716fd71b843fcf163b8e4631dfa59fdafed2a02a9f2c5dcfa7'
           curl --fail --location --retry 3 --retry-delay 2 \
             --user-agent 'OpenOrchestrion-Curation/1.0' \
             --output candidate/wall-street-rag.mid "$url"
           test "$(head -c 4 candidate/wall-street-rag.mid)" = 'MThd'
+          echo "$expected  candidate/wall-street-rag.mid" | sha256sum -c -
           sha256sum candidate/wall-street-rag.mid | tee candidate/SHA256SUMS
           file candidate/wall-street-rag.mid | tee candidate/file.txt
           wc -c candidate/wall-street-rag.mid | tee candidate/size.txt
@@ -34,3 +41,24 @@ jobs:
           path: candidate/
           if-no-files-found: error
           retention-days: 1
+
+      - name: Commit reviewed candidate and evidence
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p music/candidates
+          cp candidate/wall-street-rag.mid music/candidates/wall-street-rag.mid
+          cat > music/candidates/catalog.csv <<'CSV'
+          path,sha256,rights_status,source_reference,source_label,license,license_url,attribution,composition_rights,composition_rights_basis,redistribution,verified_by,verified_at
+          wall-street-rag.mid,d8d84ab616241b716fd71b843fcf163b8e4631dfa59fdafed2a02a9f2c5dcfa7,verified-open,"https://commons.wikimedia.org/wiki/File:Scott_Joplin%27s_%22Wall_Street_Rag%22_%281909%29.mid",Wikimedia Commons,CC0-1.0,https://creativecommons.org/publicdomain/zero/1.0/,,public-domain,"Scott Joplin died 1917; Wall Street Rag published 1909; Wikimedia Commons marks the composition public domain",permitted,OpenOrchestrion curation,2026-08-24T11:53:54+00:00
+          CSV
+          git config user.name 'OpenOrchestrion Curation Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add music/candidates/catalog.csv music/candidates/wall-street-rag.mid
+          if git diff --cached --quiet; then
+            echo 'candidate already staged at reviewed digest'
+            exit 0
+          fi
+          git commit -m 'Stage verified Wall Street Rag candidate'
+          git push origin HEAD:curation/candidates
