@@ -248,7 +248,7 @@ copyright.
 
 | Composition | Composer | Died | Composed / published | Note | File license |
 | --- | --- | --- | --- | --- | --- |
-| **Silent Night** | Franz Xaver Gruber | 1863 | 1818 | Mutopia hymntune contribution | **public-domain — cleared** |
+| **Stille Nacht (Silent Night)** | Franz Xaver Gruber | 1863 | 1818 | Mutopia hymntune contribution; ships under the Mutopia title with the English name as an alias | **public-domain — cleared** |
 | O Holy Night | Adolphe Adam | 1856 | 1847 | Check the English translation used | _unestablished_ |
 | Joy to the World | Lowell Mason | 1872 | 1848 | — | _unestablished_ |
 | Hark! The Herald Angels Sing | Felix Mendelssohn | 1847 | 1840 | — | _unestablished_ |
@@ -316,7 +316,7 @@ of the six categories:
 | Ragtime | Wall Street Rag, Maple Leaf Rag, The Entertainer |
 | Expressive solo piano | Für Elise, Clair de lune |
 | Two-piano / duet | Diabelli Op. 149 No. 1 (piano four hands) |
-| Seasonal | Stille Nacht |
+| Seasonal | Stille Nacht (Silent Night) |
 
 The Diabelli is the one that mattered most: a work *written* for two players rather
 than a solo part split after the fact, which is what the multi-device routing work
