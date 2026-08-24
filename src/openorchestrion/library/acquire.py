@@ -176,7 +176,10 @@ def stage_candidate(
     if source_url is not None:
         check_source_host(source_url)
 
-    target_name = _safe_target_name(filename or source.name)
+    # Blank means "not given", whichever way it arrives. Without the strip, an
+    # empty string fell back to the source name while a whitespace-only one was
+    # refused, which is the same intent taking two different paths.
+    target_name = _safe_target_name((filename or "").strip() or source.name)
 
     size = source.stat().st_size
     if size == 0:
@@ -258,7 +261,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--file", required=True, help="The downloaded file to stage")
     parser.add_argument("--into", required=True, help="Candidate directory to write into")
     parser.add_argument("--filename", help="Plain .mid/.midi basename to store")
-    parser.add_argument("--source-url", help="HTTPS URL it was downloaded from; checked against policy")
+    parser.add_argument(
+        "--source-url", help="HTTPS URL it was downloaded from; checked against policy"
+    )
     parser.add_argument(
         "--expected-sha256",
         help="Digest of the file whose license was read. Omit only if it was not recorded.",
