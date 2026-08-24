@@ -53,6 +53,11 @@ permissions:
   contents: write
   pull-requests: write
 
+env:
+  # Same pin as the repository-contracts job in ci.yml, so the contract this
+  # job checks is the contract CI checks.
+  JSONSCHEMA_VERSION: "4.23.0"
+
 jobs:
   fetch:
     name: fetch and verify
@@ -66,10 +71,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install project
+      # validate_repo.py imports jsonschema, so the project alone is not enough
+      # for the contract step below. The first real run of this workflow fetched
+      # and staged correctly, then failed on exactly that.
+      - name: Install project and schema validator
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
+          python -m pip install "jsonschema==${JSONSCHEMA_VERSION}"
 
       # Before the download, not after: a host we have not agreed to work
       # through should never be contacted from a job that can open pull requests.
