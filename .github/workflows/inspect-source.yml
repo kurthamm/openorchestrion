@@ -1,0 +1,107 @@
+name: Inspect curation source
+
+# The read-only half of "Fetch curation candidate". Establishing a file's terms
+# means reading the page that states them, and whoever curates often cannot
+# reach the archive at all. Without a way to read an item record, the only ways
+# forward are to guess the licence or to stop — and a guessed licence written
+# into a manifest is indistinguishable from a verified one.
+#
+# So this job fetches one allowed URL and prints what it contains: digest, size,
+# and the lines that mention terms. It commits nothing, opens nothing, and runs
+# with read-only permissions. A person reads the extract and decides; only then
+# does the fetch workflow get dispatched with the evidence.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "HTTPS URL of an item record or file on an allowed archive"
+        required: true
+      max_lines:
+        description: "Cap on extracted term lines"
+        required: false
+        default: "60"
+
+# Read-only on purpose. This job pulls a page from the open internet into a
+# runner; nothing it fetches should be able to reach a branch.
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: read the item record
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      # Before the download, exactly as in the fetch job: the allowlist is the
+      # decision about which archives this project works through, and a research
+      # request is not a reason to contact somewhere it does not.
+      - name: Check the source host is one we work through
+        env:
+          SOURCE_URL: ${{ inputs.url }}
+        run: |
+          python - <<'CHECK'
+          import os, sys
+          from openorchestrion.library.acquire import CandidateError, check_source_host
+
+          try:
+              check_source_host(os.environ["SOURCE_URL"])
+          except CandidateError as exc:
+              sys.exit(f"error: {exc}")
+          print("source host allowed")
+          CHECK
+
+      # Redirects are refused here too. This job cannot write, so a redirect is
+      # less dangerous than in the fetch job — but the headers are dumped either
+      # way, so a moved page reports its Location instead of silently becoming a
+      # request to a host nobody reviewed.
+      - name: Download the page
+        env:
+          SOURCE_URL: ${{ inputs.url }}
+        run: |
+          mkdir -p /tmp/inspect
+          status=0
+          curl --fail --location --max-redirs 0 --silent --show-error \
+               --proto '=https' --proto-redir '=https' \
+               --max-filesize 8388608 --max-time 60 \
+               --dump-header /tmp/inspect/headers.txt \
+               --user-agent "OpenOrchestrion curation (+https://github.com/kurthamm/openorchestrion)" \
+               --output /tmp/inspect/payload \
+               "$SOURCE_URL" || status=$?
+          echo "--- response headers ---"
+          cat /tmp/inspect/headers.txt || true
+          if [ "$status" -ne 0 ]; then
+            echo "curl exited $status. Exit 47 means the page redirected and the"
+            echo "redirect was refused; the Location header above says where to."
+            exit "$status"
+          fi
+
+      - name: Report what it contains
+        env:
+          SOURCE_URL: ${{ inputs.url }}
+          MAX_LINES: ${{ inputs.max_lines }}
+        run: |
+          openorchestrion-inspect-source \
+            --file /tmp/inspect/payload \
+            --url "$SOURCE_URL" \
+            --max-lines "$MAX_LINES" \
+            | tee /tmp/inspect/report.txt
+          {
+            echo '### Source report'
+            echo
+            echo '```'
+            cat /tmp/inspect/report.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
