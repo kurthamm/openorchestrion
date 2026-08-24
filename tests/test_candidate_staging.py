@@ -89,8 +89,23 @@ def test_a_url_without_a_host_is_refused() -> None:
         check_source_host("file:///etc/passwd")
 
 
+def test_plain_http_is_refused_even_for_an_allowed_host() -> None:
+    """Without a researched digest, transport integrity cannot fall back to HTTP."""
+    with pytest.raises(CandidateError, match="HTTPS"):
+        check_source_host("http://commons.wikimedia.org/wiki/File:X.mid")
+
+
 def test_host_matching_ignores_case() -> None:
     check_source_host("https://Commons.WikiMedia.ORG/wiki/File:X.mid")
+
+
+def test_fetch_workflow_refuses_redirects_before_contacting_a_second_host() -> None:
+    """The host allowlist must cover the host actually contacted, not only hop one."""
+    workflow = (
+        Path(__file__).resolve().parents[1] / ".github" / "workflows" / "fetch-candidate.yml"
+    ).read_text(encoding="utf-8")
+    assert "--max-redirs 0" in workflow
+    assert "--proto '=https'" in workflow
 
 
 # --------------------------------------------------------------- the digest
@@ -141,6 +156,47 @@ def test_an_observed_digest_is_reported_as_weaker_than_a_verified_one(
     )
     assert staged.digest_was_verified is False
     assert staged.sha256 == digest_of(download)
+
+
+# ------------------------------------------------------- destination policy
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "../escape.mid",
+        "nested/example.mid",
+        r"nested\example.mid",
+        "/tmp/example.mid",
+        "example.txt",
+        "example",
+    ],
+)
+def test_candidate_filename_cannot_escape_or_hide_the_midi(
+    tmp_path: Path, download: Path, filename: str
+) -> None:
+    """A workflow input must stay inside candidates and remain visible to the audit."""
+    with pytest.raises(CandidateError, match="filename"):
+        stage_candidate(
+            download,
+            tmp_path / "candidates",
+            CLEARED,
+            filename=filename,
+            source_url=GOOD_URL,
+        )
+    assert not (tmp_path / "candidates").exists()
+    assert not (tmp_path / "escape.mid").exists()
+
+
+def test_midi_extension_matching_is_case_insensitive(tmp_path: Path, download: Path) -> None:
+    stage_candidate(
+        download,
+        tmp_path / "candidates",
+        CLEARED,
+        filename="Example.MIDI",
+        source_url=GOOD_URL,
+    )
+    assert (tmp_path / "candidates" / "Example.MIDI").is_file()
 
 
 # ------------------------------------------------------------- is it music
