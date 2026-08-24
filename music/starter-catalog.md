@@ -79,6 +79,31 @@ Everything goes through the production pipeline. There is no separate catalog
 format to keep in sync — the sidecars written here are the same sidecars any
 user's import produces.
 
+### Fetching a candidate when you cannot reach the archive
+
+Research and retrieval do not always happen in the same place: whoever reads a
+license page may be unable to commit, and whoever commits may have no route to
+the archive at all. The **Fetch curation candidate** workflow bridges that. Run
+it from the Actions tab with the URL and the evidence you gathered; it fetches on
+a runner, checks the file, and opens a pull request.
+
+It refuses, in this order, before anything reaches a branch:
+
+1. a **source host** the project has not agreed to work through;
+2. a file whose **digest** is not the one the research was about;
+3. anything that is **not readable MIDI with actual notes** — archives serve
+   error pages with `.mid` names when a link rots;
+4. a **claim its evidence cannot support**.
+
+Supply `expected_sha256` whenever the digest was recorded. Without it the file is
+still staged, but the pull request says the digest was *observed* rather than
+verified — "I read this file's terms" and "I read some file's terms and this is a
+file" are different claims and must not look alike in review.
+
+The workflow is manual-dispatch only, it opens a pull request rather than pushing,
+and it runs the repository contract check before doing so. A person still decides
+whether the music ships.
+
 ### A curated set: one row of evidence per file
 
 A starter catalog is not one rights claim applied to a folder. Every file has a
