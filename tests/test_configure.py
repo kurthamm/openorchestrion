@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -30,6 +31,23 @@ def _files(tmp_path: Path) -> tuple[Path, Path]:
     secrets.write_text("# service only\nOPENAI_API_KEY=sk-old-secret\n", encoding="utf-8")
     os.chmod(secrets, 0o640)
     return env, secrets
+
+
+def _pretend_reference_secret(
+    monkeypatch: pytest.MonkeyPatch,
+    secrets: Path,
+) -> None:
+    monkeypatch.setattr(config, "DEFAULT_SECRETS_FILE", secrets)
+    monkeypatch.setattr(config.os, "geteuid", lambda: 0)
+    monkeypatch.setattr(
+        config.grp,
+        "getgrnam",
+        lambda name: SimpleNamespace(gr_gid=secrets.stat().st_gid),
+    )
+    # The runner is not actually root. Permission behavior is what these tests
+    # exercise; ownership is covered by the requirement tuple and production
+    # call path, so avoid requiring root privileges in CI.
+    monkeypatch.setattr(config.os, "chown", lambda *_args: None)
 
 
 def test_environment_document_preserves_comments_unknown_keys_and_order(tmp_path: Path) -> None:
@@ -125,6 +143,64 @@ def test_second_file_failure_rolls_back_first_file(tmp_path: Path, monkeypatch: 
 
     assert env.read_bytes() == before_env
     assert secrets.read_bytes() == before_secrets
+
+
+def test_unchanged_reference_secret_repairs_insecure_permissions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    env, secrets = _files(tmp_path)
+    before = secrets.read_bytes()
+    os.chmod(secrets, 0o644)
+    _pretend_reference_secret(monkeypatch, secrets)
+
+    changed = configure_files(
+        env_path=env,
+        secrets_path=secrets,
+        env_changes={},
+        secret_changes={"OPENAI_API_KEY": "sk-old-secret"},
+    )
+
+    assert changed is True
+    assert secrets.read_bytes() == before
+    assert secrets.stat().st_mode & 0o777 == 0o640
+
+
+def test_permission_only_repair_rolls_back_if_later_permission_step_fails(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    env, secrets = _files(tmp_path)
+    os.chmod(env, 0o600)
+    os.chmod(secrets, 0o644)
+    before_env = env.read_bytes()
+    before_secrets = secrets.read_bytes()
+    before_env_mode = env.stat().st_mode & 0o777
+    before_secret_mode = secrets.stat().st_mode & 0o777
+
+    monkeypatch.setattr(config, "DEFAULT_ENV_FILE", env)
+    _pretend_reference_secret(monkeypatch, secrets)
+    original_permissions = config._reference_permissions
+
+    def fail_on_secret(path: Path, *, secret: bool) -> None:
+        if secret:
+            raise OSError("simulated secret chmod failure")
+        original_permissions(path, secret=secret)
+
+    monkeypatch.setattr(config, "_reference_permissions", fail_on_secret)
+
+    with pytest.raises(ConfigurationError, match="configuration update failed"):
+        configure_files(
+            env_path=env,
+            secrets_path=secrets,
+            env_changes={"OPENORCHESTRION_AI_PROVIDER": "off"},
+            secret_changes={"OPENAI_API_KEY": "sk-old-secret"},
+        )
+
+    assert env.read_bytes() == before_env
+    assert secrets.read_bytes() == before_secrets
+    assert env.stat().st_mode & 0o777 == before_env_mode
+    assert secrets.stat().st_mode & 0o777 == before_secret_mode
 
 
 def test_clear_key_removes_only_the_key(tmp_path: Path) -> None:
