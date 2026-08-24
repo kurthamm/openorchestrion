@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       source_url:
-        description: "Direct download URL (host must be an allowed archive)"
+        description: "Direct HTTPS download URL (allowed archive; redirects refused)"
         required: true
       filename:
         description: "Store the file as this name, e.g. maple-leaf-rag.mid"
@@ -73,6 +73,7 @@ jobs:
 
       # Before the download, not after: a host we have not agreed to work
       # through should never be contacted from a job that can open pull requests.
+      # check_source_host also requires HTTPS.
       - name: Check the source host is one we work through
         env:
           SOURCE_URL: ${{ inputs.source_url }}
@@ -90,13 +91,16 @@ jobs:
 
       # Bounded on purpose. A Standard MIDI File is tiny; anything approaching
       # this is far more likely to be a mis-named archive than music, and the
-      # runner should not spend minutes discovering that.
+      # runner should not spend minutes discovering that. The input is explicitly
+      # a direct URL: max-redirs=0 means an allowed archive cannot redirect this
+      # write-capable runner to a host that was never reviewed/allowlisted.
       - name: Download the candidate
         env:
           SOURCE_URL: ${{ inputs.source_url }}
         run: |
           mkdir -p /tmp/candidate
-          curl --fail --location --silent --show-error \
+          curl --fail --location --max-redirs 0 --silent --show-error \
+               --proto '=https' --proto-redir '=https' \
                --max-filesize 33554432 --max-time 120 \
                --user-agent "OpenOrchestrion curation (+https://github.com/kurthamm/openorchestrion)" \
                --output /tmp/candidate/download.mid \
@@ -168,7 +172,7 @@ jobs:
             ${{ env.STAGED }}
             ```
 
-            The file was verified before this branch existed: allowed source host,
+            The file was verified before this branch existed: allowed HTTPS source host,
             digest, readable MIDI with actual notes, and a rights audit that the
             evidence had to satisfy. The repository contract check also passed, so
             merging this cannot introduce unevidenced music.
