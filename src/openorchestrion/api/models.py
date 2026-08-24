@@ -11,9 +11,10 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from ..models import PlaybackIntent
+from ..playback import RenderingError, RenderingMode, RenderingPolicy
 
 # Stable, machine-readable error codes. The UI switches on these rather than
 # parsing prose, so treat the strings as part of the contract.
@@ -346,6 +347,51 @@ class TransportCommand(BaseModel):
     )
 
 
+ProgramSelector = StrictInt | Annotated[str, Field(min_length=1, max_length=100)]
+
+
+class RenderingProgramOverrideRequest(BaseModel):
+    """One ephemeral General MIDI channel override for a queue request.
+
+    Channels are MIDI-native zero-based values 0..15, matching the playback and
+    routing domains. General MIDI percussion channel 10 is therefore channel 9
+    here and is rejected by the rendering domain for pitched overrides.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    channel: int = Field(ge=0, le=15, strict=True)
+    program: ProgramSelector
+
+
+class RenderingRequest(BaseModel):
+    """Reversible playback policy applied to every item created by one queue request."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    mode: RenderingMode = RenderingMode.ORIGINAL
+    piano_program: ProgramSelector = 0
+    program_overrides: list[RenderingProgramOverrideRequest] = Field(default_factory=list)
+
+    def to_policy(self) -> RenderingPolicy:
+        try:
+            return RenderingPolicy.from_values(
+                mode=self.mode,
+                piano_program=self.piano_program,
+                program_overrides=(
+                    (override.channel, override.program)
+                    for override in self.program_overrides
+                ),
+            )
+        except RenderingError as exc:
+            raise ValueError(str(exc)) from None
+
+    @model_validator(mode="after")
+    def validate_rendering_policy(self) -> RenderingRequest:
+        self.to_policy()
+        return self
+
+
 class QueueReplaceRequest(BaseModel):
     """Fill the queue from exactly one source: an intent or explicit assets."""
 
@@ -356,6 +402,7 @@ class QueueReplaceRequest(BaseModel):
     asset_ids: list[str] = Field(default_factory=list)
     seed: int = 0
     max_tracks: int = Field(default=25, ge=1, le=1000)
+    rendering: RenderingRequest | None = None
     command_id: UUID | None = None
 
     @model_validator(mode="after")
