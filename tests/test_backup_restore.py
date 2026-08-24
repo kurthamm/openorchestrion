@@ -113,7 +113,11 @@ def _replace_member_and_manifest(
 
 def _one_member(archive: Path, suffix: str) -> str:
     with zipfile.ZipFile(archive, "r") as zipped:
-        matches = [name for name in zipped.namelist() if name.endswith(suffix)]
+        matches = [
+            name
+            for name in zipped.namelist()
+            if name.startswith("library/assets/") and name.endswith(suffix)
+        ]
     assert len(matches) == 1
     return matches[0]
 
