@@ -3,6 +3,8 @@ name: Fetch curation candidate
 on:
   push:
     branches: [curation/candidates]
+  pull_request:
+    branches: [curation/candidates]
 
 permissions:
   contents: read
