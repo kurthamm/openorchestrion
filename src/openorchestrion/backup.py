@@ -25,7 +25,7 @@ from contextlib import closing
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
-from typing import Any, BinaryIO, Iterable
+from typing import Any
 from uuid import uuid4
 
 from .history import HISTORY_SCHEMA_VERSION
@@ -97,6 +97,11 @@ class _Manifest:
             "created_at": self.created_at,
             "files": [entry.to_dict() for entry in self.files],
         }
+
+
+def _absolute_path(value: str | Path) -> Path:
+    """Return an absolute path without following a final symlink."""
+    return Path(os.path.abspath(os.fspath(Path(value).expanduser())))
 
 
 def _digest_shape(value: str) -> bool:
@@ -338,10 +343,12 @@ def _write_archive(staging: Path, destination: Path, manifest: _Manifest) -> Non
 
 def create_backup(state_root: str | Path, destination: str | Path) -> BackupReport:
     """Create one verified, atomically-published application-data backup archive."""
-    root = Path(state_root).resolve()
-    archive = Path(destination).resolve()
-    if not root.is_dir():
-        raise BackupError(f"state root does not exist: {root}")
+    root = _absolute_path(state_root)
+    archive = _absolute_path(destination)
+    if root.is_symlink() or not root.is_dir():
+        raise BackupError(f"state root is not a regular directory: {root}")
+    if archive.is_symlink():
+        raise BackupError(f"backup destination may not be a symlink: {archive}")
     if archive.exists() and archive.is_dir():
         raise BackupError(f"backup destination is a directory: {archive}")
 
@@ -407,10 +414,9 @@ def _read_manifest(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> _Manifest
         raise BackupError("backup manifest must be a JSON object")
     if document.get("format") != BACKUP_FORMAT:
         raise BackupError(f"unexpected backup format: {document.get('format')!r}")
-    if document.get("version") != BACKUP_VERSION:
-        raise BackupError(
-            f"unsupported backup version {document.get('version')!r}; expected {BACKUP_VERSION}"
-        )
+    version = document.get("version")
+    if isinstance(version, bool) or version != BACKUP_VERSION:
+        raise BackupError(f"unsupported backup version {version!r}; expected {BACKUP_VERSION}")
     created_at = document.get("created_at")
     if not isinstance(created_at, str) or not created_at.strip():
         raise BackupError("backup manifest created_at must be a non-empty string")
@@ -535,8 +541,8 @@ def _target_is_available(target: Path) -> bool:
 
 def restore_backup(archive_path: str | Path, state_root: str | Path) -> RestoreReport:
     """Verify an entire backup and atomically publish it as a blank state root."""
-    source = Path(archive_path).resolve()
-    target = Path(state_root).resolve()
+    source = _absolute_path(archive_path)
+    target = _absolute_path(state_root)
     if source.is_symlink() or not source.is_file():
         raise BackupError(f"backup archive is not a regular file: {source}")
     if not _target_is_available(target):
