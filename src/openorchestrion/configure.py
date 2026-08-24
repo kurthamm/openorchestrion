@@ -16,6 +16,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -106,7 +107,33 @@ class EnvironmentDocument:
             if key in seen or value is None:
                 continue
             rendered.append(f"{key}={_quote(value)}")
+        if not rendered:
+            return ""
         return "\n".join(rendered).rstrip("\n") + "\n"
+
+
+@dataclass(frozen=True, slots=True)
+class _FileSnapshot:
+    """Enough state to undo a failed two-file configuration transaction."""
+
+    existed: bool
+    content: bytes | None
+    mode: int | None
+    uid: int | None
+    gid: int | None
+
+    @classmethod
+    def capture(cls, path: Path) -> "_FileSnapshot":
+        if not path.exists():
+            return cls(False, None, None, None, None)
+        stat = path.stat()
+        return cls(
+            True,
+            path.read_bytes(),
+            stat.st_mode & 0o777,
+            stat.st_uid,
+            stat.st_gid,
+        )
 
 
 def _unquote(value: str) -> str:
@@ -126,6 +153,17 @@ def _quote(value: str) -> str:
     return f'"{escaped}"'
 
 
+def _fsync_parent(path: Path) -> None:
+    try:
+        directory = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    except OSError:
+        pass
+
+
 def _atomic_write(path: Path, content: str, *, mode: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     previous = path.stat() if path.exists() else None
@@ -143,14 +181,35 @@ def _atomic_write(path: Path, content: str, *, mode: int) -> None:
             except PermissionError:
                 pass
         os.replace(temporary, path)
-        try:
-            directory = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        _fsync_parent(path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+def _restore(path: Path, snapshot: _FileSnapshot) -> None:
+    """Best-effort exact rollback for a file already changed in this transaction."""
+    if not snapshot.existed:
+        path.unlink(missing_ok=True)
+        _fsync_parent(path)
+        return
+    assert snapshot.content is not None
+    fd, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.rollback.", dir=path.parent)
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(snapshot.content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if snapshot.mode is not None:
+            os.chmod(temporary, snapshot.mode)
+        if snapshot.uid is not None and snapshot.gid is not None:
             try:
-                os.fsync(directory)
-            finally:
-                os.close(directory)
-        except OSError:
-            pass
+                os.chown(temporary, snapshot.uid, snapshot.gid)
+            except PermissionError:
+                pass
+        os.replace(temporary, path)
+        _fsync_parent(path)
     except BaseException:
         temporary.unlink(missing_ok=True)
         raise
@@ -174,10 +233,7 @@ def _reference_permissions(path: Path, *, secret: bool) -> None:
 
 
 def _requires_privilege(path: Path) -> bool:
-    try:
-        return path.is_relative_to(Path("/etc"))
-    except AttributeError:  # pragma: no cover - Python 3.11 always has is_relative_to
-        return str(path).startswith("/etc/")
+    return path.is_relative_to(Path("/etc"))
 
 
 def _validate_candidate(
@@ -202,11 +258,12 @@ def configure_files(
     env_changes: Mapping[str, str | None],
     secret_changes: Mapping[str, str | None],
 ) -> bool:
-    """Validate and atomically apply a local configuration transaction.
+    """Validate and transactionally apply local appliance configuration.
 
-    Validation happens for both documents first. If it fails, neither file is
-    touched. Once validation succeeds, each EnvironmentFile is replaced
-    atomically. The reference secrets file is kept service-only (0640).
+    Both documents are parsed and the resulting application settings validated
+    before either file is touched. Each replacement is atomic; if the second
+    write or permission step fails, the first file is rolled back to its exact
+    previous bytes/mode/ownership rather than leaving a half-applied config.
     """
     env_file = Path(env_path)
     secrets_file = Path(secrets_path)
@@ -216,8 +273,7 @@ def configure_files(
     env_document = EnvironmentDocument.read(env_file)
     secret_document = EnvironmentDocument.read(secrets_file)
     current_env = env_document.values()
-    # Parse secrets too so malformed existing data is not silently overwritten.
-    secret_document.values()
+    secret_document.values()  # malformed existing secrets are fatal, not silently hidden
     _validate_candidate(current_env, env_changes)
 
     env_content = env_document.updated(env_changes)
@@ -226,14 +282,37 @@ def configure_files(
     secret_previous = secrets_file.read_text(encoding="utf-8") if secrets_file.exists() else ""
     env_changed = bool(env_changes) and env_content != env_previous
     secret_changed = bool(secret_changes) and secret_content != secret_previous
+    if not env_changed and not secret_changed:
+        return False
 
-    if env_changed:
-        _atomic_write(env_file, env_content, mode=0o644)
-        _reference_permissions(env_file, secret=False)
-    if secret_changed:
-        _atomic_write(secrets_file, secret_content, mode=0o640)
-        _reference_permissions(secrets_file, secret=True)
-    return env_changed or secret_changed
+    env_snapshot = _FileSnapshot.capture(env_file)
+    secret_snapshot = _FileSnapshot.capture(secrets_file)
+    wrote_env = False
+    wrote_secret = False
+    try:
+        if env_changed:
+            _atomic_write(env_file, env_content, mode=0o644)
+            wrote_env = True
+            _reference_permissions(env_file, secret=False)
+        if secret_changed:
+            _atomic_write(secrets_file, secret_content, mode=0o640)
+            wrote_secret = True
+            _reference_permissions(secrets_file, secret=True)
+    except BaseException as exc:
+        rollback_errors: list[str] = []
+        for path, snapshot, changed in (
+            (secrets_file, secret_snapshot, wrote_secret),
+            (env_file, env_snapshot, wrote_env),
+        ):
+            if not changed:
+                continue
+            try:
+                _restore(path, snapshot)
+            except BaseException as rollback_exc:  # pragma: no cover - catastrophic I/O failure
+                rollback_errors.append(f"{path}: {rollback_exc}")
+        suffix = f"; rollback also failed: {'; '.join(rollback_errors)}" if rollback_errors else ""
+        raise ConfigurationError(f"configuration update failed: {exc}{suffix}") from exc
+    return True
 
 
 def _redacted(values: Mapping[str, str]) -> dict[str, str]:
@@ -251,10 +330,7 @@ def show_configuration(
     secrets_path: str | Path = DEFAULT_SECRETS_FILE,
 ) -> dict[str, str]:
     values = EnvironmentDocument.read(env_path).values()
-    try:
-        secrets = EnvironmentDocument.read(secrets_path).values()
-    except ConfigurationError:
-        secrets = {}
+    secrets = EnvironmentDocument.read(secrets_path).values()
     values.update(_redacted(secrets))
     return _redacted(values)
 
@@ -268,14 +344,13 @@ def _restart_service(service: str) -> None:
 
 def _read_key_file(path: str) -> str:
     try:
-        value = Path(path).read_text(encoding="utf-8").strip()
+        raw = Path(path).read_text(encoding="utf-8")
     except OSError as exc:
         raise ConfigurationError(f"cannot read API-key file {path}: {exc}") from exc
-    if not value:
-        raise ConfigurationError("API-key file is empty")
-    if "\n" in value or "\r" in value:
-        raise ConfigurationError("API-key file must contain exactly one line")
-    return value
+    lines = raw.splitlines()
+    if len(lines) != 1 or not lines[0].strip():
+        raise ConfigurationError("API-key file must contain exactly one non-empty line")
+    return lines[0].strip()
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -365,7 +440,7 @@ def main() -> None:
         if changed and not args.no_restart:
             _restart_service(args.service)
     except ConfigurationError as exc:
-        print(f"error: {exc}", file=os.sys.stderr)
+        print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(2) from None
 
     print("configuration updated" if changed else "configuration already matched requested values")
