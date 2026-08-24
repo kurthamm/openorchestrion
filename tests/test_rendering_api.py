@@ -12,6 +12,7 @@ from openorchestrion.api.settings import Settings
 from openorchestrion.app import create_app
 from openorchestrion.library.catalog import rebuild_catalog, search_catalog
 from openorchestrion.library.importer import import_paths
+from openorchestrion.models import PlaybackIntent
 from openorchestrion.playback import ProgramOverride, RenderingMode, RenderingPolicy
 from openorchestrion.testing.midi_fixtures import generate_suite
 
@@ -89,6 +90,21 @@ def test_rendering_policy_reaches_the_queue_item_spec(tmp_path: Path) -> None:
         mode="PIANO_ONLY",
         piano_program="Bright Acoustic Piano",
     )
+
+
+def test_rendering_policy_reaches_every_smart_station_item(tmp_path: Path) -> None:
+    settings = _settings(tmp_path, with_library=True)
+    payload = QueueReplaceRequest(
+        intent=PlaybackIntent(),
+        max_tracks=4,
+        rendering={"mode": "PIANO_ONLY"},
+    )
+
+    specs = _queue_specs(payload, settings)
+
+    assert specs
+    expected = RenderingPolicy.from_values(mode="PIANO_ONLY")
+    assert all(spec.rendering_policy == expected for spec in specs)
 
 
 @pytest.mark.parametrize(
