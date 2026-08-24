@@ -1,8 +1,17 @@
 sha256,title,composer,year_composed,era,performance_type,genres,moods,themes,instrumentation,familiarity,energy
-d8d84ab616241b716fd71b843fcf163b8e4631dfa59fdafed2a02a9f2c5dcfa7,Wall Street Rag,Scott Joplin,1909,ragtime,SOLO_PIANO,ragtime,"upbeat,nostalgic","parlor,americana",piano,3,3
-3dd712a85fabd267f5a2cee5cb23af4683408c2f29b8814721844498f1ee4f66,Maple Leaf Rag,Scott Joplin,1899,ragtime,SOLO_PIANO,ragtime,"upbeat,lively","parlor,americana",piano,5,4
-33e4e81ee64ffb2edf90d1c6a1ddee7276507296bfb915c2bb775231a467f066,The Entertainer,Scott Joplin,1902,ragtime,SOLO_PIANO,ragtime,"upbeat,playful","parlor,americana",piano,5,4
-1c12c21c7bbf4cf163896732672648a69d497636059837abd153c71abe50215a,"Für Elise, WoO 59",Ludwig van Beethoven,1810,classical,SOLO_PIANO,classical,"tender,wistful","parlor,dinner",piano,5,2
-4eee9a1546ffde1ff74cb9824ba0e57cbc821185a15185bfea9faed97820bf8c,"Clair de Lune (Suite bergamasque, L. 75)",Claude Debussy,1905,impressionist,SOLO_PIANO,"classical,impressionist","dreamy,calm","dinner,evening",piano,5,1
+3e695c28acdcbd54890d694114a5efbecffd25fbbc937ee9a5741ec684659c1f,"28 Melodische Ubungsstucke, Op. 149 No. 4",Anton Diabelli,1831,classical,PIANO_DUET,"classical,duet","playful,bright","teaching,parlor",piano four hands,2,3
+6d217596cc6ecb1d20e9779621e939b6a5a13641f9daa25dd7c5109d3c7665f1,"28 Melodische Ubungsstucke, Op. 149 No. 5",Anton Diabelli,1831,classical,PIANO_DUET,"classical,duet","playful,bright","teaching,parlor",piano four hands,2,3
 9ad9ce80541e03f9bfa5b51352137e0e20f154d81ed04d3db71ace797bf9d6fe,"28 Melodische Übungsstücke, Op. 149: No. 1",Anton Diabelli,1831,classical,PIANO_DUET,classical,"cheerful,gentle","parlor,teaching",piano,2,3
+5f7763dd4d29f309cac6d670c22aa029aca23c8c97743a0511d4b9c6d3435f1c,Air on the G String (BWV 1068),Johann Sebastian Bach,1730,baroque,MULTI_INSTRUMENT,"classical,baroque","serene,stately","ceremonial,wedding",strings,5,2
+4eee9a1546ffde1ff74cb9824ba0e57cbc821185a15185bfea9faed97820bf8c,"Clair de Lune (Suite bergamasque, L. 75)",Claude Debussy,1905,impressionist,SOLO_PIANO,"classical,impressionist","dreamy,calm","dinner,evening",piano,5,1
+1c12c21c7bbf4cf163896732672648a69d497636059837abd153c71abe50215a,"Für Elise, WoO 59",Ludwig van Beethoven,1810,classical,SOLO_PIANO,classical,"tender,wistful","parlor,dinner",piano,5,2
+09ce7337b4bf42ba12e1aa64b4c7dc7fcfa6455f1070cb12f8880a755df97384,Gymnopedie No. 1,Erik Satie,1888,impressionist,SOLO_PIANO,"classical,ambient","wistful,calm","meditative,cafe",piano,5,1
+02e8ae8d7e1f6073f12f62a61a63cf07b260a1cf49f4a9008ee4e3f8e1934d30,Gymnopedie No. 2,Erik Satie,1888,impressionist,SOLO_PIANO,"classical,ambient","wistful,calm","meditative,cafe",piano,3,1
+9b9a6213941932d5171d9102d85912c3c1c61f8176ce02005cd2198881823c2d,"Invention No. 1, BWV 772",Johann Sebastian Bach,1723,baroque,SOLO_PIANO,"classical,baroque","bright,focused","study,counterpoint",piano,3,3
+3dd712a85fabd267f5a2cee5cb23af4683408c2f29b8814721844498f1ee4f66,Maple Leaf Rag,Scott Joplin,1899,ragtime,SOLO_PIANO,ragtime,"upbeat,lively","parlor,americana",piano,5,4
+e202d3941ce5f26397f57f59f0e2e4e3ad9e19061fa3c4dc596c5ee6a6a2548e,"Nocturne in E-flat, Op. 9 No. 2",Frederic Chopin,1833,romantic,SOLO_PIANO,"classical,romantic","tender,expressive","evening,salon",piano,5,2
+874e07d0479542971bfceaf420d6117da8d602d89d26eea4610e7dd1ef58bf26,"Prelude in C, BWV 846",Johann Sebastian Bach,1722,baroque,SOLO_PIANO,"classical,baroque","calm,contemplative","study,meditative",piano,4,2
 c5d4e634edb067b7bda02f148f8f43ccfeac7bb9e10bd3add9051057ae6e9f39,Stille Nacht (Silent Night),Franz Xaver Gruber,1818,romantic,SOLO_PIANO,"hymn,seasonal","peaceful,reverent","christmas,seasonal",piano,5,1
+33e4e81ee64ffb2edf90d1c6a1ddee7276507296bfb915c2bb775231a467f066,The Entertainer,Scott Joplin,1902,ragtime,SOLO_PIANO,ragtime,"upbeat,playful","parlor,americana",piano,5,4
+6e5793f5f49f06ef793cfb7ebe720ba391a81f077d9c1ed1ab8ce3c02ebde99d,The Strenuous Life,Scott Joplin,1902,ragtime,SOLO_PIANO,ragtime,"upbeat,jaunty","parlor,americana",piano,2,3
+d8d84ab616241b716fd71b843fcf163b8e4631dfa59fdafed2a02a9f2c5dcfa7,Wall Street Rag,Scott Joplin,1909,ragtime,SOLO_PIANO,ragtime,"upbeat,nostalgic","parlor,americana",piano,3,3
