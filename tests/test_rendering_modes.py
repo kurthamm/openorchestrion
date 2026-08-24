@@ -18,19 +18,21 @@ def _event(at: float, message: Message, track: int) -> MidiTimelineEvent:
 
 
 def _sample_timeline() -> MidiTimeline:
+    # MidiTimeline's production invariant is chronological event order. Keep
+    # hand-built tests honest about the same contract as MidiTimeline.from_file.
     return MidiTimeline(
         events=(
             _event(0.0, Message("control_change", channel=0, control=0, value=1), 0),
             _event(0.0, Message("program_change", channel=0, program=48), 0),
-            _event(0.1, Message("control_change", channel=0, control=64, value=127), 0),
-            _event(0.2, Message("note_on", channel=0, note=60, velocity=91), 0),
-            _event(0.4, Message("note_off", channel=0, note=60, velocity=0), 0),
-            _event(0.5, Message("control_change", channel=0, control=64, value=0), 0),
             _event(0.0, Message("program_change", channel=1, program=40), 1),
-            _event(0.2, Message("note_on", channel=1, note=67, velocity=73), 1),
-            _event(0.4, Message("note_off", channel=1, note=67, velocity=0), 1),
+            _event(0.1, Message("control_change", channel=0, control=64, value=127), 0),
             _event(0.1, Message("note_on", channel=9, note=36, velocity=110), 2),
+            _event(0.2, Message("note_on", channel=0, note=60, velocity=91), 0),
+            _event(0.2, Message("note_on", channel=1, note=67, velocity=73), 1),
             _event(0.2, Message("note_off", channel=9, note=36, velocity=0), 2),
+            _event(0.4, Message("note_off", channel=0, note=60, velocity=0), 0),
+            _event(0.4, Message("note_off", channel=1, note=67, velocity=0), 1),
+            _event(0.5, Message("control_change", channel=0, control=64, value=0), 0),
         ),
         duration_seconds=0.5,
     )
