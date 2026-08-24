@@ -1,0 +1,34 @@
+name: Fetch curation candidate
+
+on:
+  push:
+    branches: [curation/candidates]
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-candidate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Wall Street Rag MIDI
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p candidate
+          url='https://upload.wikimedia.org/wikipedia/commons/f/f6/Scott_Joplin%27s_%22Wall_Street_Rag%22_%281909%29.mid'
+          curl --fail --location --retry 3 --retry-delay 2 \
+            --user-agent 'OpenOrchestrion-Curation/1.0' \
+            --output candidate/wall-street-rag.mid "$url"
+          test "$(head -c 4 candidate/wall-street-rag.mid)" = 'MThd'
+          sha256sum candidate/wall-street-rag.mid | tee candidate/SHA256SUMS
+          file candidate/wall-street-rag.mid | tee candidate/file.txt
+          wc -c candidate/wall-street-rag.mid | tee candidate/size.txt
+
+      - name: Upload candidate for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: wall-street-rag-candidate
+          path: candidate/
+          if-no-files-found: error
+          retention-days: 1
