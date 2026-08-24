@@ -33,7 +33,7 @@ from urllib.parse import urlparse
 
 from openorchestrion.midi.analyzer import analyze_midi
 
-from .importer import DEFAULT_MAX_BYTES
+from .importer import DEFAULT_MAX_BYTES, SUPPORTED_EXTENSIONS
 from .rights import (
     COMPOSITION_RIGHTS,
     ESTABLISHED_LICENSES,
@@ -105,17 +105,42 @@ class StagedCandidate:
 def check_source_host(url: str) -> None:
     """Refuse a URL from anywhere this project has not agreed to work through."""
     try:
-        host = (urlparse(url).hostname or "").lower()
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").lower()
     except ValueError as exc:
         raise CandidateError(f"unreadable source URL: {exc}") from None
     if not host:
         raise CandidateError(f"source URL has no host: {url!r}")
+    if parsed.scheme.casefold() != "https":
+        raise CandidateError("source URL must use HTTPS")
     if host not in ALLOWED_SOURCE_HOSTS:
         raise CandidateError(
             f"{host} is not an allowed source. This project works through "
             f"{', '.join(sorted(ALLOWED_SOURCE_HOSTS))}. Add a host to "
             "ALLOWED_SOURCE_HOSTS after deciding it belongs there."
         )
+
+
+def _safe_target_name(value: str) -> str:
+    """Return a plain MIDI basename or refuse a path/alternate extension.
+
+    ``filename`` crosses from a workflow input into a repository write. It must
+    never be able to escape the candidate directory, and a MIDI hidden under an
+    unrelated extension would evade the repository-wide ``.mid``/``.midi`` audit.
+    """
+    candidate = value.strip()
+    path = Path(candidate)
+    if (
+        not candidate
+        or path.is_absolute()
+        or path.name != candidate
+        or "/" in candidate
+        or "\\" in candidate
+    ):
+        raise CandidateError("filename must be a plain basename inside the candidate directory")
+    if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        raise CandidateError("filename must end in .mid or .midi")
+    return candidate
 
 
 def _digest(path: Path) -> str:
@@ -151,6 +176,8 @@ def stage_candidate(
     if source_url is not None:
         check_source_host(source_url)
 
+    target_name = _safe_target_name(filename or source.name)
+
     size = source.stat().st_size
     if size == 0:
         raise CandidateError(f"{source} is empty; the download produced nothing")
@@ -180,7 +207,6 @@ def stage_candidate(
     except RightsError as exc:
         raise CandidateError(str(exc)) from None
 
-    target_name = filename or source.name
     destination_dir = Path(destination)
     destination_dir.mkdir(parents=True, exist_ok=True)
     (destination_dir / target_name).write_bytes(source.read_bytes())
@@ -231,8 +257,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--file", required=True, help="The downloaded file to stage")
     parser.add_argument("--into", required=True, help="Candidate directory to write into")
-    parser.add_argument("--filename", help="Name to store it as (default: the file's own)")
-    parser.add_argument("--source-url", help="URL it was downloaded from; checked against policy")
+    parser.add_argument("--filename", help="Plain .mid/.midi basename to store")
+    parser.add_argument("--source-url", help="HTTPS URL it was downloaded from; checked against policy")
     parser.add_argument(
         "--expected-sha256",
         help="Digest of the file whose license was read. Omit only if it was not recorded.",
