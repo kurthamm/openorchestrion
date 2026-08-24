@@ -125,3 +125,21 @@ def test_browser_setup_write_endpoints_accept_no_configuration_body(tmp_path: Pa
     serialized = json.dumps(schema)
     # Provider keys are local-admin configuration and must never become a web API field.
     assert "OPENAI_API_KEY" not in serialized
+
+
+def test_first_run_auto_route_retries_after_initial_setup_fetch_failure() -> None:
+    """A startup race must not permanently consume the one-shot setup redirect."""
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "src"
+        / "openorchestrion"
+        / "web"
+        / "js"
+        / "app.js"
+    ).read_text(encoding="utf-8")
+
+    # The failure path must preserve setup.autoRouted instead of marking a
+    # decision that never happened.
+    assert "loading: false, error, autoRouted: true" not in source
+    # One call happens at startup; the second is the retry after WebSocket live.
+    assert source.count("loadSetup({ autoRoute: true })") >= 2
