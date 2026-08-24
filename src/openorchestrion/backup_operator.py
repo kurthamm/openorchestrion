@@ -24,7 +24,7 @@ from typing import Any
 from uuid import uuid4
 
 from .appliance import load_appliance_environment, server_options, wait_for_health
-from .backup import BackupError, BackupReport, RestoreReport, create_backup, restore_backup
+from .backup import BackupError, RestoreReport, create_backup, restore_backup
 
 REFERENCE_STATE_ROOT = Path("/var/lib/openorchestrion")
 DEFAULT_SERVICE = "openorchestrion.service"
@@ -68,6 +68,10 @@ def _is_reference_root(path: Path) -> bool:
     return path == REFERENCE_STATE_ROOT
 
 
+def _is_within(path: Path, root: Path) -> bool:
+    return path == root or root in path.parents
+
+
 def _require_reference_privilege(path: Path) -> None:
     if _is_reference_root(path) and os.geteuid() != 0:
         raise OperatorError(f"operating on {REFERENCE_STATE_ROOT} requires root (sudo)")
@@ -103,9 +107,10 @@ def _wait_service_health(url: str, *, timeout_seconds: float) -> None:
 def _state_has_durable_payload(root: Path) -> bool:
     """Distinguish a fresh installer skeleton from state worth protecting.
 
-    `setup.json`, an empty/rebuildable catalog, empty directories and permanent
-    sidecar lock files are not irreplaceable. MIDI objects/sidecars, history, or
-    anything unexpected are treated conservatively as durable state.
+    `setup.json`, an ordinary rebuildable catalog, empty directories and
+    permanent sidecar lock files are not irreplaceable. MIDI objects/sidecars,
+    history, symlinks, or anything unexpected are treated conservatively as
+    durable state.
     """
     if root.is_symlink():
         return True
@@ -123,7 +128,11 @@ def _state_has_durable_payload(root: Path) -> bool:
             return True
 
         for library_entry in entry.iterdir():
-            if library_entry.name == "catalog.db" and library_entry.is_file():
+            if (
+                library_entry.name == "catalog.db"
+                and library_entry.is_file()
+                and not library_entry.is_symlink()
+            ):
                 continue
             if library_entry.name != "assets" or library_entry.is_symlink() or not library_entry.is_dir():
                 return True
@@ -140,9 +149,12 @@ def _rollback_archive_path(state_root: Path) -> Path:
 
 
 def _apply_reference_state_permissions(root: Path) -> None:
-    """Make the restored tree writable only by the appliance service account."""
-    if not _is_reference_root(root):
-        return
+    """Make a verified reference-state tree writable only by the service account.
+
+    The caller decides whether the final target is the reference state root. The
+    tree passed here is normally the sibling preflight candidate, so it must not
+    require ``root == REFERENCE_STATE_ROOT`` itself.
+    """
     try:
         uid = pwd.getpwnam(SERVICE_USER).pw_uid
         gid = grp.getgrnam(SERVICE_GROUP).gr_gid
@@ -208,11 +220,48 @@ def _swap_in(candidate: Path, target: Path, previous: Path) -> bool:
         raise
 
 
-def _rollback_swap(target: Path, previous: Path, failed: Path) -> None:
+def _rollback_swap(target: Path, previous: Path, failed: Path) -> bool:
+    """Move the failed new tree aside and restore the old tree when one existed."""
     if target.exists():
         os.replace(target, failed)
     if previous.exists():
         os.replace(previous, target)
+        return True
+    return False
+
+
+def _prepare_replacement(
+    source: Path,
+    target: Path,
+    *,
+    durable: bool,
+    rollback_archive: str | Path | None,
+) -> tuple[Path, RestoreReport, Path | None]:
+    """Do every fallible preparation while the live service/state are untouched."""
+    if _is_within(source, target):
+        raise OperatorError("restore archive must live outside the state root being replaced")
+
+    candidate, verified = _preflight_candidate(source, target)
+    rollback_path: Path | None = None
+    try:
+        if durable:
+            rollback_path = (
+                _absolute(rollback_archive)
+                if rollback_archive is not None
+                else _rollback_archive_path(target)
+            )
+            if _is_within(rollback_path, target):
+                raise OperatorError("rollback archive must live outside the state root being replaced")
+            if rollback_path == source:
+                raise OperatorError("rollback archive may not overwrite the restore source archive")
+            create_backup(target, rollback_path)
+
+        if _is_reference_root(target):
+            _apply_reference_state_permissions(candidate)
+        return candidate, verified, rollback_path
+    except BaseException:
+        shutil.rmtree(candidate, ignore_errors=True)
+        raise
 
 
 def replace_from_backup(
@@ -241,32 +290,29 @@ def replace_from_backup(
     if durable and not replace_existing:
         raise OperatorError("existing durable state found; pass --replace-existing to replace it")
 
-    # Full archive verification and catalog rebuild happen while the current
-    # appliance is still untouched and, when present, still running.
-    candidate, verified = _preflight_candidate(source, target)
+    # Archive verification, rollback backup creation and candidate permission
+    # preparation all happen before the service is stopped. A failure here never
+    # enters the destructive rollback phase and never interrupts playback.
+    candidate, verified, rollback_path = _prepare_replacement(
+        source,
+        target,
+        durable=durable,
+        rollback_archive=rollback_archive,
+    )
+
     previous = target.parent / f".{target.name}.previous.{uuid4().hex}"
     failed = target.parent / f".{target.name}.failed.{uuid4().hex}"
-    rollback_path: Path | None = None
     moved_old = False
     service_stopped = False
+    new_tree_live = False
 
     try:
-        if durable:
-            rollback_path = (
-                _absolute(rollback_archive)
-                if rollback_archive is not None
-                else _rollback_archive_path(target)
-            )
-            create_backup(target, rollback_path)
-
-        if _is_reference_root(target):
-            _apply_reference_state_permissions(candidate)
-
         if manage_service:
             _stop_service(service)
             service_stopped = True
 
         moved_old = _swap_in(candidate, target, previous)
+        new_tree_live = True
 
         if manage_service:
             _start_service(service)
@@ -285,26 +331,29 @@ def replace_from_backup(
             service_managed=manage_service,
         )
     except BaseException as exc:
-        # If the new tree became live, move it aside and put the exact old tree
-        # back before attempting to restart. Keep the failed tree if rollback
-        # health itself also fails; it is useful forensic/recovery material.
-        if manage_service and not service_stopped:
+        if new_tree_live and manage_service and not service_stopped:
             try:
                 _stop_service(service)
                 service_stopped = True
-            except OperatorError:
-                pass
+            except OperatorError as stop_exc:
+                raise OperatorError(
+                    f"restore failed ({exc}) and the new service could not be stopped safely "
+                    f"({stop_exc}); filesystem rollback was not attempted; "
+                    f"previous_tree={previous if previous.exists() else None}; "
+                    f"rollback_archive={rollback_path}"
+                ) from exc
 
-        if moved_old or (target.exists() and not candidate.exists()):
+        original_restored = False
+        if new_tree_live:
             try:
-                _rollback_swap(target, previous, failed)
+                original_restored = _rollback_swap(target, previous, failed)
             except BaseException as rollback_exc:
                 raise OperatorError(
                     f"restore failed ({exc}); state-tree rollback also failed ({rollback_exc}); "
                     f"rollback archive={rollback_path}"
                 ) from exc
 
-        if manage_service and target.exists():
+        if manage_service and original_restored:
             try:
                 _start_service(service)
                 service_stopped = False
@@ -317,9 +366,18 @@ def replace_from_backup(
                     f"rollback archive={rollback_path}"
                 ) from exc
 
-        if failed.exists():
-            shutil.rmtree(failed, ignore_errors=True)
-        raise OperatorError(f"restore failed and original state was restored: {exc}") from exc
+        if original_restored:
+            if failed.exists():
+                shutil.rmtree(failed, ignore_errors=True)
+            raise OperatorError(f"restore failed and original state was restored: {exc}") from exc
+
+        # There was no prior state tree to restore. Preserve the failed candidate
+        # for diagnosis rather than claiming a rollback that did not exist.
+        failed_path = failed if failed.exists() else None
+        raise OperatorError(
+            f"restore failed and there was no previous state tree to restore: {exc}; "
+            f"failed restored tree={failed_path}; rollback archive={rollback_path}"
+        ) from exc
     finally:
         if candidate.exists():
             shutil.rmtree(candidate, ignore_errors=True)
@@ -375,8 +433,11 @@ def main() -> None:
     try:
         if args.command == "create":
             state_root = _absolute(args.state_root)
+            destination = _absolute(args.destination)
             _require_reference_privilege(state_root)
-            report: Any = create_backup(state_root, args.destination)
+            if _is_within(destination, state_root):
+                raise OperatorError("backup destination must live outside the state root")
+            report: Any = create_backup(state_root, destination)
         elif args.command == "inspect":
             report = inspect_backup(args.archive)
         else:
