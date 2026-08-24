@@ -126,7 +126,7 @@ When the hosted Concierge provider fails and the deterministic fallback answers,
 | GET | `/api/library/search` | `LibrarySearchResponse` | implemented |
 | GET | `/api/library/stats` | `LibraryCounts` | implemented |
 | GET | `/api/library/assets/{asset_id}` | `LibraryAssetDetail` | implemented |
-| POST | `/api/library/assets/{asset_id}/favorite` | metadata writer | blocked |
+| POST | `/api/library/assets/{asset_id}/favorite` | metadata writer | implemented |
 | GET | `/api/history/recent` | `HistoryResponse` | implemented |
 | GET | `/api/devices` | `DevicesResponse` | implemented |
 | GET | `/api/queue` | `QueueState` | implemented |
@@ -175,6 +175,11 @@ Intent source:
   "intent": {"themes": ["dinner"], "energy": "low"},
   "seed": 42,
   "max_tracks": 25,
+  "rendering": {
+    "mode": "PIANO_ONLY",
+    "piano_program": "Acoustic Grand Piano",
+    "program_overrides": []
+  },
   "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71"
 }
 ```
@@ -185,12 +190,59 @@ Explicit catalog source:
 {
   "mode": "append",
   "asset_ids": ["sha256:...", "sha256:..."],
+  "rendering": {
+    "mode": "OVERRIDE",
+    "program_overrides": [
+      {"channel": 1, "program": "Violin"},
+      {"channel": 2, "program": 24}
+    ]
+  },
   "command_id": "8f14e45f-4b3a-4a66-9ec0-5d6d6f72ad71"
 }
 ```
 
 An empty source or a request that supplies both `intent` and `asset_ids` is
 `request_invalid`.
+
+### Playback rendering policy
+
+`rendering` is optional and ephemeral. When omitted, queue items carry no
+rendering policy and playback preserves the source arrangement exactly. When
+present, one validated policy is attached to every item created by that queue
+request. It never changes the stored MIDI bytes, SHA-256 identity, deterministic
+analysis, sidecar, or catalog metadata.
+
+Supported modes are:
+
+- `ORIGINAL`: preserve the accepted source arrangement. Explicit overrides may
+  still force selected pitched channels.
+- `PIANO_ONLY`: render pitched parts with a General MIDI piano program, suppress
+  General MIDI percussion, and prevent source Bank Select / Program Change from
+  undoing the piano choice.
+- `OVERRIDE`: preserve the arrangement while forcing one or more selected MIDI
+  channels to explicit General MIDI programs.
+
+Precedence is:
+
+```text
+source arrangement < rendering mode < explicit program override
+```
+
+The public wire contract uses the same MIDI-native numbering as the playback
+and routing domains:
+
+- channels are integers `0..15`;
+- General MIDI percussion channel 10 is therefore channel `9` and cannot receive
+  a pitched program override;
+- program integers are MIDI-native `0..127`;
+- programs may alternatively be canonical or unambiguous General MIDI names,
+  such as `Violin` or `Acoustic Guitar (nylon)`;
+- numeric strings such as `"1"` are rejected so human-facing GM numbering
+  `1..128` cannot be confused with MIDI Program Change values `0..127`.
+
+Unknown/ambiguous names, invalid ranges, duplicate channel overrides,
+percussion overrides, a non-piano `piano_program`, or `OVERRIDE` without at least
+one target are `request_invalid` and fail before the queue is mutated.
 
 Queue mutations:
 
@@ -333,22 +385,20 @@ internal_error
 ```
 
 `intent_invalid` is reserved for errors inside `PlaybackIntent`.
-`request_invalid` covers malformed query parameters, UUIDs, queue commands, and
-other request structure.
+`request_invalid` covers malformed query parameters, UUIDs, queue commands,
+rendering policy, and other request structure.
 
 Unexpected exceptions are logged server-side and returned as non-sensitive
 `internal_error` JSON. The touchscreen should never receive a framework HTML
 500 page.
 
-## 13. Favorites blocker
+## 13. Favorites persistence
 
-Favorites remain outside Issue #14. The `favorite` value is durable descriptive
-metadata, and the repository still needs the metadata-writer workflow that can
-safely edit a sidecar and rebuild/reconcile the catalog.
-
-Until that exists, the favorite endpoint returns a typed `not_implemented`
-response. The UI may render the control but must not pretend persistence
-succeeded.
+Favorites are durable descriptive metadata. The favorite endpoint writes the
+asset sidecar first through the metadata writer and then reconciles the
+rebuildable catalog. A browser fallback may still be used only when the endpoint
+is genuinely unavailable; a successful API response means the favorite survives
+catalog deletion/rebuild and appliance restart.
 
 ## 14. Development without hardware
 
@@ -360,8 +410,8 @@ OPENORCHESTRION_VIRTUAL_MIDI=1
 
 The application creates `OpenOrchestrion Virtual`, an in-memory output behind
 the same playback abstraction used by physical Mido ports. This allows queue,
-transport, history, WebSocket, scheduler, and routing behavior to be developed
-before the CTK-6200 and PSR-EW300 are present.
+transport, history, WebSocket, scheduler, routing, and rendering behavior to be
+developed before the CTK-6200 and PSR-EW300 are present.
 
 Arbitrary imported SysEx is suppressed by default. See
 [Playback engine](playback-engine.md) for timing, routing, pause/resume, cleanup,

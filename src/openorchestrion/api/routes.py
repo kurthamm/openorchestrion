@@ -24,6 +24,7 @@ from ..playback import (
     PlaybackError,
     PlaybackOutputError,
     QueueItemSpec,
+    RenderingPolicy,
 )
 from ..stations import StationConstraints, build_station
 from .errors import ApiError
@@ -167,13 +168,15 @@ def _asset_spec(
     settings: Settings,
     *,
     intent: PlaybackIntent | None = None,
+    rendering_policy: RenderingPolicy | None = None,
 ) -> QueueItemSpec:
-    """Translate catalog data and validated intent hints into a playback item.
+    """Translate catalog data and validated request hints into a playback item.
 
-    The API does not make routing decisions. It only carries the curated
-    performance type and validated device/role preferences to the playback
-    engine, whose planner remains authoritative. Untagged assets therefore keep
-    ``performance_type=None`` and fall back to MIDI/GM analysis in the planner.
+    The API does not make routing or rendering decisions. It carries curated
+    performance type, validated device/role preferences, and an already-validated
+    ephemeral rendering policy to the playback engine. Untagged assets therefore
+    keep ``performance_type=None`` and fall back to MIDI/GM analysis in the
+    planner, while omitted rendering preserves the source arrangement exactly.
     """
     relative_path = Path(str(record["midi_path"]))
     midi_path = relative_path if relative_path.is_absolute() else settings.library_root / relative_path
@@ -188,6 +191,7 @@ def _asset_spec(
         performance_type=record.get("performance_type"),
         device_preferences=tuple(intent.device_preferences) if intent else (),
         routing_preferences=dict(intent.routing_preferences) if intent else {},
+        rendering_policy=rendering_policy,
     )
 
 
@@ -208,6 +212,7 @@ def _station_constraints(settings: Settings, intent: PlaybackIntent) -> StationC
 
 def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[QueueItemSpec]:
     catalog_db = _require_catalog(settings)
+    rendering_policy = payload.rendering.to_policy() if payload.rendering is not None else None
     if payload.intent is not None:
         station = build_station(
             catalog_db,
@@ -235,7 +240,14 @@ def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[Queue
                     status_code=404,
                     detail={"asset_id": item.asset_id},
                 )
-            specs.append(_asset_spec(record, settings, intent=payload.intent))
+            specs.append(
+                _asset_spec(
+                    record,
+                    settings,
+                    intent=payload.intent,
+                    rendering_policy=rendering_policy,
+                )
+            )
         return specs
 
     specs = []
@@ -248,7 +260,7 @@ def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[Queue
                 status_code=404,
                 detail={"asset_id": asset_id},
             )
-        specs.append(_asset_spec(record, settings))
+        specs.append(_asset_spec(record, settings, rendering_policy=rendering_policy))
     return specs
 
 
