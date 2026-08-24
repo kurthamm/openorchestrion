@@ -186,6 +186,7 @@ audit will refuse it if anyone tries.
 
 | Composition | Composer | Died | Composed / published | Source candidate | File license |
 | --- | --- | --- | --- | --- | --- |
+| **Wall Street Rag** | Scott Joplin | 1917 | 1909 | **Wikimedia Commons** | **CC0-1.0 — cleared** |
 | Maple Leaf Rag | Scott Joplin | 1917 | 1899 | Mutopia | _unestablished_ |
 | The Entertainer | Scott Joplin | 1917 | 1902 | Mutopia | _unestablished_ |
 | Pine Apple Rag | Scott Joplin | 1917 | 1908 | Mutopia | _unestablished_ |
@@ -281,10 +282,18 @@ string is refused by the audit for exactly that reason.
 
 ## Status
 
-Composition-level research above is complete and needs review. File-level terms
-are entirely outstanding: no candidate has had its actual MIDI file located,
-fetched, or its license read, so nothing here is yet importable as
-`verified-open`. The generated conformance suite in
-`openorchestrion.testing.midi_fixtures` is currently the only content the project
-holds a genuine `verified-open` record for, since it is our own output under our
-own license.
+**One piece has cleared: Scott Joplin's *Wall Street Rag* (1909)**, from Wikimedia
+Commons under CC0-1.0, now committed in `music/starter/` with its evidence in
+`catalog.csv`. It is the first third-party repertoire this project has been able
+to assert redistribution rights over, and it proves the pipeline end to end:
+audited, imported under its own evidence, tagged, indexed, and picked up by a
+station query.
+
+Composition-level research for the remaining candidates is complete and needs
+review. Their file-level terms are still outstanding — no other candidate has had
+its actual MIDI file located, fetched, or its license read — so nothing else here
+is yet importable as `verified-open`.
+
+The generated conformance suite in `openorchestrion.testing.midi_fixtures` remains
+the project's own content under its own license, and is separate from this
+catalog.
