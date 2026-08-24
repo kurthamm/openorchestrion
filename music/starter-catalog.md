@@ -79,6 +79,26 @@ Everything goes through the production pipeline. There is no separate catalog
 format to keep in sync — the sidecars written here are the same sidecars any
 user's import produces.
 
+### Reading the terms when you cannot reach the archive
+
+The file-level column is filled by reading the item record, and whoever curates
+often cannot reach the archive at all. There are then two ways forward and only
+one of them is curation: read the page, or guess. A guessed license written into
+a manifest is indistinguishable from a verified one, which is precisely the
+failure this whole catalog exists to prevent.
+
+The **Inspect curation source** workflow reads it for you. Dispatch it with the
+URL of an item record; it fetches on a runner, and prints the digest, the size,
+and every line on the page that mentions license, copyright, attribution or
+permission. It writes nothing, opens nothing and runs with read-only
+permissions — a page pulled from the open internet should not be able to reach a
+branch.
+
+What comes back is an extract, not a clearance. An item record commonly states
+terms for the engraving, the score and the generated MIDI separately, and only
+one of those is the file being fetched. Read the lines and decide; then dispatch
+the fetch workflow with what you read.
+
 ### Fetching a candidate when you cannot reach the archive
 
 Research and retrieval do not always happen in the same place: whoever reads a
