@@ -1,0 +1,99 @@
+/* First-run setup surface. Uses the shared tokens from app.css. */
+
+.setup-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap);
+}
+
+.setup-title,
+.setup-next h3,
+.setup-admin h3 {
+  margin: 0;
+}
+
+.setup-title { font-size: 1.2rem; }
+.setup-intro { margin: 4px 0 0; color: var(--ink-2); max-width: 52rem; }
+
+.setup-ready,
+.setup-badge {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  padding: 5px 9px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.setup-ready-ok,
+.setup-badge-ok { color: var(--ok); }
+.setup-ready-warn,
+.setup-badge-warn { color: var(--warn); }
+
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.setup-card,
+.setup-next,
+.setup-admin {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+}
+
+.setup-card-ok { border-left: 4px solid var(--ok); }
+.setup-card-warn { border-left: 4px solid var(--warn); }
+
+.setup-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.setup-summary { margin: 8px 0 0; font-weight: 600; }
+.setup-detail { margin: 4px 0 0; color: var(--muted); font-size: 0.86rem; }
+
+.setup-next h3,
+.setup-admin h3 { font-size: 0.95rem; }
+.setup-next ul { margin: 8px 0 0; padding-left: 1.25rem; }
+.setup-next li + li { margin-top: 5px; }
+.setup-admin p { margin: 7px 0; color: var(--ink-2); }
+
+.setup-command {
+  display: block;
+  overflow-x: auto;
+  padding: 9px;
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.setup-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 620px) {
+  .setup-heading { flex-direction: column; }
+  .setup-grid { grid-template-columns: 1fr; }
+}
+
+/* The 7-inch kiosk is short more than it is narrow. Keep cards compact and
+   preserve two columns so the checklist does not become a long scroll. */
+@media (max-height: 520px) and (min-width: 650px) {
+  .setup-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .setup-card { padding: 9px 10px; }
+  .setup-detail { font-size: 0.8rem; }
+  .setup-next,
+  .setup-admin { padding: 9px 10px; }
+  .setup-admin p { margin: 4px 0; }
+}
