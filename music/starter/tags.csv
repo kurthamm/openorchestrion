@@ -1,0 +1,8 @@
+sha256,title,composer,year_composed,era,performance_type,genres,moods,themes,instrumentation,familiarity,energy
+d8d84ab616241b716fd71b843fcf163b8e4631dfa59fdafed2a02a9f2c5dcfa7,Wall Street Rag,Scott Joplin,1909,ragtime,SOLO_PIANO,ragtime,"upbeat,nostalgic","parlor,americana",piano,3,3
+3dd712a85fabd267f5a2cee5cb23af4683408c2f29b8814721844498f1ee4f66,Maple Leaf Rag,Scott Joplin,1899,ragtime,SOLO_PIANO,ragtime,"upbeat,lively","parlor,americana",piano,5,4
+33e4e81ee64ffb2edf90d1c6a1ddee7276507296bfb915c2bb775231a467f066,The Entertainer,Scott Joplin,1902,ragtime,SOLO_PIANO,ragtime,"upbeat,playful","parlor,americana",piano,5,4
+1c12c21c7bbf4cf163896732672648a69d497636059837abd153c71abe50215a,"Für Elise, WoO 59",Ludwig van Beethoven,1810,classical,SOLO_PIANO,classical,"tender,wistful","parlor,dinner",piano,5,2
+4eee9a1546ffde1ff74cb9824ba0e57cbc821185a15185bfea9faed97820bf8c,"Clair de Lune (Suite bergamasque, L. 75)",Claude Debussy,1905,impressionist,SOLO_PIANO,"classical,impressionist","dreamy,calm","dinner,evening",piano,5,1
+9ad9ce80541e03f9bfa5b51352137e0e20f154d81ed04d3db71ace797bf9d6fe,"28 Melodische Übungsstücke, Op. 149: No. 1",Anton Diabelli,1831,classical,PIANO_DUET,classical,"cheerful,gentle","parlor,teaching",piano,2,3
+c5d4e634edb067b7bda02f148f8f43ccfeac7bb9e10bd3add9051057ae6e9f39,Stille Nacht (Silent Night),Franz Xaver Gruber,1818,romantic,SOLO_PIANO,"hymn,seasonal","peaceful,reverent","christmas,seasonal",piano,5,1

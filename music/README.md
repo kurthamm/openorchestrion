@@ -16,7 +16,19 @@ That means a user gets playable, legally clean repertoire on clone, and the appl
 
 Candidates arrive as raw input first — files plus a curation manifest — and are promoted here only after the audit passes. Anything that fails stays out of the starter set; it remains fine as a personal import on someone's own appliance.
 
-Committed repertoire keeps its evidence in the manifest beside it (`catalog.csv`) rather than in a sidecar per file, because the manifest is what the installer reads: the claim CI checks is then the same claim the appliance acts on. Install it with `openorchestrion-import-midi --from-csv`, never by importing the directory — a plain directory import discards the evidence and lands everything as `personal`, invisible to the stations the catalog exists to feed.
+Committed repertoire keeps its evidence in the manifest beside it (`catalog.csv`) rather than in a sidecar per file, because the manifest is what the installer reads: the claim CI checks is then the same claim the appliance acts on.
+
+Installing the starter catalog takes three commands, and all three matter:
+
+```bash
+openorchestrion-import-midi --from-csv music/starter/catalog.csv --library-root var/library
+openorchestrion-tag --from-csv music/starter/tags.csv --library-root var/library
+openorchestrion-reindex var/library
+```
+
+`catalog.csv` carries the **rights evidence**; `tags.csv` carries the **descriptive metadata** — title, composer, genre, mood, theme. They are separate files because they are separate kinds of claim: one is what we may do with the music, the other is what the music is. Only the first is a legal assertion, and only the first gates CI.
+
+Skipping either leaves the library broken in its own way. Import the directory instead of the manifest and the evidence is discarded, landing everything as `personal`. Skip the tags and the music arrives untitled and composer-less, invisible to every themed station query — playable, but unreachable by the feature the catalog exists to feed.
 
 See [starter-catalog.md](starter-catalog.md) for the worklist, the curation procedure, and the sources still to be evaluated.
 
