@@ -215,21 +215,39 @@ def _restore(path: Path, snapshot: _FileSnapshot) -> None:
         raise
 
 
-def _reference_permissions(path: Path, *, secret: bool) -> None:
-    """Apply the reference installation ownership only to the real `/etc` files."""
+def _reference_requirements(path: Path, *, secret: bool) -> tuple[int, int, int] | None:
+    """Return mode/uid/gid required for a real reference config file."""
     expected = DEFAULT_SECRETS_FILE if secret else DEFAULT_ENV_FILE
     if path != expected or os.geteuid() != 0:
-        return
+        return None
     mode = 0o640 if secret else 0o644
+    if not secret:
+        return mode, 0, 0
+    try:
+        group = grp.getgrnam("openorchestrion")
+    except KeyError as exc:
+        raise ConfigurationError("service group 'openorchestrion' does not exist") from exc
+    return mode, 0, group.gr_gid
+
+
+def _reference_metadata_drift(path: Path, *, secret: bool) -> bool:
+    """Whether a real reference file exists with unsafe/incorrect metadata."""
+    requirements = _reference_requirements(path, secret=secret)
+    if requirements is None or not path.exists():
+        return False
+    mode, uid, gid = requirements
+    stat = path.stat()
+    return (stat.st_mode & 0o777, stat.st_uid, stat.st_gid) != (mode, uid, gid)
+
+
+def _reference_permissions(path: Path, *, secret: bool) -> None:
+    """Apply reference ownership/mode only to the real `/etc` files."""
+    requirements = _reference_requirements(path, secret=secret)
+    if requirements is None or not path.exists():
+        return
+    mode, uid, gid = requirements
     os.chmod(path, mode)
-    if secret:
-        try:
-            group = grp.getgrnam("openorchestrion")
-        except KeyError as exc:
-            raise ConfigurationError("service group 'openorchestrion' does not exist") from exc
-        os.chown(path, 0, group.gr_gid)
-    else:
-        os.chown(path, 0, 0)
+    os.chown(path, uid, gid)
 
 
 def _requires_privilege(path: Path) -> bool:
@@ -261,9 +279,10 @@ def configure_files(
     """Validate and transactionally apply local appliance configuration.
 
     Both documents are parsed and the resulting application settings validated
-    before either file is touched. Each replacement is atomic; if the second
-    write or permission step fails, the first file is rolled back to its exact
-    previous bytes/mode/ownership rather than leaving a half-applied config.
+    before either file is touched. Content replacements are atomic, and reference
+    ownership/mode corrections participate in the same transaction. If a later
+    write or permission step fails, earlier content and metadata changes are
+    rolled back to their exact previous bytes/mode/ownership.
     """
     env_file = Path(env_path)
     secrets_file = Path(secrets_path)
@@ -282,27 +301,37 @@ def configure_files(
     secret_previous = secrets_file.read_text(encoding="utf-8") if secrets_file.exists() else ""
     env_changed = bool(env_changes) and env_content != env_previous
     secret_changed = bool(secret_changes) and secret_content != secret_previous
-    if not env_changed and not secret_changed:
+    env_metadata_drift = _reference_metadata_drift(env_file, secret=False)
+    secret_metadata_drift = _reference_metadata_drift(secrets_file, secret=True)
+    if not any((env_changed, secret_changed, env_metadata_drift, secret_metadata_drift)):
         return False
 
     env_snapshot = _FileSnapshot.capture(env_file)
     secret_snapshot = _FileSnapshot.capture(secrets_file)
-    wrote_env = False
-    wrote_secret = False
+    touched_env = False
+    touched_secret = False
     try:
         if env_changed:
             _atomic_write(env_file, env_content, mode=0o644)
-            wrote_env = True
+            touched_env = True
+        if env_changed or env_metadata_drift:
+            # Mark touched before chmod/chown: either operation may partially
+            # succeed before the next one raises, and rollback must then restore
+            # the original metadata even when the file bytes never changed.
+            touched_env = True
             _reference_permissions(env_file, secret=False)
+
         if secret_changed:
             _atomic_write(secrets_file, secret_content, mode=0o640)
-            wrote_secret = True
+            touched_secret = True
+        if secret_changed or secret_metadata_drift:
+            touched_secret = True
             _reference_permissions(secrets_file, secret=True)
     except BaseException as exc:
         rollback_errors: list[str] = []
         for path, snapshot, changed in (
-            (secrets_file, secret_snapshot, wrote_secret),
-            (env_file, env_snapshot, wrote_env),
+            (secrets_file, secret_snapshot, touched_secret),
+            (env_file, env_snapshot, touched_env),
         ):
             if not changed:
                 continue
