@@ -102,6 +102,16 @@ def test_existing_durable_state_is_refused_without_explicit_replace(
     assert _title(old) == "Old"
 
 
+def test_symlinked_catalog_is_not_mistaken_for_disposable_skeleton_state(tmp_path: Path) -> None:
+    root = tmp_path / "state"
+    (root / "library" / "assets").mkdir(parents=True)
+    external = tmp_path / "external.db"
+    external.write_bytes(b"not-the-real-catalog")
+    (root / "library" / "catalog.db").symlink_to(external)
+
+    assert operator._state_has_durable_payload(root) is True
+
+
 def test_invalid_archive_never_stops_service_or_changes_live_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -118,6 +128,77 @@ def test_invalid_archive_never_stops_service_or_changes_live_state(
             live,
             replace_existing=True,
             health_url="http://example.invalid",
+        )
+
+    assert calls == []
+    assert _title(live) == "Old"
+
+
+def test_prepare_failure_never_stops_healthy_service(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    live, _ = _state(tmp_path, "live", fixture="single-note.mid", title="Old")
+    new, _ = _state(tmp_path, "new", fixture="velocity-ladder.mid", title="New")
+    incoming = tmp_path / "incoming.zip"
+    create_backup(new, incoming)
+    calls: list[str] = []
+    _mock_root_service(monkeypatch, calls)
+    monkeypatch.setattr(operator, "REFERENCE_STATE_ROOT", live.absolute())
+    monkeypatch.setattr(
+        operator,
+        "_apply_reference_state_permissions",
+        lambda root: (_ for _ in ()).throw(OperatorError("permission prep failed")),
+    )
+
+    with pytest.raises(OperatorError, match="permission prep failed"):
+        replace_from_backup(
+            incoming,
+            live,
+            replace_existing=True,
+            rollback_archive=tmp_path / "rollback.zip",
+            health_url="http://example.invalid",
+        )
+
+    assert calls == []
+    assert _title(live) == "Old"
+
+
+def test_restore_source_must_live_outside_state_tree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    live, _ = _state(tmp_path, "live", fixture="single-note.mid", title="Old")
+    new, _ = _state(tmp_path, "new", fixture="velocity-ladder.mid", title="New")
+    incoming = live / "incoming.zip"
+    create_backup(new, incoming)
+    calls: list[str] = []
+    _mock_root_service(monkeypatch, calls)
+
+    with pytest.raises(OperatorError, match="outside the state root"):
+        replace_from_backup(incoming, live, replace_existing=True)
+
+    assert calls == []
+    assert _title(live) == "Old"
+
+
+def test_rollback_archive_must_live_outside_state_tree(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    live, _ = _state(tmp_path, "live", fixture="single-note.mid", title="Old")
+    new, _ = _state(tmp_path, "new", fixture="velocity-ladder.mid", title="New")
+    incoming = tmp_path / "incoming.zip"
+    create_backup(new, incoming)
+    calls: list[str] = []
+    _mock_root_service(monkeypatch, calls)
+
+    with pytest.raises(OperatorError, match="rollback archive must live outside"):
+        replace_from_backup(
+            incoming,
+            live,
+            replace_existing=True,
+            rollback_archive=live / "rollback.zip",
         )
 
     assert calls == []
@@ -262,7 +343,6 @@ def test_reference_permission_application_is_bounded_to_state_root(
     asset.write_bytes(b"midi")
     sibling = tmp_path / "do-not-touch"
     sibling.write_text("sentinel")
-    monkeypatch.setattr(operator, "REFERENCE_STATE_ROOT", root.absolute())
     monkeypatch.setattr(operator.pwd, "getpwnam", lambda name: type("P", (), {"pw_uid": 123})())
     monkeypatch.setattr(operator.grp, "getgrnam", lambda name: type("G", (), {"gr_gid": 456})())
     touched: list[Path] = []
@@ -278,6 +358,38 @@ def test_reference_permission_application_is_bounded_to_state_root(
     assert asset.stat().st_mode & 0o777 == 0o640
 
 
+def test_reference_restore_prepares_candidate_permissions_before_service_stop(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source, _ = _state(tmp_path, "source", fixture="single-note.mid", title="New")
+    incoming = tmp_path / "incoming.zip"
+    create_backup(source, incoming)
+    reference = tmp_path / "reference"
+    (reference / "library" / "assets").mkdir(parents=True)
+    calls: list[str] = []
+    monkeypatch.setattr(operator, "REFERENCE_STATE_ROOT", reference.absolute())
+    _mock_root_service(monkeypatch, calls)
+    prepared: list[Path] = []
+
+    def prepare(root: Path) -> None:
+        prepared.append(root)
+
+    monkeypatch.setattr(operator, "_apply_reference_state_permissions", prepare)
+    monkeypatch.setattr(operator, "_wait_service_health", lambda url, timeout_seconds: calls.append("health"))
+
+    replace_from_backup(
+        incoming,
+        reference,
+        health_url="http://127.0.0.1:9999",
+    )
+
+    assert len(prepared) == 1
+    assert prepared[0] != reference
+    assert prepared[0].name.startswith(".reference.candidate.")
+    assert calls == ["stop:openorchestrion.service", "start:openorchestrion.service", "health"]
+
+
 def test_no_service_control_is_forbidden_for_reference_state(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -291,6 +403,30 @@ def test_no_service_control_is_forbidden_for_reference_state(
 
     with pytest.raises(OperatorError, match="may not disable service control"):
         replace_from_backup(archive, reference, manage_service=False)
+
+
+def test_cli_create_refuses_destination_inside_state_root(tmp_path: Path) -> None:
+    root, _ = _state(tmp_path, "source", fixture="single-note.mid", title="Source")
+    destination = root / "backup.zip"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "openorchestrion.backup_operator",
+            "create",
+            str(destination),
+            "--state-root",
+            str(root),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "outside the state root" in result.stderr
+    assert not destination.exists()
 
 
 def test_cli_create_and_inspect_json_are_secret_free(tmp_path: Path) -> None:
