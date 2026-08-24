@@ -76,6 +76,9 @@ export function commandId() {
 export const api = {
   status: () => request('/api/status'),
   devices: () => request('/api/devices'),
+  setup: () => request('/api/setup'),
+  completeSetup: () => request('/api/setup/complete', { method: 'POST' }),
+  resetSetup: () => request('/api/setup/reset', { method: 'POST' }),
 
   ask: ({ prompt, sessionId, currentIntent, signal, id = commandId() }) =>
     request('/api/concierge/ask', {

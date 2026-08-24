@@ -16,6 +16,7 @@ import { renderAskResult, renderStations, STATIONS } from './views/listen.js';
 import { renderNowPlaying, updateProgress } from './views/nowplaying.js';
 import { renderFacets, renderResults } from './views/browse.js';
 import { renderHistory, renderQueue } from './views/queue.js';
+import { renderSetup } from './views/setup.js';
 
 const nodes = {
   health: document.getElementById('health'),
@@ -31,6 +32,7 @@ const nodes = {
   searchResults: document.getElementById('search-results'),
   queuePanel: document.getElementById('queue-panel'),
   historyPanel: document.getElementById('history-panel'),
+  setupPanel: document.getElementById('setup-panel'),
   nowPlaying: document.getElementById('nowplaying'),
   toasts: document.getElementById('toasts'),
 };
@@ -73,6 +75,7 @@ const handlers = {
     setState({ view });
     if (view === 'history') void loadHistory();
     if (view === 'queue') void loadQueue();
+    if (view === 'setup') void loadSetup();
   },
 
   async ask(prompt) {
@@ -183,8 +186,6 @@ const handlers = {
       toast(next ? 'Added to favorites.' : 'Removed from favorites.');
     } catch (error) {
       if (error instanceof ApiError && error.pending) {
-        // Expected until the descriptive-metadata writer lands. Keep the choice
-        // visible for this browser session and be explicit about its scope.
         setState({ favoritesPersist: false });
         toast('Kept in this browser session only — favorites are not persistent yet.', 'warn');
         return;
@@ -211,6 +212,34 @@ const handlers = {
       toast(error.message, 'bad');
     }
   },
+
+  refreshSetup() {
+    void loadSetup();
+  },
+
+  async completeSetup() {
+    setState((state) => ({ setup: { ...state.setup, loading: true, error: null } }));
+    try {
+      const data = await api.completeSetup();
+      setState((state) => ({ setup: { ...state.setup, loading: false, data, error: null } }));
+      toast('Setup preference saved.');
+    } catch (error) {
+      setState((state) => ({ setup: { ...state.setup, loading: false, error } }));
+      toast(error.message, 'bad');
+    }
+  },
+
+  async resetSetup() {
+    setState((state) => ({ setup: { ...state.setup, loading: true, error: null } }));
+    try {
+      const data = await api.resetSetup();
+      setState((state) => ({ setup: { ...state.setup, loading: false, data, error: null } }));
+      toast('First-run guidance is visible again.');
+    } catch (error) {
+      setState((state) => ({ setup: { ...state.setup, loading: false, error } }));
+      toast(error.message, 'bad');
+    }
+  },
 };
 
 async function loadStatus() {
@@ -218,6 +247,31 @@ async function loadStatus() {
     setState({ status: await api.status() });
   } catch {
     /* health pills fall back to the connection state */
+  }
+}
+
+async function loadSetup({ autoRoute = false } = {}) {
+  setState((state) => ({ setup: { ...state.setup, loading: true, error: null } }));
+  try {
+    const data = await api.setup();
+    const current = getState();
+    const shouldRoute = Boolean(
+      autoRoute && !current.setup.autoRouted && !data.complete && !data.ready && current.view === 'listen'
+    );
+    setState({
+      ...(shouldRoute ? { view: 'setup' } : {}),
+      setup: {
+        ...current.setup,
+        loading: false,
+        data,
+        error: null,
+        autoRouted: current.setup.autoRouted || shouldRoute || autoRoute,
+      },
+    });
+  } catch (error) {
+    // A failed first status call is not a routing decision. Keep autoRouted as
+    // it was so the first live WebSocket connection can retry first-run setup.
+    setState((state) => ({ setup: { ...state.setup, loading: false, error } }));
   }
 }
 
@@ -282,9 +336,11 @@ function applyEnvelope(envelope) {
       break;
     case 'state.devices':
       setState({ status: { ...getState().status, outputs: envelope.payload } });
+      if (getState().view === 'setup') void loadSetup();
       break;
     case 'state.library':
       setState({ status: { ...getState().status, library: envelope.payload } });
+      if (getState().view === 'setup') void loadSetup();
       break;
     case 'error':
       toast(envelope.payload?.message || 'The appliance reported an error.', 'bad');
@@ -302,7 +358,13 @@ const socket = new StateSocket({
       return;
     }
     setState({ connection });
-    if (connection === 'live') void loadStatus();
+    if (connection === 'live') {
+      void loadStatus();
+      // A pre-socket setup request can fail simply because the backend is not
+      // ready yet. A live socket is the reliable signal to retry the one-shot
+      // first-run routing decision.
+      void loadSetup({ autoRoute: true });
+    }
   },
 });
 
@@ -315,6 +377,7 @@ subscribe((state) => {
   renderResults(nodes.searchResults, state, handlers);
   renderQueue(nodes.queuePanel, state, handlers);
   renderHistory(nodes.historyPanel, state);
+  renderSetup(nodes.setupPanel, state, handlers);
   renderNowPlaying(nodes.nowPlaying, state, handlers, positionAnchor);
 
   for (const button of nodes.tabs.querySelectorAll('.tab')) {
@@ -361,8 +424,12 @@ nodes.searchForm.addEventListener('submit', (event) => {
 renderStations(nodes.stations, handlers);
 ensureSessionId();
 void loadStatus();
+void loadSetup({ autoRoute: true });
 socket.connect();
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') void loadStatus();
+  if (document.visibilityState === 'visible') {
+    void loadStatus();
+    if (getState().view === 'setup') void loadSetup();
+  }
 });

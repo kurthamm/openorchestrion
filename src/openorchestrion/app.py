@@ -18,6 +18,7 @@ from .api.errors import install_error_handlers
 from .api.routes import router
 from .api.sessions import ConciergeSessions
 from .api.settings import Settings
+from .api.setup_routes import router as setup_router
 from .api.web import install_web_app
 from .playback import PlaybackEngine
 from .playback.factory import create_default_playback
@@ -62,6 +63,7 @@ def create_app(
     )
     install_error_handlers(application)
     application.include_router(router)
+    application.include_router(setup_router)
     # Mounted last: the catch-all static mount at "/" must not shadow /api.
     install_web_app(application)
     if settings is not None:
