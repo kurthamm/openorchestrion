@@ -221,20 +221,20 @@ audit will refuse it if anyone tries.
 | --- | --- | --- | --- | --- | --- |
 | Gymnopédie No. 1 | Erik Satie | 1925 | 1888 | Mutopia | _unestablished_ |
 | Gnossienne No. 1 | Erik Satie | 1925 | composed 1890, published 1893 | Mutopia | _unestablished_ |
-| Clair de lune (Suite bergamasque) | Claude Debussy | 1918 | 1905 | Mutopia | _unestablished_ |
+| **Clair de lune (Suite bergamasque)** | Claude Debussy | 1918 | 1905 | **Mutopia** | **public-domain — cleared** |
 | Rêverie | Claude Debussy | 1918 | composed 1890 | Mutopia | _unestablished_ |
 | Nocturne in E♭, Op. 9 No. 2 | Frédéric Chopin | 1849 | 1832 | Mutopia | _unestablished_ |
 | Prelude in D♭, Op. 28 No. 15 | Frédéric Chopin | 1849 | 1839 | Mutopia | _unestablished_ |
 | Träumerei (Kinderszenen) | Robert Schumann | 1856 | 1838 | Mutopia | _unestablished_ |
-| Für Elise | Ludwig van Beethoven | 1827 | composed 1810, published 1867 | Mutopia | _unestablished_ |
+| **Für Elise** | Ludwig van Beethoven | 1827 | composed 1810, published 1867 | **Mutopia** | **public-domain — cleared** |
 
 ### Ragtime
 
 | Composition | Composer | Died | Composed / published | Source candidate | File license |
 | --- | --- | --- | --- | --- | --- |
 | **Wall Street Rag** | Scott Joplin | 1917 | 1909 | **Wikimedia Commons** | **CC0-1.0 — cleared** |
-| Maple Leaf Rag | Scott Joplin | 1917 | 1899 | Mutopia | _unestablished_ |
-| The Entertainer | Scott Joplin | 1917 | 1902 | Mutopia | _unestablished_ |
+| **Maple Leaf Rag** | Scott Joplin | 1917 | 1899 | **Mutopia** | **public-domain — cleared** |
+| **The Entertainer** | Scott Joplin | 1917 | 1902 | **Mutopia** | **public-domain — cleared** |
 | Pine Apple Rag | Scott Joplin | 1917 | 1908 | Mutopia | _unestablished_ |
 | Solace | Scott Joplin | 1917 | 1909 | Mutopia | _unestablished_ |
 
@@ -254,6 +254,7 @@ than a solo part split in half. These are written for two players.
 
 | Composition | Composer | Died | Composed / published | Forces | File license |
 | --- | --- | --- | --- | --- | --- |
+| **28 Melodische Übungsstücke, Op. 149 No. 1** | Anton Diabelli | 1858 | published 1831 | **Piano four hands** | **CC-BY-SA-3.0 — cleared** |
 | Sonata for Two Pianos in D, K. 448 | W. A. Mozart | 1791 | composed 1781 | Two pianos | _unestablished_ |
 | Fantasia in F minor, D. 940 | Franz Schubert | 1828 | 1829 | Piano four hands | _unestablished_ |
 | Slavonic Dances, Op. 46 | Antonín Dvořák | 1904 | 1878 | Piano four hands | _unestablished_ |
@@ -268,7 +269,7 @@ copyright.
 
 | Composition | Composer | Died | Composed / published | Note | File license |
 | --- | --- | --- | --- | --- | --- |
-| Silent Night | Franz Xaver Gruber | 1863 | 1818 | Melody only; check the arrangement | _unestablished_ |
+| **Stille Nacht (Silent Night)** | Franz Xaver Gruber | 1863 | 1818 | Mutopia hymntune contribution; ships under the Mutopia title with the English name as an alias | **public-domain — cleared** |
 | O Holy Night | Adolphe Adam | 1856 | 1847 | Check the English translation used | _unestablished_ |
 | Joy to the World | Lowell Mason | 1872 | 1848 | — | _unestablished_ |
 | Hark! The Herald Angels Sing | Felix Mendelssohn | 1847 | 1840 | — | _unestablished_ |
@@ -328,18 +329,24 @@ string is refused by the audit for exactly that reason.
 
 ## Status
 
-**One piece has cleared: Scott Joplin's *Wall Street Rag* (1909)**, from Wikimedia
-Commons under CC0-1.0, now committed in `music/starter/` with its evidence in
-`catalog.csv`. It is the first third-party repertoire this project has been able
-to assert redistribution rights over, and it proves the pipeline end to end:
-audited, imported under its own evidence, tagged, indexed, and picked up by a
-station query.
+**Seven pieces have cleared** and ship in `music/starter/`, with breadth across four
+of the six categories:
 
-Composition-level research for the remaining candidates is complete and needs
-review. Their file-level terms are still outstanding — no other candidate has had
-its actual MIDI file located, fetched, or its license read — so nothing else here
-is yet importable as `verified-open`.
+| Category | Cleared |
+| --- | --- |
+| Ragtime | Wall Street Rag, Maple Leaf Rag, The Entertainer |
+| Expressive solo piano | Für Elise, Clair de lune |
+| Two-piano / duet | Diabelli Op. 149 No. 1 (piano four hands) |
+| Seasonal | Stille Nacht (Silent Night) |
+
+The Diabelli is the one that mattered most: a work *written* for two players rather
+than a solo part split after the fact, which is what the multi-device routing work
+exists to play. It is also the only cleared item under a share-alike license, so it
+is the piece that exercises the attribution path end to end.
+
+Still thin: **broader classical and chamber/orchestral** have nothing cleared, and
+the classical entries are both solo piano. Composition-level research for the
+remaining candidates is complete; their file-level terms are outstanding.
 
 The generated conformance suite in `openorchestrion.testing.midi_fixtures` remains
-the project's own content under its own license, and is separate from this
-catalog.
+the project's own content under its own license, and is separate from this catalog.
