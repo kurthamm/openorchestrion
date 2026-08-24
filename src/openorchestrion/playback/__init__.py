@@ -9,6 +9,13 @@ from .outputs import (
     PlaybackOutputError,
     VirtualMidiOutput,
 )
+from .rendering import (
+    ProgramOverride,
+    RenderingError,
+    RenderingMode,
+    RenderingPolicy,
+    render_timeline,
+)
 from .routed_engine import PlaybackEngine
 from .routing import (
     PartDemand,
@@ -34,6 +41,11 @@ __all__ = [
     "MidiOutputRouter",
     "PlaybackOutputError",
     "VirtualMidiOutput",
+    "ProgramOverride",
+    "RenderingError",
+    "RenderingMode",
+    "RenderingPolicy",
+    "render_timeline",
     "PartDemand",
     "RoutingDecision",
     "RoutingEndpoint",
