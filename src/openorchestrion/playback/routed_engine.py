@@ -2,18 +2,22 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import replace
+from pathlib import Path
 
 from openorchestrion.midi.router import RoutingPlan
 
+from .engine import PlaybackConflict, PlaybackError
 from .engine import PlaybackEngine as BasePlaybackEngine
 from .engine import _Dispatch
 from .models import RuntimeQueueItem
+from .outputs import PlaybackOutputError
+from .rendering import render_timeline
 from .routing import RoutingDecision, RoutingEndpoint, plan_routing
 from .timeline import MidiTimeline
 
 
 class PlaybackEngine(BasePlaybackEngine):
-    """Playback engine with track-aware, capability-aware multi-output routing."""
+    """Playback engine with rendering plus capability-aware multi-output routing."""
 
     def __init__(self, *args, **kwargs) -> None:  # type: ignore[no-untyped-def]
         super().__init__(*args, **kwargs)
@@ -29,27 +33,83 @@ class PlaybackEngine(BasePlaybackEngine):
         )
 
     async def _begin_current_locked(self, *, start_position: float) -> None:
+        """Load, render, plan and start one queue item from the same timeline.
+
+        Rendering happens before routing so Piano Only/overridden program
+        families are what capability-aware routing sees.  The resulting timeline
+        is also the one used for dispatch and resume priming, preventing a split
+        brain where routing plans for rendered state but playback sends source
+        state.
+        """
         current = self._current_item_locked()
+        if current is None:
+            raise PlaybackConflict("there is no current queue item")
+        if not self.router.ready:
+            raise PlaybackOutputError("no MIDI output is available")
+        if current.play_id is None:
+            current.play_id = await self.history.queued(
+                asset_id=current.spec.asset_id,
+                composition_id=current.spec.composition_id,
+                duration_seconds=current.spec.duration_seconds,
+            )
+
         if start_position <= 0:
             self.last_routing_decision = None
-        if (
-            current is not None
-            and current.spec.routing_plan is None
-            and len(self.router.output_names) > 1
-        ):
-            # Plan at play time rather than queue time so routing reflects the
-            # outputs actually connected when the track begins.
-            timeline = MidiTimeline.from_file(current.spec.midi_path)
-            decision = plan_routing(
-                timeline,
-                self._routing_endpoints(),
-                performance_type=current.spec.performance_type,
-                device_preferences=current.spec.device_preferences,
-                routing_preferences=current.spec.routing_preferences,
+
+        try:
+            source_timeline = MidiTimeline.from_file(Path(current.spec.midi_path))
+            timeline = render_timeline(source_timeline, current.spec.rendering_policy)
+
+            if current.spec.routing_plan is None and len(self.router.output_names) > 1:
+                # Plan at play time rather than queue time so routing reflects the
+                # outputs actually connected when the track begins.  Crucially,
+                # inspect the rendered program state rather than the immutable
+                # source arrangement.
+                decision = plan_routing(
+                    timeline,
+                    self._routing_endpoints(),
+                    performance_type=current.spec.performance_type,
+                    device_preferences=current.spec.device_preferences,
+                    routing_preferences=current.spec.routing_preferences,
+                )
+                current.spec = replace(current.spec, routing_plan=decision.plan)
+                self.last_routing_decision = decision
+
+            dispatches = self._build_dispatches(timeline, current.spec.routing_plan)
+        except Exception as exc:
+            error = f"{type(exc).__name__}: {exc}"
+            await self.history.failed(current.play_id, start_position, error)
+            current.play_id = None
+            self._state = "stopped"
+            self.events.publish(
+                "error",
+                {
+                    "code": "internal_error",
+                    "message": "Playback could not start. Check the server log.",
+                    "detail": {"asset_id": current.spec.asset_id},
+                },
             )
-            current.spec = replace(current.spec, routing_plan=decision.plan)
-            self.last_routing_decision = decision
-        await super()._begin_current_locked(start_position=start_position)
+            raise PlaybackError(error) from exc
+
+        await self.history.started(current.play_id)
+        self._generation += 1
+        generation = self._generation
+        self._position_seconds = min(max(0.0, start_position), timeline.duration_seconds)
+        self._active_duration_seconds = timeline.duration_seconds
+        self._run_anchor_clock = self.clock.now()
+        self._state = "playing"
+        self._worker = asyncio.create_task(
+            self._run_track(
+                generation,
+                current,
+                timeline,
+                dispatches,
+                self._position_seconds,
+                self._run_anchor_clock,
+            ),
+            name=f"openorchestrion:{current.spec.asset_id[:24]}",
+        )
+        self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
 
     def _build_dispatches(
         self,

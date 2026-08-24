@@ -5,6 +5,8 @@ from typing import Any, Mapping
 
 from openorchestrion.midi.router import RoutingPlan
 
+from .rendering import RenderingPolicy
+
 
 @dataclass(frozen=True, slots=True)
 class QueueItemSpec:
@@ -18,6 +20,7 @@ class QueueItemSpec:
     performance_type: str | None = None
     device_preferences: tuple[str, ...] = ()
     routing_preferences: Mapping[str, str] = field(default_factory=dict)
+    rendering_policy: RenderingPolicy | None = None
 
 
 @dataclass(slots=True)
