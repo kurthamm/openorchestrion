@@ -371,3 +371,50 @@ def test_a_staged_candidate_imports_with_its_evidence_intact(
     provenance = json.loads(Path(report.imported[0].metadata_path).read_text())["provenance"]
     assert provenance["rights_status"] == "verified-open"
     assert provenance["license"] == "CC0-1.0"
+
+
+# ------------------------------------------------- names that are merely untidy
+#
+# The escape, extension and HTTPS cases are covered above. These pin what is
+# left: a name that is careless rather than dangerous should be normalized, not
+# treated as an attack.
+
+
+@pytest.mark.parametrize("blank", ["", "   "])
+def test_a_blank_filename_falls_back_to_the_downloaded_name(
+    tmp_path: Path, download: Path, blank: str
+) -> None:
+    """Blank means "not given" whichever way it arrives.
+
+    An empty string fell back because it is falsy, while a whitespace-only one
+    reached the basename check and was refused — the same intent taking two
+    different paths through a security-sensitive input.
+    """
+    staged = stage_candidate(
+        download, tmp_path / "candidates", CLEARED, filename=blank, source_url=GOOD_URL
+    )
+    assert staged.filename == "download.mid"
+
+
+def test_a_padded_filename_is_trimmed_rather_than_refused(
+    tmp_path: Path, download: Path
+) -> None:
+    """Copy-paste from a spreadsheet carries whitespace; that is not an attack."""
+    staged = stage_candidate(
+        download, tmp_path / "candidates", CLEARED, filename="  tune.mid  ", source_url=GOOD_URL
+    )
+    assert staged.filename == "tune.mid"
+    assert (tmp_path / "candidates" / "tune.mid").is_file()
+
+
+def test_the_name_is_checked_before_the_file_is_read(tmp_path: Path, download: Path) -> None:
+    """A rejected name must not cost a digest pass over a large download."""
+    with pytest.raises(CandidateError, match="basename"):
+        stage_candidate(
+            download,
+            tmp_path / "candidates",
+            CLEARED,
+            filename="../escape.mid",
+            source_url=GOOD_URL,
+            max_bytes=1,  # would also fail, but later
+        )
