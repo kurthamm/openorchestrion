@@ -89,8 +89,9 @@ failure this whole catalog exists to prevent.
 
 The **Inspect curation source** workflow reads it for you. Dispatch it with the
 URL of an item record; it fetches on a runner, and prints the digest, the size,
-and every line on the page that mentions license, copyright, attribution or
-permission. It writes nothing, opens nothing and runs with read-only
+every line on the page that mentions license, copyright, attribution or
+permission, and every link that leads to another item record or a MIDI file —
+so a browse listing can be used to find the record before reading it. It writes nothing, opens nothing and runs with read-only
 permissions — a page pulled from the open internet should not be able to reach a
 branch.
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openorchestrion.library.source_report import (
+    item_links,
     looks_binary,
     summarize,
     term_lines,
@@ -123,3 +124,56 @@ def test_the_report_says_it_is_an_extract_rather_than_a_verdict() -> None:
 
 def test_an_empty_response_is_named_as_such() -> None:
     assert "empty response" in summarize(b"")
+
+
+LISTING = b"""<html><body>
+  <a href="#top">Skip</a>
+  <a href="/cgibin/piece-info.cgi?id=931">Fur Elise</a>
+  <a href='/cgibin/piece-info.cgi?id=1778'>Clair de lune</a>
+  <a href="/cgibin/piece-info.cgi?id=931">Fur Elise (again, in a sidebar)</a>
+  <a href="/ftp/BachJS/BWV846/prelude/prelude.mid">Download MIDI</a>
+  <a href="/about.html">About this archive</a>
+  <a href="javascript:void(0)">Menu</a>
+</body></html>
+"""
+
+
+def test_links_to_records_and_files_are_reported() -> None:
+    links = item_links(LISTING, base_url="https://www.mutopiaproject.org/browse.html")
+
+    assert "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=931" in links
+    assert "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=1778" in links
+    assert "https://www.mutopiaproject.org/ftp/BachJS/BWV846/prelude/prelude.mid" in links
+
+
+def test_navigation_is_not_reported_as_a_candidate() -> None:
+    links = item_links(LISTING, base_url="https://www.mutopiaproject.org/browse.html")
+
+    assert not any("about.html" in link for link in links)
+    assert not any(link.startswith("javascript") for link in links)
+    assert not any(link.endswith("#top") for link in links)
+
+
+def test_a_repeated_link_is_listed_once() -> None:
+    links = item_links(LISTING, base_url="https://www.mutopiaproject.org/browse.html")
+    assert sum(1 for link in links if link.endswith("id=931")) == 1
+
+
+def test_links_are_absolute_so_the_next_dispatch_needs_no_reassembly() -> None:
+    # A relative href printed as-is cannot be handed to the fetch workflow, whose
+    # host allowlist requires a full HTTPS URL.
+    links = item_links(LISTING, base_url="https://www.mutopiaproject.org/browse.html")
+    assert all(link.startswith("https://") for link in links)
+
+
+def test_the_link_list_is_capped() -> None:
+    page = b"".join(
+        f'<a href="/cgibin/piece-info.cgi?id={index}">x</a>'.encode() for index in range(100)
+    )
+    assert len(item_links(page, max_links=7)) == 7
+
+
+def test_a_listing_reports_its_links_in_the_summary() -> None:
+    report = summarize(LISTING, url="https://www.mutopiaproject.org/browse.html")
+    assert "links to item records or files" in report
+    assert "piece-info.cgi?id=1778" in report

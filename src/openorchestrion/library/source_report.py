@@ -20,7 +20,10 @@ needs to see before making a claim:
   pages with ``.mid`` names when a link rots;
 * for a page, the **lines that mention terms** — licence, copyright, permission —
   because an item record is mostly navigation and the four lines that matter are
-  buried in it.
+  buried in it;
+* for a page, the **links that lead to item records or MIDI files**, because
+  finding the record is the step before reading it and a browse listing carries
+  that entirely in its markup.
 
 The extract is a reading aid, never a verdict. It cannot tell whether a licence
 applies to the file or to the engraving beside it, so it deliberately reports
@@ -35,6 +38,7 @@ import html
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urljoin
 
 from openorchestrion.midi.analyzer import analyze_midi
 
@@ -69,12 +73,27 @@ TERM_KEYWORDS: tuple[str, ...] = (
     "publisher",
 )
 
+#: Link targets worth showing: an item record to read, or a file to fetch.
+#:
+#: A browse listing is almost entirely navigation, so an unfiltered link dump is
+#: as unreadable as the raw page. These are the two things a curator is ever
+#: looking for on the way to a claim.
+LINK_PATTERNS: tuple[str, ...] = (
+    "piece-info",
+    "/ftp/",
+    "file:",
+    ".mid",
+    ".midi",
+)
+
 _SCRIPTISH = re.compile(r"<(script|style)\b.*?</\1>", re.IGNORECASE | re.DOTALL)
+_HREF = re.compile(r"""<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""", re.IGNORECASE)
 _BLOCK_END = re.compile(r"</(p|div|tr|li|h[1-6]|table|br)\s*>|<br\s*/?>", re.IGNORECASE)
 _TAG = re.compile(r"<[^>]+>")
 _SPACES = re.compile(r"[ \t ]+")
 
 DEFAULT_MAX_LINES = 60
+DEFAULT_MAX_LINKS = 40
 
 
 def _digest(payload: bytes) -> str:
@@ -128,7 +147,45 @@ def term_lines(lines: list[str], *, max_lines: int = DEFAULT_MAX_LINES) -> list[
     return kept
 
 
-def summarize(payload: bytes, *, url: str | None = None, max_lines: int = DEFAULT_MAX_LINES) -> str:
+def item_links(
+    payload: bytes,
+    *,
+    base_url: str | None = None,
+    max_links: int = DEFAULT_MAX_LINKS,
+) -> list[str]:
+    """Links on a page that lead to an item record or a MIDI file.
+
+    Resolved against ``base_url`` when one is given, because a listing states its
+    links relatively and a curator has to be able to dispatch the next fetch with
+    what the report printed, not with a path they have to reassemble by hand.
+    """
+    text = payload.decode("utf-8", errors="replace")
+    seen: set[str] = set()
+    found: list[str] = []
+    for match in _HREF.finditer(text):
+        href = html.unescape(next(group for group in match.groups() if group is not None)).strip()
+        if not href or href.startswith(("#", "javascript:", "mailto:")):
+            continue
+        lowered = href.casefold()
+        if not any(pattern in lowered for pattern in LINK_PATTERNS):
+            continue
+        resolved = urljoin(base_url, href) if base_url else href
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        found.append(resolved)
+        if len(found) >= max_links:
+            break
+    return found
+
+
+def summarize(
+    payload: bytes,
+    *,
+    url: str | None = None,
+    max_lines: int = DEFAULT_MAX_LINES,
+    max_links: int = DEFAULT_MAX_LINKS,
+) -> str:
     """A curator-facing report on downloaded bytes: what they are, and what they say."""
     report: list[str] = []
     if url:
@@ -161,6 +218,12 @@ def summarize(payload: bytes, *, url: str | None = None, max_lines: int = DEFAUL
             "clean result — it usually means the terms live on a linked page, or "
             "this is not the item record."
         )
+
+    links = item_links(payload, base_url=url, max_links=max_links)
+    if links:
+        report.append("")
+        report.append(f"links to item records or files ({len(links)}):")
+        report.extend(f"  - {link}" for link in links)
 
     report.append("")
     report.append(
@@ -207,6 +270,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_MAX_LINES,
         help=f"Cap on extracted term lines (default {DEFAULT_MAX_LINES})",
     )
+    parser.add_argument(
+        "--max-links",
+        type=int,
+        default=DEFAULT_MAX_LINKS,
+        help=f"Cap on reported links (default {DEFAULT_MAX_LINKS})",
+    )
     return parser
 
 
@@ -216,7 +285,14 @@ def main() -> None:
     if not source.is_file():
         print(f"error: {source} does not exist", file=sys.stderr)
         raise SystemExit(2)
-    print(summarize(source.read_bytes(), url=args.url, max_lines=args.max_lines))
+    print(
+        summarize(
+            source.read_bytes(),
+            url=args.url,
+            max_lines=args.max_lines,
+            max_links=args.max_links,
+        )
+    )
 
 
 if __name__ == "__main__":
