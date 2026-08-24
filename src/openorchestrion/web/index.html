@@ -25,6 +25,7 @@
     <button class="tab" data-view="browse">Browse</button>
     <button class="tab" data-view="queue">Queue</button>
     <button class="tab" data-view="history">History</button>
+    <button class="tab" data-view="setup">Setup</button>
   </nav>
 
   <main id="main" class="main" tabindex="-1">
@@ -63,6 +64,10 @@
 
     <section class="view" data-view="history" hidden>
       <div id="history-panel" class="panel-body"></div>
+    </section>
+
+    <section class="view" data-view="setup" hidden>
+      <div id="setup-panel" class="panel-body" aria-live="polite"></div>
     </section>
 
   </main>
