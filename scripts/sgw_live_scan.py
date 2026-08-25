@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""Live, reproducible ShopGoodwill inventory sweep for OpenOrchestrion endpoints.
+"""Reproducible live ShopGoodwill sweep for OpenOrchestrion MIDI endpoints.
 
-This intentionally does not start from previously favored models. It queries overlapping
-musical-keyboard terms against ShopGoodwill's live Buyer API, paginates every result set,
-deduplicates by item ID, removes obvious non-instruments/accessories, and prints a machine-
-readable candidate set for a second-stage capability review.
+The scan starts from the current inventory, not remembered favorite models. It runs
+multiple overlapping musical-keyboard searches against ShopGoodwill's live Buyer API,
+paginates each result set, detects broken/repeating pagination, deduplicates by item ID,
+removes obvious accessories/non-musical keyboards, and emits a compact candidate set.
+
+Inventory triage is intentionally separate from the procurement gate. Finalists still
+require manufacturer evidence for inbound MIDI, multitimbral/GM behavior, controllers,
+program changes, polyphony, and audio output.
 """
 
 from __future__ import annotations
@@ -13,17 +17,14 @@ import json
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import requests
 
-API_ROOT = "https://buyerapi.shopgoodwill.com/api"
-SEARCH_URL = f"{API_ROOT}/Search/ItemListing"
-DETAIL_URL = f"{API_ROOT}/ItemDetail/GetItemDetailModelByItemId"
+SEARCH_URL = "https://buyerapi.shopgoodwill.com/api/Search/ItemListing"
 
-# Deliberately overlapping and model-diverse. Brand/model-family searches are coverage arms,
-# not ranking priors. The merged result set is deduplicated before scoring.
+# Coverage arms, not ranking priors. Overlap is deliberate; item IDs are deduplicated.
 QUERIES = [
     "digital piano",
     "electronic piano",
@@ -31,11 +32,13 @@ QUERIES = [
     "electronic musical keyboard",
     "arranger keyboard",
     "music keyboard",
+    "Yamaha keyboard",
     "Yamaha PSR",
     "Yamaha DGX",
     "Yamaha YPG",
+    "Casio keyboard",
     "Casio CTK",
-    "Casio CT-X",
+    "Casio CT X",
     "Casio WK keyboard",
     "Casio Privia",
     "Roland keyboard",
@@ -44,36 +47,20 @@ QUERIES = [
     "Kurzweil keyboard",
 ]
 
-# Strong evidence an item is not the self-contained MIDI sound endpoint we need.
 NEGATIVE_TITLE = re.compile(
     r"\b(?:stand|bench|case|bag|cover|pedal|adapter|power supply|charger|cable|manual|"
     r"sheet music|book|computer keyboard|wireless keyboard|gaming keyboard|typewriter|"
-    r"keycaps?|mouse|laptop|controller only|midi controller)\b",
+    r"keycaps?|mouse|laptop|keyboard tray|keyboard drawer|controller only|midi controller)\b",
     re.I,
 )
-
 MUSICAL_HINT = re.compile(
-    r"\b(?:piano|keyboard|synth|synthesizer|workstation|arranger|organ|PSR|DGX|YPG|CTK|CT-X|WK-|Privia)\b",
+    r"\b(?:piano|keyboard|synth|synthesizer|workstation|arranger|organ|PSR|DGX|YPG|"
+    r"CTK|CT-X|CTX|WK-?\d|Privia|Fantom|Juno|Motif)\b",
     re.I,
 )
 
-# Inventory triage only. Final procurement gating is done against manufacturer MIDI docs.
-def inventory_score(item: dict[str, Any], detail_text: str = "") -> int:
-    text = f"{item.get('title', '')} {detail_text}".lower()
-    score = 0
-    if "usb" in text: score += 8
-    if "midi" in text: score += 10
-    if "general midi" in text or " gm " in f" {text} ": score += 8
-    if "tested" in text or "works" in text or "working" in text: score += 5
-    if "power adapter" in text or "ac adapter" in text or "power supply" in text: score += 3
-    if any(x in text for x in ("76 key", "76-key", "88 key", "88-key")): score += 2
-    # Families commonly capable of being self-contained multitimbral sound engines.
-    if any(x in text for x in ("psr-", "dgx-", "ypg-", "ctk-", "ct-x", "wk-", "roland", "korg", "kurzweil")):
-        score += 3
-    return score
 
-
-def session() -> requests.Session:
+def browser_session() -> requests.Session:
     s = requests.Session()
     s.headers.update({
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
@@ -85,7 +72,7 @@ def session() -> requests.Session:
     return s
 
 
-def payload(query: str, page: int) -> dict[str, Any]:
+def request_payload(query: str, page: int) -> dict[str, Any]:
     return {
         "isSize": False,
         "isWeddingCatagory": "false",
@@ -109,7 +96,7 @@ def payload(query: str, page: int) -> dict[str, Any]:
         "closedAuctionDaysBack": "7",
         "searchCanadaShipping": "false",
         "searchInternationalShippingOnly": "false",
-        "sortColumn": "1",           # ending soonest
+        "sortColumn": "1",          # ending soonest
         "sortDescending": "false",
         "savedSearchId": 0,
         "useBuyerPrefs": "true",
@@ -124,87 +111,113 @@ def payload(query: str, page: int) -> dict[str, Any]:
     }
 
 
-def live_search(s: requests.Session, query: str) -> tuple[list[dict[str, Any]], int]:
+def search_all_pages(s: requests.Session, query: str) -> tuple[list[dict[str, Any]], int, str | None]:
     out: list[dict[str, Any]] = []
-    page = 1
+    seen_page_fingerprints: set[tuple[int, ...]] = set()
     total = 0
-    while True:
-        r = s.post(SEARCH_URL, json=payload(query, page), timeout=30)
+    warning = None
+
+    for page in range(1, 51):
+        r = s.post(SEARCH_URL, json=request_payload(query, page), timeout=30)
         r.raise_for_status()
-        body = r.json().get("searchResults", {})
-        items = body.get("items", []) or []
-        total = int(body.get("itemCount", 0) or 0)
-        out.extend(items)
-        if not items or len(items) < 40 or len(out) >= total:
+        sr = r.json().get("searchResults", {})
+        items = sr.get("items", []) or []
+        total = int(sr.get("itemCount", 0) or 0)
+        if not items:
             break
-        page += 1
-        if page > 100:
-            raise RuntimeError(f"Pagination safety limit hit for query {query!r}")
-        time.sleep(0.05)
-    return out, total
+
+        fingerprint = tuple(int(x.get("itemId", 0) or 0) for x in items)
+        if fingerprint in seen_page_fingerprints:
+            warning = f"pagination repeated at page {page}; stopped safely"
+            break
+        seen_page_fingerprints.add(fingerprint)
+        out.extend(items)
+
+        if len(items) < 40 or len({int(x.get('itemId', 0) or 0) for x in out}) >= total:
+            break
+        time.sleep(0.03)
+    else:
+        warning = "50-page safety cap reached"
+
+    # A malformed API total must never manufacture duplicate inventory.
+    unique = {int(i.get("itemId")): i for i in out if i.get("itemId")}
+    return list(unique.values()), total, warning
 
 
-def get_detail_text(s: requests.Session, item_id: int) -> str:
+def price_number(v: Any) -> float:
     try:
-        r = s.get(f"{DETAIL_URL}/{item_id}", timeout=20)
-        r.raise_for_status()
-        data = r.json()
-        # Preserve all scalar text because API field names have changed over time.
-        chunks: list[str] = []
-        def walk(v: Any) -> None:
-            if isinstance(v, dict):
-                for x in v.values(): walk(x)
-            elif isinstance(v, list):
-                for x in v: walk(x)
-            elif isinstance(v, str):
-                chunks.append(v)
-        walk(data)
-        return " ".join(chunks)
-    except Exception as exc:
-        return f"DETAIL_ERROR {type(exc).__name__}: {exc}"
+        return float(v)
+    except (TypeError, ValueError):
+        return 999999.0
+
+
+def triage_score(title: str) -> int:
+    """Broad capability prior only; manufacturer documentation decides the finalists."""
+    t = title.lower()
+    score = 0
+    if any(b in t for b in ("yamaha", "casio", "roland", "korg", "kawai", "kurzweil")):
+        score += 5
+    # Arranger / workstation families are particularly interesting because OpenOrchestrion
+    # benefits from multitimbral program/channel playback, not merely piano key feel.
+    strong_patterns = [
+        r"psr[- ](?:s|sx)\d", r"psr[- ]ew\d", r"dgx[- ]\d", r"ypg[- ]\d",
+        r"ct[- ]?x\d", r"ctk[- ](?:6|7)\d{3}", r"wk[- ]\d",
+        r"\bbk[- ]\d", r"\be[- ]\d{2,}", r"\bpa\d{2,}",
+        r"motif", r"fantom", r"juno", r"kurzweil",
+    ]
+    for p in strong_patterns:
+        if re.search(p, t):
+            score += 15
+            break
+    medium_patterns = [r"psr[- ]e\d", r"ctk[- ]\d", r"privia", r"px[- ]\d"]
+    for p in medium_patterns:
+        if re.search(p, t):
+            score += 8
+            break
+    if "with power" in t or "power adapter" in t or "ac adapter" in t:
+        score += 2
+    if "tested" in t or "working" in t:
+        score += 3
+    if "for parts" in t or "not working" in t or "untested" in t:
+        score -= 8
+    return score
 
 
 def main() -> int:
-    s = session()
+    s = browser_session()
     merged: dict[int, dict[str, Any]] = {}
-    coverage: dict[int, set[str]] = {}
-    query_counts: dict[str, int] = {}
+    matched_by: dict[int, set[str]] = {}
+    coverage: dict[str, Any] = {}
 
     for q in QUERIES:
         try:
-            items, total = live_search(s, q)
+            items, total, warning = search_all_pages(s, q)
         except Exception as exc:
-            print(f"SEARCH_ERROR {q!r}: {type(exc).__name__}: {exc}", file=sys.stderr)
-            return 2
-        query_counts[q] = total
-        print(f"COVERAGE {q!r}: {total} live results", flush=True)
+            coverage[q] = {"error": f"{type(exc).__name__}: {exc}"}
+            print(f"COVERAGE_ERROR {q!r}: {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
+            continue
+        coverage[q] = {"reported": total, "retrievedUnique": len(items), "warning": warning}
+        print(f"COVERAGE {q!r}: reported={total}, unique={len(items)}, warning={warning}", flush=True)
         for item in items:
             try:
                 iid = int(item.get("itemId"))
             except (TypeError, ValueError):
                 continue
             merged[iid] = item
-            coverage.setdefault(iid, set()).add(q)
+            matched_by.setdefault(iid, set()).add(q)
 
-    candidates: list[dict[str, Any]] = []
+    if not merged:
+        print("No live inventory returned from any coverage arm", file=sys.stderr)
+        return 2
+
+    rows: list[dict[str, Any]] = []
     for iid, item in merged.items():
         title = str(item.get("title", ""))
-        if NEGATIVE_TITLE.search(title):
+        if NEGATIVE_TITLE.search(title) or not MUSICAL_HINT.search(title):
             continue
-        if not MUSICAL_HINT.search(title):
-            continue
-        candidates.append(item)
-
-    # Pull detail text for every plausible instrument. This lets us distinguish "powers on"
-    # and included adapters from title-only guesses while keeping final MIDI capability gating
-    # separate and evidence-based.
-    enriched = []
-    for n, item in enumerate(candidates, 1):
-        iid = int(item["itemId"])
-        detail = get_detail_text(s, iid)
-        row = {
+        rows.append({
             "itemId": iid,
-            "title": item.get("title"),
+            "title": title,
             "currentPrice": item.get("currentPrice"),
             "numBids": item.get("numBids"),
             "endTime": item.get("endTime"),
@@ -214,27 +227,25 @@ def main() -> int:
             "pickupOnly": item.get("isPickupOnly") or item.get("pickupOnly"),
             "imageURL": item.get("imageURL"),
             "url": f"https://shopgoodwill.com/item/{iid}",
-            "matchedQueries": sorted(coverage.get(iid, set())),
-            "inventoryScore": inventory_score(item, detail),
-            "detailExcerpt": re.sub(r"\s+", " ", detail)[:1800],
-        }
-        enriched.append(row)
-        if n % 20 == 0:
-            print(f"DETAIL_PROGRESS {n}/{len(candidates)}", flush=True)
-        time.sleep(0.03)
+            "matchedQueries": sorted(matched_by.get(iid, set())),
+            "triageScore": triage_score(title),
+        })
 
-    enriched.sort(key=lambda x: (-x["inventoryScore"], str(x.get("endTime") or ""), float(x.get("currentPrice") or 0)))
+    # We emit all plausible musical endpoints, but sort interesting families first and cheaper
+    # current bids second. Final selection is not made by this score.
+    rows.sort(key=lambda x: (-x["triageScore"], price_number(x.get("currentPrice")), str(x.get("endTime") or "")))
 
+    summary = {
+        "generatedAtUTC": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "coverageArms": len(QUERIES),
+        "uniqueInventoryBeforeFilter": len(merged),
+        "plausibleMusicalEndpoints": len(rows),
+        "coverage": coverage,
+    }
     print("\n=== SGW_SCAN_SUMMARY ===")
-    print(json.dumps({
-        "queries": len(QUERIES),
-        "queryCounts": query_counts,
-        "uniqueItemsBeforeFilter": len(merged),
-        "plausibleMusicalEndpoints": len(enriched),
-        "generatedAtUTC": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-    }, indent=2, default=str))
+    print(json.dumps(summary, indent=2, default=str))
     print("=== SGW_CANDIDATES_JSON ===")
-    print(json.dumps(enriched, indent=2, default=str))
+    print(json.dumps(rows, indent=2, default=str))
     print("=== END_SGW_CANDIDATES_JSON ===")
     return 0
 
