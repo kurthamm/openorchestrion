@@ -76,6 +76,7 @@ export function commandId() {
 export const api = {
   status: () => request('/api/status'),
   devices: () => request('/api/devices'),
+  renderingOptions: () => request('/api/rendering/options'),
   setup: () => request('/api/setup'),
   completeSetup: () => request('/api/setup/complete', { method: 'POST' }),
   resetSetup: () => request('/api/setup/reset', { method: 'POST' }),
@@ -117,19 +118,22 @@ export const api = {
     mode = 'replace',
     seed = 0,
     maxTracks = 25,
+    rendering = null,
     id = commandId(),
-  }) =>
-    request('/api/queue', {
-      method: 'POST',
-      body: {
-        mode,
-        intent: intent ?? null,
-        asset_ids: assetIds,
-        seed,
-        max_tracks: maxTracks,
-        command_id: id,
-      },
-    }),
+  }) => {
+    const body = {
+      mode,
+      intent: intent ?? null,
+      asset_ids: assetIds,
+      seed,
+      max_tracks: maxTracks,
+      command_id: id,
+    };
+    // Original Arrangement deliberately omits the optional field so the default
+    // request stays identical to the pre-rendering browser contract.
+    if (rendering) body.rendering = rendering;
+    return request('/api/queue', { method: 'POST', body });
+  },
   reorderQueue: (assetId, toIndex, id = commandId()) =>
     request('/api/queue/reorder', {
       method: 'POST',
