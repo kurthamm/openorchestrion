@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from .ai import MusicConcierge
 from .ai_runtime import create_configured_concierge
 from .api.errors import install_error_handlers
+from .api.rendering_routes import router as rendering_router
 from .api.routes import router
 from .api.sessions import ConciergeSessions
 from .api.settings import Settings
@@ -64,6 +65,7 @@ def create_app(
     install_error_handlers(application)
     application.include_router(router)
     application.include_router(setup_router)
+    application.include_router(rendering_router)
     # Mounted last: the catch-all static mount at "/" must not shadow /api.
     install_web_app(application)
     if settings is not None:
