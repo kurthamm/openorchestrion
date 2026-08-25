@@ -27,4 +27,59 @@ jobs:
       - name: Install scanner dependency
         run: python -m pip install --disable-pip-version-check requests
       - name: Sweep live ShopGoodwill inventory
-        run: python scripts/sgw_live_scan.py
+        run: python scripts/sgw_live_scan.py > sgw-raw.log
+      - name: Extract compact candidate output
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          text = Path('sgw-raw.log').read_text()
+          start = '=== SGW_CANDIDATES_JSON ===\n'
+          end = '\n=== END_SGW_CANDIDATES_JSON ==='
+          if start not in text or end not in text:
+              raise SystemExit('candidate markers missing from scanner output')
+          candidate_text = text.split(start, 1)[1].split(end, 1)[0].strip()
+          rows = json.loads(candidate_text)
+          Path('sgw-candidates.json').write_text(json.dumps(rows, indent=2))
+
+          summary_start = '=== SGW_SCAN_SUMMARY ===\n'
+          if summary_start in text:
+              summary_text = text.split(summary_start, 1)[1].split(start, 1)[0].strip()
+              Path('sgw-summary.json').write_text(summary_text)
+              try:
+                  summary = json.loads(summary_text)
+                  print('SCAN|generated=' + str(summary.get('generatedAtUTC')) +
+                        '|coverageArms=' + str(summary.get('coverageArms')) +
+                        '|uniqueInventory=' + str(summary.get('uniqueInventoryBeforeFilter')) +
+                        '|plausibleEndpoints=' + str(summary.get('plausibleMusicalEndpoints')))
+                  for q, c in summary.get('coverage', {}).items():
+                      print('COVERAGE|' + q + '|reported=' + str(c.get('reported')) +
+                            '|retrieved=' + str(c.get('retrievedUnique')) +
+                            '|warning=' + str(c.get('warning')) +
+                            ('|error=' + str(c.get('error')) if c.get('error') else ''))
+              except Exception:
+                  pass
+
+          print('CANDIDATES|showing=' + str(min(200, len(rows))) + '|total=' + str(len(rows)))
+          for r in rows[:200]:
+              print('ITEM|' + '|'.join([
+                  str(r.get('itemId', '')),
+                  str(r.get('triageScore', '')),
+                  str(r.get('currentPrice', '')),
+                  str(r.get('numBids', '')),
+                  str(r.get('endTime', '')),
+                  str(r.get('remainingTime', '')).strip(),
+                  str(r.get('title', '')).replace('|', '/'),
+                  str(r.get('url', '')),
+              ]))
+          PY
+      - name: Upload full live result set
+        uses: actions/upload-artifact@v4
+        with:
+          name: sgw-live-results
+          path: |
+            sgw-candidates.json
+            sgw-summary.json
+            sgw-raw.log
+          retention-days: 3
