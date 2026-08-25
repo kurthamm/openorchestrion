@@ -2,145 +2,151 @@
 
 ## Phase
 
-**Appliance-ready software / physical hardware proof**
+**Appliance-ready software / physical validation and publication**
 
-OpenOrchestrion now has the complete local-first software path from MIDI ingestion and curated metadata through Smart Station/Concierge selection, server-owned queue/playback, synchronized multi-device routing, responsive household/kiosk UI, durable history, CI, and reproducible Raspberry Pi appliance packaging.
+OpenOrchestrion now has the complete local-first software path from MIDI ingestion and rights-aware curation through natural-language intent, Smart Stations, server-owned playback, multi-device routing, non-destructive rendering, responsive household control, appliance packaging, and verified backup/restore.
 
-The software can be installed from a wheel or checkout, boot under systemd with zero MIDI hardware attached, serve the packaged UI, and run in either headless or Chromium-kiosk mode. The next architectural evidence is physical: real Pi 5 timing under appliance load and end-to-end MIDI/audio validation on the target sound engines.
+The software can be installed from a wheel or checkout, boot under systemd with zero MIDI hardware attached, serve its packaged UI in headless or Chromium-kiosk mode, and pass repository contracts from a non-editable installation.
 
-## Current hardware targets
+The major remaining engineering evidence is physical rather than architectural: Raspberry Pi timing under realistic appliance load, end-to-end MIDI/audio validation on the selected sound engines, relative MIDI-to-audio latency for two-engine synchronization, and the reference enclosure/BOM.
 
-The intended first two-engine build is:
+## Implemented product stack
 
-1. **Casio CTK-6200** — primary/general ensemble engine.
-2. **Yamaha PSR-EW300** — complementary Yamaha sound engine.
+### Library, analysis, and curation
 
-Both are documented MIDI-receiving candidates with nominal 48-note polyphony and broad sound sets. Acquisition and physical project validation are still pending. The earlier Casio CT-X700 remains a documented-compatible fallback/reference and has its own hardware-proof issue.
+- SHA-256 content-addressed MIDI assets with authoritative JSON sidecars.
+- Robust batch importer that isolates malformed/truncated/oversized inputs rather than aborting a collection.
+- Deterministic analyzer for timing, tracks/channels, programs/banks, controllers, sustain, percussion, note range, expressive events, SysEx presence, and sustain-aware peak simultaneous voices.
+- `openorchestrion-tag` single-asset and SHA-256-keyed CSV metadata editing.
+- Atomic metadata writes with optimistic revisions plus per-asset writer locking.
+- `openorchestrion-reanalyze` for repairing deterministic analysis without re-importing immutable MIDI objects.
+- Rebuildable `catalog.db` with composition/performance separation and per-asset reconciliation.
+- Durable favorites and curated metadata that survive catalog deletion/rebuild.
 
-## Implemented software foundation
+### Rights and starter repertoire
 
-### Synthetic MIDI conformance and timing harness
+- Separate evidence for composition rights and the specific MIDI file/arrangement license.
+- Fail-closed `verified-open` audit and post-import rights editing.
+- CI audits Git-tracked MIDI repository-wide rather than trusting one directory.
+- Source-reading and candidate-fetch workflows support evidence-based curation without guessing archive terms.
+- A verified-open starter repertoire now ships through the same import/tag/reindex path used by ordinary libraries.
+- Issue #64 is expanding the still-thin chamber/orchestral category with instrumentation evidence kept separate from rights evidence.
 
-The generated suite covers single notes, velocity, sustain, Program Change/Bank Select, GM ensemble/percussion, receive range, 16/32/48/64-note stress, two-piano split, synchronization clicks, endurance, and parser resilience.
+### Smart Stations and listening history
 
-The playback benchmark measures real `SystemClock` scheduler jitter, long-run drift, relative timing error, and simultaneous two-output skew. The harness is implemented; Issue #6 remains open for the reference Pi 5 run under actual appliance load and later MIDI-to-audio measurements.
-
-### Deterministic MIDI analyzer and robust importer
-
-Provides SHA-256 identity, timing/tempo, tracks/channels, programs/banks, controllers, sustain, percussion, note/velocity statistics, expressive-event/SysEx reporting, and estimated peak simultaneous sounding notes.
-
-The importer isolates malformed/truncated/oversized files instead of losing the remainder of a batch. `peak_simultaneous_notes` now models one sounding voice per `(channel, note)`, including sustain and channel-mode controller semantics, and `openorchestrion-reanalyze` repairs existing sidecars without re-importing content.
-
-### Durable sidecars and curated metadata
-
-Content-addressed MIDI objects and JSON sidecars are authoritative. Curated `descriptive_metadata` is editable through `openorchestrion-tag` or SHA-256-keyed CSV bulk edits, with free-text normalization for descriptive facets and stable enums where behavior depends on them.
-
-Writes are atomic, guarded by optimistic revisions plus per-asset writer locking, preserve provenance/rights and AI enrichment, and reconcile the rebuildable catalog. Favorites persist through the real API. Corrected analyzer facts can be re-derived while curated metadata remains intact.
-
-### Rebuildable SQLite catalog
-
-`catalog.db` rebuilds from sidecars and indexes compositions separately from MIDI performances, including curated metadata, provenance, rights, and compatibility-relevant analysis. Per-asset reconciliation removes orphaned composition rows correctly. The catalog is disposable; sidecars are not.
-
-### Deterministic Smart Stations
-
-Validated `PlaybackIntent` produces explainable queues with exact/partial/fallback matching, weighted preferences, hard exclusions, composer diversity, duration targets, device/MIDI limits, seeded variation, favorites, quality, no-repeat inputs, and explicit relaxation diagnostics.
-
-### Durable play history
-
-`history.db` is separate from the rebuildable catalog. It records queued, started, substantially played, completed, skipped, and failed attempts and feeds no-repeat/staleness behavior back into station selection. Normal service shutdown stops active playback so history attempts are not stranded.
+- Strict `PlaybackIntent` with deterministic station construction.
+- Exact/partial/fallback matching, hard compatibility constraints, weighted preferences, favorites, quality, seeded variation, composer diversity, energy sequencing, duration targets, and explicit relaxation diagnostics.
+- Durable `history.db` with queued/started/substantial/completed/skipped/failed semantics.
+- No-repeat and staleness inputs feed station selection.
 
 ### AI Music Concierge
 
-Provider-neutral natural-language interpretation produces strictly validated `PlaybackIntent`, preserves hard constraints during refinement, supports bounded conversational sessions, and falls back to deterministic offline interpretation. AI never receives direct MIDI/playback control.
+- Provider-neutral intent interpretation with bounded conversational refinement.
+- Deterministic offline interpreter remains available without Internet access.
+- Optional hosted OpenAI Responses API adapter with strict structured output and hard-tag preservation.
+- Hosted AI is explicit opt-in; merely storing a provider key does not enable cloud calls.
+- Prompts/current intent may leave the appliance only when hosted AI is enabled. MIDI files, queue, history, devices, MIDI events, and audio are not part of the interpretation contract.
+- Provider credentials live in a service-only secrets file and do not appear in browser status/configuration.
 
-A concrete hosted/local provider adapter remains optional future work; it is not required for offline appliance operation.
+### Server-owned playback
 
-### Server-owned playback and synchronized routing
+- Authoritative queue and transport state machine with play/resume, pause, stop, skip, panic, and automatic advance.
+- Tempo-aware monotonic scheduling through the clock seam.
+- Idempotent command IDs and WebSocket state snapshots/deltas.
+- Browser progress interpolation anchors at local message receipt rather than subtracting server wall clock.
+- Resume primes channel state without pretending held notes persisted through pause.
+- Arbitrary imported SysEx is suppressed by default.
 
-The backend owns queue, transport, position, scheduling, MIDI cleanup, history emission, and WebSocket state. Implemented transport is play, pause/resume, stop, skip, and panic with automatic track advance and tempo-aware monotonic scheduling.
+### Synchronized routing and rendering
 
-Multi-device routing keeps one master timeline and supports track/channel-specific routes, broadcast, TWO_PIANO, PIANO_DUET, separable DUELING_PIANO, instrument-family affinity, capacity-aware load balancing, device/role preferences, per-device latency compensation, resume priming, and conservative stop/panic behavior when a destination fails.
+- One master timeline drives all directly attached sound engines.
+- Track/channel routes, broadcast, instrument-family affinity, device capabilities, load balancing, role/device preferences, and per-device latency offsets.
+- `SOLO_PIANO`, `MULTI_INSTRUMENT`, `PIANO_DUET`, `TWO_PIANO`, `DUELING_PIANO`, and future `DISTRIBUTED` performance types.
+- Conservative stop/panic if an active required destination disappears.
+- Non-destructive `ORIGINAL`, `PIANO_ONLY`, and `OVERRIDE` rendering modes.
+- Rendering occurs before routing so the planner sees the program family that will actually sound.
+- The browser now exposes rendering controls for the next queue using the backend-owned General MIDI vocabulary rather than a duplicate 128-program table.
 
-Curated `performance_type` and validated intent routing preferences flow into playback. Free-text `instrumentation` is not treated as a routing contract; untagged material falls back to deterministic MIDI/GM analysis.
+### Responsive household UI
 
-### Responsive appliance/household UI
+- One no-build HTML/CSS/ES-module application for 800×480 kiosk, phones, tablets, and desktop browsers.
+- Concierge, station shortcuts, Browse/search, favorites, Queue, History, Now Playing, transport, health/degraded states, live progress, reconnect/resync, setup, and rendering controls.
+- Browser rendering preference is explicitly local preference for the next queue, not authoritative server playback state.
+- No Node build, CDN, webfont, or external runtime resource dependency.
 
-One no-build ES-module/CSS web application serves the 7-inch kiosk, phone, tablet, and desktop. It includes Concierge/listening surfaces, Browse, favorites, queue, Now Playing, transport, device/degraded state, live WebSocket synchronization, progress interpolation, reconnect/resync behavior, light/dark layouts, and PWA assets.
+### Appliance setup and LAN discovery
 
-The UI is a thin client. Playback remains server-owned even if every browser disconnects.
+- `openorchestrion-serve` single-process production entry point.
+- systemd service with graceful shutdown and journald logging.
+- Durable state under `/var/lib/openorchestrion`; software environment under `/opt/openorchestrion/venv`.
+- Headless and health-gated Chromium kiosk modes.
+- First-run Setup view for readiness and next actions.
+- Privileged `openorchestrion-configure` for settings/secrets that must not be writable from an unauthenticated household browser.
+- Optional Avahi/mDNS discovery and explicit `openorchestrion.local` hostname path.
+- `openorchestrion-smoke` verifies the installed appliance without requiring physical MIDI hardware.
 
-### CI and install contracts
+### Backup and recovery
 
-CI has stable check contexts:
+- Versioned application-data archive for immutable MIDI objects, sidecars, and a SQLite-safe history snapshot.
+- `catalog.db` is deliberately excluded and rebuilt on restore.
+- Backup publication is atomic and verifies content-address integrity before replacement.
+- Restore rejects path traversal, unexpected members, symlinks, duplicates, digest mismatches, malformed sidecars, corrupt history, unsupported versions, and raced/non-empty targets.
+- Privileged replacement workflow performs preflight before stopping a healthy service, creates a rollback backup, publishes verified candidate state, health-checks the replacement, and restores the old tree if the new state cannot become healthy.
+- Provider secrets and system configuration are not silently included in application-data backups.
+
+### CI and packaging contracts
+
+Stable CI contexts are:
 
 - `lint`
 - `test-py3.11`
 - `test-py3.12`
 - `repository-contracts`
 
-Ruff is pinned and the rule set is explicit. Repository contracts validate schemas, device profiles, generated MIDI, importer/catalog/station flows, and now a real non-editable wheel installation.
+Ruff version and selected rule set are explicit. Repository contracts validate schemas, device profiles, generated MIDI, import/catalog/station flows, rights policy, and a non-editable wheel installation.
 
-The wheel contract boots `openorchestrion-serve` outside the checkout with physical MIDI absent, verifies health and packaged web assets, and requires graceful application shutdown. GitHub branch-protection/ruleset mutation is still an administrative step because the available repository connector does not expose that operation.
+The wheel contract boots the packaged server outside the source checkout with no physical MIDI output, verifies health and web assets, and requires graceful shutdown.
 
-### Raspberry Pi appliance packaging
+GitHub `main` branch protection remains an administrative repository-setting step; the connected repository tool does not expose that mutation.
 
-Issue #30 provides the production appliance path:
+## Current reference hardware status
 
-- `openorchestrion-serve` single-process production entry point;
-- systemd service with restart and graceful shutdown;
-- shared `/etc/openorchestrion/openorchestrion.env` runtime configuration;
-- durable state under `/var/lib/openorchestrion`;
-- disposable software environment under `/opt/openorchestrion/venv`;
-- `openorchestrion-kiosk` health-gated Chromium startup;
-- first-class headless operation;
-- checkout or wheel installation/update flow;
-- journald logging;
-- `openorchestrion-smoke` post-install diagnostics;
-- uninstall/recovery procedures that preserve library sidecars and history.
+The software is hardware-neutral and routes by capability/profile rather than model-name branches.
 
-The appliance does not require Node, a CDN, Docker, or Internet access to boot and play local music.
+The project has manufacturer-evidence profiles and procurement candidates from Casio and Yamaha families. The Casio CT-X700 remains the named hardware-proof issue/reference profile, while other used Casio/Yamaha models are being considered for the first practical two-engine build.
+
+**No keyboard is promoted to project-validated hardware until physical evidence exists.** Manufacturer documentation is evidence of documented compatibility, not a substitute for the project's own enumeration, controller, polyphony, reconnect, latency, and long-run tests.
 
 ## Current work lanes
 
-- **Issue #9 / verified-open starter catalog:** active content/data lane on `feature/issue-9-starter-catalog`. The goal is a legally clean starter repertoire imported and tagged through the real production pipeline with per-asset source/license/attribution evidence.
-- **Issues #1 and #6 / physical proof:** next platform evidence once the Pi/reference sound engine is available. Run the packaged appliance path, not a hand-launched development server.
-- **Issue #11 / second Yamaha engine:** follows first-device proof and adds tone-diversity, relative-latency, two-piano, and multichannel validation.
+- **Issue #64:** deepen genuine chamber/orchestral starter repertoire. Source reports now keep instrumentation/arrangement clues independent from rights lines so an ensemble score is not confused with a keyboard reduction.
+- **Issue #10:** publication lane. The first slice creates the OpenOrchestrion v2 living white paper and static project site while keeping hardware photos/results explicitly pending.
+- **Issue #6:** timing harness is implemented; the controlled Raspberry Pi 5 loaded run remains open.
+- **Issue #1:** physical first-engine proof remains open.
+- **Issue #11:** complementary Yamaha/second-engine validation follows first-engine proof.
+- **Issue #8:** reference enclosure/BOM follows acquisition of the physical build.
 
-## Next milestones
+## Next physical proof sequence
 
-1. Complete the verified-open starter catalog (#9).
-2. Install the current wheel on the reference Raspberry Pi 5 using the documented appliance procedure.
-3. Run the loaded Pi timing benchmark (#6) with FastAPI, Chromium kiosk, WebSockets/library activity, and one/two MIDI outputs where available.
-4. Validate the first physical sound engine end to end (#1 or the acquired equivalent): enumeration, Note On/Off, velocity, sustain, Program/Bank, GM/percussion, range, dense polyphony, endurance, reconnect/restart.
-5. Validate the complementary Yamaha engine (#11) and measure relative MIDI-to-audio latency for two-device compensation.
-6. After the physical reference build exists, design/publish the enclosure/BOM (#8) and capture demo evidence.
-7. Publish the v2 white paper/project site (#10) after hardware photos, timing results, and demos can replace design-only claims.
+1. Install the current wheel on the reference Raspberry Pi through the documented systemd path.
+2. Run `openorchestrion-smoke` before attaching MIDI hardware.
+3. Attach the first sound engine and capture Linux MIDI enumeration.
+4. Verify Note On/Off, velocity, sustain CC64, Program Change, Bank Select, GM/percussion, receive range, practical 16/32/48/64-note stress, and expressive piano playback.
+5. Exercise service restart, reconnect, power-cycle, and long-duration playback.
+6. Run the controlled Pi timing protocol with FastAPI, Chromium kiosk where applicable, WebSockets/library activity, and output paths active.
+7. Attach the second sound engine and measure relative MIDI-to-audio latency.
+8. Route two-piano/duet and multichannel material from the one master timeline.
+9. Publish the enclosure/BOM and capture hardware photos/demo video.
+10. Update the v2 publication with measured evidence rather than design-only claims.
 
-## Decisions already made
+## Publication status
 
-- Human key feel is not a core purchasing criterion; keyboards are MIDI-addressed sound engines.
-- Documented MIDI receive is mandatory for recommended hardware.
-- The Pi owns one master clock for locally connected devices.
-- Playback is local-first; cloud storage is for backup/recovery, not live timing.
-- AI interprets intent but never directly emits MIDI.
-- Core playback, selection, UI, and boot work without AI or Internet access.
-- Deterministic MIDI facts, curated metadata, provenance/rights, and AI inference remain separate data classes.
-- Sidecars and `history.db` are durable; `catalog.db` is rebuildable.
-- The backend owns queue/playback state; browsers render and reconcile it.
-- Browser progress interpolation anchors at local message receipt, not server wall-clock subtraction.
-- Arbitrary imported SysEx is not executable by default.
-- `performance_type` is a stable curated routing input; free-text instrumentation is advisory content, not a routing contract.
-- The reference service is intended for a trusted household LAN and is not an unauthenticated public-Internet endpoint.
+The living OpenOrchestrion v2 Markdown white paper and project site can describe implemented software now. Final publication media remains intentionally incomplete until hardware evidence is available.
 
-## Immediate proof sequence when hardware is available
+The project site must distinguish three levels of claim:
 
-1. Install/boot through the systemd appliance path and run `openorchestrion-smoke`.
-2. Confirm Linux enumerates the MIDI endpoint while the service is running.
-3. Send the synthetic single-note fixture and confirm internal audio playback.
-4. Verify velocity response and sustain CC64.
-5. Verify Program Change / Bank Select behavior and GM channel 10 percussion.
-6. Exercise receive range and practical 16/32/48/64-note stress.
-7. Run long-duration playback plus service restart/reconnect tests.
-8. Run the Pi timing benchmark under realistic kiosk/WebSocket/library load.
-9. With two sound engines, route the generated two-piano fixture from one master timeline and measure relative MIDI-to-audio latency.
-10. Exercise the full Concierge → Smart Station → queue → playback → history loop against real catalog material.
+1. **Implemented software:** behavior present and tested in the repository.
+2. **Documented compatibility:** manufacturer/source evidence indicates a capability.
+3. **Project validated:** physical OpenOrchestrion evidence has been captured.
+
+That distinction is part of the engineering standard, not a footnote.
