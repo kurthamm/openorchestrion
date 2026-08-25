@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openorchestrion.library.source_report import (
+    instrumentation_lines,
     item_links,
     looks_binary,
     summarize,
@@ -190,19 +191,44 @@ ENSEMBLE_RECORD = b"""<html><body>
 """
 
 
-def test_instrumentation_is_reported_alongside_terms() -> None:
-    # Curation asks two questions of an item: may we ship it, and what is it
-    # scored for. A report that answers only the first cannot tell a chamber
-    # score from the keyboard reduction filed beside it under the same title.
-    found = "\n".join(term_lines(text_lines(ENSEMBLE_RECORD)))
+def test_instrumentation_is_reported_separately_from_terms() -> None:
+    lines = text_lines(ENSEMBLE_RECORD)
+    instrumentation = "\n".join(instrumentation_lines(lines))
+    terms = "\n".join(term_lines(lines))
 
-    assert "2 Violins, Viola, Cello, Continuo" in found
-    assert "not a keyboard reduction" in found
-    assert "Public Domain" in found
+    assert "2 Violins, Viola, Cello, Continuo" in instrumentation
+    assert "not a keyboard reduction" in instrumentation
+    assert "Public Domain" not in instrumentation
+    assert "Public Domain" in terms
 
 
-def test_instrumentation_does_not_crowd_out_the_terms() -> None:
-    # The licence line must survive the cap even on a record that lists many
-    # instruments; terms are why the extract exists.
-    report = summarize(ENSEMBLE_RECORD)
+def test_instrumentation_only_does_not_suppress_the_no_rights_warning() -> None:
+    page = b"<html><body><p>Instrument(s): Piano</p></body></html>"
+    report = summarize(page)
+
+    assert "lines mentioning instrumentation" in report
+    assert "Instrument(s): Piano" in report
+    assert "no line mentions licence" in report
+    assert "not a clean result" in report
+
+
+def test_instrumentation_cannot_crowd_out_a_later_rights_line() -> None:
+    page = b"""<html><body>
+      <p>Instrument(s): Violin</p>
+      <p>Arrangement: orchestra</p>
+      <p>Scored for voices and strings</p>
+      <p>Copyright: Public Domain</p>
+    </body></html>"""
+    report = summarize(page, max_lines=1)
+
     assert "Copyright: Public Domain" in report
+    assert "lines mentioning terms (1)" in report
+    assert "lines mentioning instrumentation (1)" in report
+
+
+def test_voice_matches_as_a_word_not_inside_invoice() -> None:
+    lines = ["Invoice number 42", "Voices: soprano and alto"]
+    found = instrumentation_lines(lines)
+
+    assert "Invoice number 42" not in found
+    assert "Voices: soprano and alto" in found
