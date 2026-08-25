@@ -4,11 +4,13 @@
 The scan starts from the current inventory, not remembered favorite models. It runs
 multiple overlapping musical-keyboard searches against ShopGoodwill's live Buyer API,
 paginates each result set, detects broken/repeating pagination, deduplicates by item ID,
-removes obvious accessories/non-musical keyboards, and emits a compact candidate set.
+removes only clear non-instruments/controllers, and emits a compact candidate set.
 
-Inventory triage is intentionally separate from the procurement gate. Finalists still
-require manufacturer evidence for inbound MIDI, multitimbral/GM behavior, controllers,
-program changes, polyphony, and audio output.
+Recall is intentionally favored over precision. A real keyboard must never be discarded
+merely because its auction title also says adapter, stand, case, bench, or other bundled
+accessory. Inventory triage is separate from the procurement gate. Finalists still require
+manufacturer evidence for inbound MIDI, multitimbral/GM behavior, controllers, program
+changes, polyphony, and audio output.
 """
 
 from __future__ import annotations
@@ -47,15 +49,25 @@ QUERIES = [
     "Kurzweil keyboard",
 ]
 
-NEGATIVE_TITLE = re.compile(
-    r"\b(?:stand|bench|case|bag|cover|pedal|adapter|power supply|charger|cable|manual|"
-    r"sheet music|book|computer keyboard|wireless keyboard|gaming keyboard|typewriter|"
-    r"keycaps?|mouse|laptop|keyboard tray|keyboard drawer|controller only|midi controller)\b",
+# Only hard negatives go here. Do NOT put words such as adapter, stand, case, bench,
+# cable, or power supply here: those frequently describe useful bundles.
+HARD_NON_INSTRUMENT = re.compile(
+    r"\b(?:computer keyboard|wireless keyboard|gaming keyboard|mechanical keyboard|"
+    r"typewriter keyboard|keycaps?|computer mouse|laptop keyboard|keyboard tray|"
+    r"keyboard drawer)\b",
     re.I,
 )
+
+# A controller has no internal sound engine, so it cannot be the OpenOrchestrion endpoint.
+CONTROLLER_ONLY = re.compile(
+    r"\b(?:midi\s+controller|keyboard\s+controller|usb\s+midi\s+keyboard\s+controller|"
+    r"bluetooth\s+midi\s+keyboard\s+controller)\b",
+    re.I,
+)
+
 MUSICAL_HINT = re.compile(
     r"\b(?:piano|keyboard|synth|synthesizer|workstation|arranger|organ|PSR|DGX|YPG|"
-    r"CTK|CT-X|CTX|WK-?\d|Privia|Fantom|Juno|Motif)\b",
+    r"CTK|CT-X|CTX|WK-?\d|Privia|Fantom|Juno)\b",
     re.I,
 )
 
@@ -163,7 +175,7 @@ def triage_score(title: str) -> int:
         r"psr[- ](?:s|sx)\d", r"psr[- ]ew\d", r"dgx[- ]\d", r"ypg[- ]\d",
         r"ct[- ]?x\d", r"ctk[- ](?:6|7)\d{3}", r"wk[- ]\d",
         r"\bbk[- ]\d", r"\be[- ]\d{2,}", r"\bpa\d{2,}",
-        r"motif", r"fantom", r"juno", r"kurzweil",
+        r"motif", r"tyros", r"genos", r"fantom", r"juno", r"kurzweil",
     ]
     for p in strong_patterns:
         if re.search(p, t):
@@ -174,11 +186,11 @@ def triage_score(title: str) -> int:
         if re.search(p, t):
             score += 8
             break
-    if "with power" in t or "power adapter" in t or "ac adapter" in t:
+    if "with power" in t or "power adapter" in t or "ac adapter" in t or "with adapter" in t:
         score += 2
     if "tested" in t or "working" in t:
         score += 3
-    if "for parts" in t or "not working" in t or "untested" in t:
+    if "for parts" in t or "not working" in t or "needs repair" in t or "for repair" in t:
         score -= 8
     return score
 
@@ -213,7 +225,9 @@ def main() -> int:
     rows: list[dict[str, Any]] = []
     for iid, item in merged.items():
         title = str(item.get("title", ""))
-        if NEGATIVE_TITLE.search(title) or not MUSICAL_HINT.search(title):
+        if HARD_NON_INSTRUMENT.search(title) or CONTROLLER_ONLY.search(title):
+            continue
+        if not MUSICAL_HINT.search(title):
             continue
         rows.append({
             "itemId": iid,
