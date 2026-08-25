@@ -1,0 +1,138 @@
+/* Rendering controls for Issue #70. Kept separate from the core appliance sheet. */
+
+.rendering-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.rendering-card > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  cursor: pointer;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.rendering-card[open] > summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.rendering-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+}
+
+.rendering-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(240px, 1.6fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.render-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.render-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+
+.render-select {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  padding: 0 10px;
+  color: var(--ink);
+}
+
+.rendering-help,
+.render-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.rendering-mode-note,
+.rendering-loading {
+  align-self: center;
+  padding-bottom: 10px;
+}
+
+.render-overrides {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.render-override-row {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.55fr) minmax(220px, 1.45fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.render-remove {
+  min-height: 42px;
+}
+
+.render-override-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.render-override-actions .muted {
+  font-size: 0.78rem;
+  flex: 1 1 260px;
+}
+
+@media (max-width: 620px) {
+  .rendering-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .render-override-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .render-remove {
+    grid-column: 1 / -1;
+  }
+}
+
+/* 7-inch reference kiosk: keep the collapsed control to one compact row, and
+   make the expanded editor dense enough not to push the Concierge result away. */
+@media (max-height: 520px) and (min-width: 650px) {
+  .rendering-card > summary {
+    min-height: 38px;
+    padding-block: 5px;
+  }
+
+  .rendering-body {
+    padding-block: 8px;
+  }
+
+  .rendering-grid {
+    gap: 8px;
+  }
+
+  .render-select,
+  .render-remove {
+    min-height: 38px;
+  }
+}

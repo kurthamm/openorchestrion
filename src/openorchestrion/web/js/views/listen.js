@@ -8,6 +8,7 @@
 
 import { h, notice, render } from '../dom.js';
 import { formatSeconds } from '../position.js';
+import { mountRenderingControls } from './rendering.js';
 
 /** Declarative presets mirroring config/stations.example.yaml. */
 export const STATIONS = [
@@ -31,6 +32,10 @@ export function renderStations(node, handlers) {
       }),
     ),
   );
+  // Rendering is browser-local preference rather than server state, so mount it
+  // once beside the station shortcuts instead of rebuilding it on every socket
+  // state update.
+  mountRenderingControls(document.getElementById('rendering-panel'));
 }
 
 export function renderAskResult(node, state, handlers) {
@@ -139,11 +144,9 @@ function askErrorTitle(error) {
 /**
  * A short sentence describing what the appliance understood.
  *
- * docs/ux-and-control-surfaces.md asks for a readable sentence before playback
- * begins. The backend's `interpretation` is preferred when it is one; today the
- * offline interpreter emits keyword fragments ("high-familiarity, Christmas"),
- * so those are recomposed here rather than shown raw. The contract does not
- * pin the field's prose format, so this degrades instead of assuming.
+ * The backend now normally supplies readable prose. This defensive recomposition
+ * keeps the UI useful against older appliances or provider-specific keyword
+ * fragments because the contract deliberately does not pin prose format.
  */
 export function describe(intent) {
   if (!intent) return '';

@@ -15,6 +15,7 @@ This directory contains the living design and implementation specification.
 ## User experience and intelligence
 
 - [UX and control surfaces](ux-and-control-surfaces.md)
+- [Browser playback rendering controls](rendering-controls.md) — Original, Piano Only, and General MIDI channel overrides for the next queue.
 - [AI Music Concierge](ai-music-concierge.md)
 - [Hosted AI Music Concierge](hosted-ai-concierge.md) — optional OpenAI Responses API provider, secrets, privacy boundary and offline fallback.
 - [Smart stations and selection](stations-and-selection.md)
