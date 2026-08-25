@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from openorchestrion.library.source_report import (
+    instrumentation_lines,
     item_links,
     looks_binary,
     summarize,
@@ -177,3 +178,57 @@ def test_a_listing_reports_its_links_in_the_summary() -> None:
     report = summarize(LISTING, url="https://www.mutopiaproject.org/browse.html")
     assert "links to item records or files" in report
     assert "piece-info.cgi?id=1778" in report
+
+
+ENSEMBLE_RECORD = b"""<html><body>
+  <table>
+    <tr><td>Title:</td><td>Air</td></tr>
+    <tr><td>Instrument(s):</td><td>2 Violins, Viola, Cello, Continuo</td></tr>
+    <tr><td>Arrangement:</td><td>original scoring, not a keyboard reduction</td></tr>
+    <tr><td>Copyright:</td><td>Public Domain</td></tr>
+  </table>
+</body></html>
+"""
+
+
+def test_instrumentation_is_reported_separately_from_terms() -> None:
+    lines = text_lines(ENSEMBLE_RECORD)
+    instrumentation = "\n".join(instrumentation_lines(lines))
+    terms = "\n".join(term_lines(lines))
+
+    assert "2 Violins, Viola, Cello, Continuo" in instrumentation
+    assert "not a keyboard reduction" in instrumentation
+    assert "Public Domain" not in instrumentation
+    assert "Public Domain" in terms
+
+
+def test_instrumentation_only_does_not_suppress_the_no_rights_warning() -> None:
+    page = b"<html><body><p>Instrument(s): Piano</p></body></html>"
+    report = summarize(page)
+
+    assert "lines mentioning instrumentation" in report
+    assert "Instrument(s): Piano" in report
+    assert "no line mentions licence" in report
+    assert "not a clean result" in report
+
+
+def test_instrumentation_cannot_crowd_out_a_later_rights_line() -> None:
+    page = b"""<html><body>
+      <p>Instrument(s): Violin</p>
+      <p>Arrangement: orchestra</p>
+      <p>Scored for voices and strings</p>
+      <p>Copyright: Public Domain</p>
+    </body></html>"""
+    report = summarize(page, max_lines=1)
+
+    assert "Copyright: Public Domain" in report
+    assert "lines mentioning terms (1)" in report
+    assert "lines mentioning instrumentation (1)" in report
+
+
+def test_voice_matches_as_a_word_not_inside_invoice() -> None:
+    lines = ["Invoice number 42", "Voices: soprano and alto"]
+    found = instrumentation_lines(lines)
+
+    assert "Invoice number 42" not in found
+    assert "Voices: soprano and alto" in found

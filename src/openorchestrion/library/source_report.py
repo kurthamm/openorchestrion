@@ -18,9 +18,11 @@ needs to see before making a claim:
   tied together later;
 * whether the bytes are **readable MIDI with notes**, since archives serve error
   pages with ``.mid`` names when a link rots;
-* for a page, the **lines that mention terms** — licence, copyright, permission —
-  because an item record is mostly navigation and the four lines that matter are
-  buried in it;
+* for a page, the **lines that mention terms** — licence, copyright, permission,
+  attribution and related evidence;
+* separately, the **lines that mention instrumentation/arrangement**, so an
+  ensemble score can be distinguished from a keyboard reduction without letting
+  scoring text masquerade as rights evidence;
 * for a page, the **links that lead to item records or MIDI files**, because
   finding the record is the step before reading it and a browse listing carries
   that entirely in its markup.
@@ -42,7 +44,7 @@ from urllib.parse import urljoin
 
 from openorchestrion.midi.analyzer import analyze_midi
 
-#: Words that mark a line as worth a curator's attention on an item record.
+#: Words that mark a line as worth a curator's attention when researching terms.
 #:
 #: Deliberately broad. A missed line costs a second look at the page; a filter
 #: tuned so finely that it drops the one sentence reserving rights would leave a
@@ -73,6 +75,17 @@ TERM_KEYWORDS: tuple[str, ...] = (
     "publisher",
 )
 
+#: Scoring/arrangement clues. Kept out of TERM_KEYWORDS deliberately: a page that
+#: says only ``Instrument(s): Piano`` has told us nothing about redistribution.
+INSTRUMENTATION_KEYWORDS: tuple[str, ...] = (
+    "instrument",
+    "scored for",
+    "arrangement",
+    "arranged",
+    "for orchestra",
+    "voice",
+)
+
 #: Link targets worth showing: an item record to read, or a file to fetch.
 #:
 #: A browse listing is almost entirely navigation, so an unfiltered link dump is
@@ -91,6 +104,7 @@ _HREF = re.compile(r"""<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))"
 _BLOCK_END = re.compile(r"</(p|div|tr|li|h[1-6]|table|br)\s*>|<br\s*/?>", re.IGNORECASE)
 _TAG = re.compile(r"<[^>]+>")
 _SPACES = re.compile(r"[ \t ]+")
+_VOICE_WORD = re.compile(r"\bvoices?\b", re.IGNORECASE)
 
 DEFAULT_MAX_LINES = 60
 DEFAULT_MAX_LINKS = 40
@@ -125,18 +139,26 @@ def text_lines(payload: bytes) -> list[str]:
     return lines
 
 
-def term_lines(lines: list[str], *, max_lines: int = DEFAULT_MAX_LINES) -> list[str]:
-    """The subset of lines that mention terms, in page order and without repeats.
+def _matches_keyword(lowered: str, keyword: str) -> bool:
+    # ``voice`` is a normal English word rather than an intentional stem. A
+    # substring check would classify ``invoice`` as instrumentation and could
+    # consume a capped report slot. Plural ``voices`` remains useful evidence.
+    if keyword == "voice":
+        return _VOICE_WORD.search(lowered) is not None
+    return keyword in lowered
 
-    Repeats are dropped because archive pages state the same licence in a
-    sidebar, a footer and a metadata table; three copies of one sentence pushes
-    the sentence that differs off the end of a capped extract.
-    """
+
+def _matching_lines(
+    lines: list[str],
+    keywords: tuple[str, ...],
+    *,
+    max_lines: int,
+) -> list[str]:
     seen: set[str] = set()
     kept: list[str] = []
     for line in lines:
         lowered = line.casefold()
-        if not any(keyword in lowered for keyword in TERM_KEYWORDS):
+        if not any(_matches_keyword(lowered, keyword) for keyword in keywords):
             continue
         if lowered in seen:
             continue
@@ -145,6 +167,24 @@ def term_lines(lines: list[str], *, max_lines: int = DEFAULT_MAX_LINES) -> list[
         if len(kept) >= max_lines:
             break
     return kept
+
+
+def term_lines(lines: list[str], *, max_lines: int = DEFAULT_MAX_LINES) -> list[str]:
+    """Lines relevant to rights/provenance research, without repeats.
+
+    Instrumentation is intentionally excluded. Its own extract cannot suppress
+    the no-rights warning or consume this quota before a later copyright line.
+    """
+    return _matching_lines(lines, TERM_KEYWORDS, max_lines=max_lines)
+
+
+def instrumentation_lines(
+    lines: list[str],
+    *,
+    max_lines: int = DEFAULT_MAX_LINES,
+) -> list[str]:
+    """Lines that describe scoring/arrangement, independently capped."""
+    return _matching_lines(lines, INSTRUMENTATION_KEYWORDS, max_lines=max_lines)
 
 
 def item_links(
@@ -206,11 +246,11 @@ def summarize(
     lines = text_lines(payload)
     report.append(f"lines:    {len(lines)} readable")
 
-    found = term_lines(lines, max_lines=max_lines)
-    if found:
+    terms = term_lines(lines, max_lines=max_lines)
+    if terms:
         report.append("")
-        report.append(f"lines mentioning terms ({len(found)}):")
-        report.extend(f"  | {line}" for line in found)
+        report.append(f"lines mentioning terms ({len(terms)}):")
+        report.extend(f"  | {line}" for line in terms)
     else:
         report.append("")
         report.append(
@@ -218,6 +258,12 @@ def summarize(
             "clean result — it usually means the terms live on a linked page, or "
             "this is not the item record."
         )
+
+    instrumentation = instrumentation_lines(lines, max_lines=max_lines)
+    if instrumentation:
+        report.append("")
+        report.append(f"lines mentioning instrumentation ({len(instrumentation)}):")
+        report.extend(f"  | {line}" for line in instrumentation)
 
     links = item_links(payload, base_url=url, max_links=max_links)
     if links:
@@ -268,7 +314,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--max-lines",
         type=int,
         default=DEFAULT_MAX_LINES,
-        help=f"Cap on extracted term lines (default {DEFAULT_MAX_LINES})",
+        help=f"Cap on each extracted terms/instrumentation section (default {DEFAULT_MAX_LINES})",
     )
     parser.add_argument(
         "--max-links",
