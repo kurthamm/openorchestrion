@@ -1,3 +1,5 @@
+import { loadRenderingPreference, renderingPayload } from './rendering.js';
+
 /**
  * The single seam between the UI and the backend.
  *
@@ -118,9 +120,15 @@ export const api = {
     mode = 'replace',
     seed = 0,
     maxTracks = 25,
-    rendering = null,
+    rendering,
     id = commandId(),
   }) => {
+    // Most callers intentionally omit `rendering`: the current browser-local
+    // preference is applied at the transport seam, so Concierge, stations, and
+    // manual Browse play all behave consistently without view-specific logic.
+    const selectedRendering = rendering === undefined
+      ? renderingPayload(loadRenderingPreference())
+      : rendering;
     const body = {
       mode,
       intent: intent ?? null,
@@ -131,7 +139,7 @@ export const api = {
     };
     // Original Arrangement deliberately omits the optional field so the default
     // request stays identical to the pre-rendering browser contract.
-    if (rendering) body.rendering = rendering;
+    if (selectedRendering) body.rendering = selectedRendering;
     return request('/api/queue', { method: 'POST', body });
   },
   reorderQueue: (assetId, toIndex, id = commandId()) =>
