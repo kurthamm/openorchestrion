@@ -20,13 +20,16 @@ import re
 import sys
 import time
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 import requests
 
 SEARCH_URL = "https://buyerapi.shopgoodwill.com/api/Search/ItemListing"
+TRANSIENT_HTTP = {429, 500, 502, 503, 504}
 
 # Coverage arms, not ranking priors. Overlap is deliberate; item IDs are deduplicated.
+# Do not add broad tokenized searches that explode into thousands of irrelevant results.
 QUERIES = [
     "digital piano",
     "electronic piano",
@@ -40,7 +43,6 @@ QUERIES = [
     "Yamaha YPG",
     "Casio keyboard",
     "Casio CTK",
-    "Casio CT X",
     "Casio WK keyboard",
     "Casio Privia",
     "Roland keyboard",
@@ -123,6 +125,67 @@ def request_payload(query: str, page: int) -> dict[str, Any]:
     }
 
 
+def retry_after_seconds(response: requests.Response) -> float | None:
+    value = response.headers.get("Retry-After")
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except ValueError:
+        try:
+            dt = parsedate_to_datetime(value)
+            now = datetime.now(dt.tzinfo or timezone.utc)
+            return max(0.0, (dt - now).total_seconds())
+        except Exception:
+            return None
+
+
+def post_search_with_retry(
+    s: requests.Session,
+    query: str,
+    page: int,
+    max_attempts: int = 6,
+) -> requests.Response:
+    """POST one search page with bounded exponential backoff for SGW throttling/outages."""
+    last: requests.Response | None = None
+    for attempt in range(max_attempts):
+        try:
+            response = s.post(SEARCH_URL, json=request_payload(query, page), timeout=30)
+        except requests.RequestException:
+            if attempt == max_attempts - 1:
+                raise
+            delay = min(60.0, 2.0 ** (attempt + 1))
+            print(
+                f"RETRY {query!r} page={page} transport-error wait={delay:.0f}s",
+                file=sys.stderr,
+                flush=True,
+            )
+            time.sleep(delay)
+            continue
+
+        last = response
+        if response.status_code not in TRANSIENT_HTTP:
+            response.raise_for_status()
+            return response
+
+        if attempt == max_attempts - 1:
+            response.raise_for_status()
+
+        header_delay = retry_after_seconds(response)
+        delay = header_delay if header_delay is not None else min(60.0, 2.0 ** (attempt + 1))
+        delay = max(1.0, min(60.0, delay))
+        print(
+            f"RETRY {query!r} page={page} HTTP={response.status_code} wait={delay:.0f}s",
+            file=sys.stderr,
+            flush=True,
+        )
+        time.sleep(delay)
+
+    assert last is not None
+    last.raise_for_status()
+    return last
+
+
 def search_all_pages(s: requests.Session, query: str) -> tuple[list[dict[str, Any]], int, str | None]:
     out: list[dict[str, Any]] = []
     seen_page_fingerprints: set[tuple[int, ...]] = set()
@@ -130,8 +193,7 @@ def search_all_pages(s: requests.Session, query: str) -> tuple[list[dict[str, An
     warning = None
 
     for page in range(1, 51):
-        r = s.post(SEARCH_URL, json=request_payload(query, page), timeout=30)
-        r.raise_for_status()
+        r = post_search_with_retry(s, query, page)
         sr = r.json().get("searchResults", {})
         items = sr.get("items", []) or []
         total = int(sr.get("itemCount", 0) or 0)
@@ -147,7 +209,7 @@ def search_all_pages(s: requests.Session, query: str) -> tuple[list[dict[str, An
 
         if len(items) < 40 or len({int(x.get('itemId', 0) or 0) for x in out}) >= total:
             break
-        time.sleep(0.03)
+        time.sleep(0.15)
     else:
         warning = "50-page safety cap reached"
 
@@ -217,6 +279,7 @@ def main() -> int:
                 continue
             merged[iid] = item
             matched_by.setdefault(iid, set()).add(q)
+        time.sleep(0.25)
 
     if not merged:
         print("No live inventory returned from any coverage arm", file=sys.stderr)
