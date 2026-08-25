@@ -76,6 +76,6 @@ def test_v2_whitepaper_is_truthful_about_software_vs_hardware_evidence() -> None
 def test_public_status_no_longer_calls_the_project_repository_bootstrap() -> None:
     status = (REPO_ROOT / "PROJECT_STATUS.md").read_text(encoding="utf-8")
     assert "architecture / hardware validation / repository bootstrap" not in status
-    assert "Hosted OpenAI Concierge" in status
+    assert "OpenAI Responses API adapter" in status
     assert "browser rendering controls" in status
     assert "verified backup/restore" in status
