@@ -1,85 +1,97 @@
 /** Browser-local controls for the rendering policy applied to the next queue. */
 
+import { api } from '../api.js';
 import { h, notice, render } from '../dom.js';
+import {
+  loadRenderingPreference,
+  normalizeRenderingPreference,
+  saveRenderingPreference,
+} from '../rendering.js';
 
-const STORAGE_KEY = 'oo.rendering';
 const MODE_LABELS = {
   ORIGINAL: 'Original arrangement',
   PIANO_ONLY: 'Piano only',
   OVERRIDE: 'Instrument overrides',
 };
 
-export const DEFAULT_RENDERING = Object.freeze({
-  mode: 'ORIGINAL',
-  pianoProgram: 0,
-  overrides: [],
-});
+/** Mount once. WebSocket/server-state updates must not rebuild this local editor. */
+export function mountRenderingControls(node) {
+  if (!node || node.dataset.renderingMounted === 'true') return;
+  node.dataset.renderingMounted = 'true';
 
-function integer(value, fallback) {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) ? parsed : fallback;
-}
-
-export function normalizeRenderingPreference(value) {
-  const source = value && typeof value === 'object' ? value : {};
-  const mode = ['ORIGINAL', 'PIANO_ONLY', 'OVERRIDE'].includes(source.mode)
-    ? source.mode
-    : 'ORIGINAL';
-  const pianoProgram = Math.min(7, Math.max(0, integer(source.pianoProgram, 0)));
-  const seen = new Set();
-  const overrides = [];
-  for (const row of Array.isArray(source.overrides) ? source.overrides : []) {
-    const channel = integer(row?.channel, -1);
-    const program = integer(row?.program, -1);
-    if (channel < 0 || channel > 15 || channel === 9 || seen.has(channel)) continue;
-    if (program < 0 || program > 127) continue;
-    seen.add(channel);
-    overrides.push({ channel, program });
-  }
-  return { mode, pianoProgram, overrides };
-}
-
-export function loadRenderingPreference(storage = globalThis.localStorage) {
-  try {
-    const raw = storage?.getItem?.(STORAGE_KEY);
-    return raw ? normalizeRenderingPreference(JSON.parse(raw)) : { ...DEFAULT_RENDERING, overrides: [] };
-  } catch {
-    return { ...DEFAULT_RENDERING, overrides: [] };
-  }
-}
-
-export function saveRenderingPreference(preference, storage = globalThis.localStorage) {
-  try {
-    storage?.setItem?.(STORAGE_KEY, JSON.stringify(normalizeRenderingPreference(preference)));
-  } catch {
-    /* Private mode/storage denial is not a playback failure. */
-  }
-}
-
-/** Translate browser preference into the public queue request shape. */
-export function renderingPayload(preference) {
-  const normalized = normalizeRenderingPreference(preference);
-  if (normalized.mode === 'ORIGINAL') return null;
-  if (normalized.mode === 'PIANO_ONLY') {
-    return {
-      mode: 'PIANO_ONLY',
-      piano_program: normalized.pianoProgram,
-      program_overrides: [],
-    };
-  }
-  if (!normalized.overrides.length) {
-    throw new Error('Add at least one channel override before using Instrument overrides.');
-  }
-  return {
-    mode: 'OVERRIDE',
-    piano_program: normalized.pianoProgram,
-    program_overrides: normalized.overrides.map(({ channel, program }) => ({ channel, program })),
+  let preference = loadRenderingPreference();
+  let options = {
+    loading: true,
+    error: null,
+    modes: ['ORIGINAL'],
+    piano_programs: [],
+    programs: [],
+    percussion_channel: 9,
   };
+
+  const rerender = () => renderRenderingControls(node, preference, options, handlers);
+  const persist = (next) => {
+    preference = saveRenderingPreference(next);
+    rerender();
+  };
+
+  const handlers = {
+    setRenderingMode(mode) {
+      persist({ ...preference, mode });
+    },
+
+    setPianoProgram(program) {
+      persist({ ...preference, pianoProgram: program });
+    },
+
+    addRenderingOverride() {
+      const percussion = options.percussion_channel ?? 9;
+      const used = new Set(preference.overrides.map((row) => row.channel));
+      const channel = Array.from({ length: 16 }, (_, value) => value)
+        .find((value) => value !== percussion && !used.has(value));
+      if (channel === undefined) return;
+      persist({
+        ...preference,
+        overrides: [...preference.overrides, { channel, program: 0 }],
+      });
+    },
+
+    updateRenderingOverride(index, patch) {
+      const overrides = preference.overrides.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, ...patch } : row,
+      );
+      persist({ ...preference, overrides });
+    },
+
+    removeRenderingOverride(index) {
+      persist({
+        ...preference,
+        overrides: preference.overrides.filter((_, rowIndex) => rowIndex !== index),
+      });
+    },
+  };
+
+  rerender();
+  void api.renderingOptions().then(
+    (loaded) => {
+      options = { ...loaded, loading: false, error: null };
+      if (!options.modes.includes(preference.mode)) {
+        preference = saveRenderingPreference({ ...preference, mode: 'ORIGINAL' });
+      }
+      rerender();
+    },
+    (error) => {
+      // A backend without the rendering-options endpoint is treated as the old
+      // compatibility path. Do not keep sending a stale non-original policy.
+      preference = saveRenderingPreference({ ...preference, mode: 'ORIGINAL' });
+      options = { ...options, loading: false, error };
+      rerender();
+    },
+  );
 }
 
-export function renderRenderingControls(node, state, handlers) {
-  const preference = normalizeRenderingPreference(state.rendering);
-  const options = state.renderingOptions;
+function renderRenderingControls(node, preference, options, handlers) {
+  preference = normalizeRenderingPreference(preference);
   const modes = options?.modes || ['ORIGINAL'];
 
   const blocks = [
@@ -118,7 +130,7 @@ export function renderRenderingControls(node, state, handlers) {
       notice(
         'warn',
         'Rendering options unavailable',
-        'Original Arrangement still works. Reload when the appliance API is available.',
+        'Using Original Arrangement until this appliance exposes the rendering vocabulary.',
       ),
     );
   }
@@ -196,7 +208,9 @@ function modeEditor(preference, options, handlers) {
 
 function overrideRow(row, index, preference, options, handlers) {
   const percussion = options?.percussion_channel ?? 9;
-  const used = new Set(preference.overrides.map((entry, rowIndex) => rowIndex === index ? -1 : entry.channel));
+  const used = new Set(
+    preference.overrides.map((entry, rowIndex) => rowIndex === index ? -1 : entry.channel),
+  );
   const channels = Array.from({ length: 16 }, (_, channel) => channel)
     .filter((channel) => channel !== percussion && !used.has(channel));
 
