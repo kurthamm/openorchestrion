@@ -1,0 +1,27 @@
+name: ShopGoodwill Top Buy Now Check
+
+on:
+  push:
+    branches:
+      - sgw-buy-now-20260825
+    paths:
+      - 'scripts/sgw_top_buy_now_scan.py'
+      - '.github/workflows/sgw-top-buy-now.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependency
+        run: python -m pip install --disable-pip-version-check requests
+      - name: Check top models with Buy Now filter
+        run: python scripts/sgw_top_buy_now_scan.py
