@@ -77,5 +77,5 @@ def test_public_status_no_longer_calls_the_project_repository_bootstrap() -> Non
     status = (REPO_ROOT / "PROJECT_STATUS.md").read_text(encoding="utf-8")
     assert "architecture / hardware validation / repository bootstrap" not in status
     assert "OpenAI Responses API adapter" in status
-    assert "browser rendering controls" in status
+    assert "rendering controls for the next queue" in status
     assert "verified backup/restore" in status
