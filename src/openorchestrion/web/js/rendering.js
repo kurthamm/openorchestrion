@@ -32,9 +32,10 @@ export function normalizeRenderingPreference(value) {
   return { mode, pianoProgram, overrides };
 }
 
-export function loadRenderingPreference(storage = globalThis.localStorage) {
+export function loadRenderingPreference(storage) {
   try {
-    const raw = storage?.getItem?.(STORAGE_KEY);
+    const target = storage === undefined ? globalThis.localStorage : storage;
+    const raw = target?.getItem?.(STORAGE_KEY);
     return raw
       ? normalizeRenderingPreference(JSON.parse(raw))
       : { ...DEFAULT_RENDERING, overrides: [] };
@@ -43,10 +44,11 @@ export function loadRenderingPreference(storage = globalThis.localStorage) {
   }
 }
 
-export function saveRenderingPreference(preference, storage = globalThis.localStorage) {
+export function saveRenderingPreference(preference, storage) {
   const normalized = normalizeRenderingPreference(preference);
   try {
-    storage?.setItem?.(STORAGE_KEY, JSON.stringify(normalized));
+    const target = storage === undefined ? globalThis.localStorage : storage;
+    target?.setItem?.(STORAGE_KEY, JSON.stringify(normalized));
   } catch {
     /* Storage denial/private mode only means the preference won't survive reload. */
   }
