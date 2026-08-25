@@ -26,6 +26,18 @@ const initial = {
   history: { items: [], loading: false, error: null },
   localFavorites: new Set(),
   favoritesPersist: true,
+  // Rendering is intentionally browser-local preference for the next queue.
+  // The active queue/playback remain server-owned and may be replaced by a
+  // different control surface at any time.
+  rendering: { mode: 'ORIGINAL', pianoProgram: 0, overrides: [] },
+  renderingOptions: {
+    loading: true,
+    error: null,
+    modes: ['ORIGINAL'],
+    piano_programs: [],
+    programs: [],
+    percussion_channel: 9,
+  },
 };
 
 let state = { ...initial };
