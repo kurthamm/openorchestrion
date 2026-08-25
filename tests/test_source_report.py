@@ -177,3 +177,32 @@ def test_a_listing_reports_its_links_in_the_summary() -> None:
     report = summarize(LISTING, url="https://www.mutopiaproject.org/browse.html")
     assert "links to item records or files" in report
     assert "piece-info.cgi?id=1778" in report
+
+
+ENSEMBLE_RECORD = b"""<html><body>
+  <table>
+    <tr><td>Title:</td><td>Air</td></tr>
+    <tr><td>Instrument(s):</td><td>2 Violins, Viola, Cello, Continuo</td></tr>
+    <tr><td>Arrangement:</td><td>original scoring, not a keyboard reduction</td></tr>
+    <tr><td>Copyright:</td><td>Public Domain</td></tr>
+  </table>
+</body></html>
+"""
+
+
+def test_instrumentation_is_reported_alongside_terms() -> None:
+    # Curation asks two questions of an item: may we ship it, and what is it
+    # scored for. A report that answers only the first cannot tell a chamber
+    # score from the keyboard reduction filed beside it under the same title.
+    found = "\n".join(term_lines(text_lines(ENSEMBLE_RECORD)))
+
+    assert "2 Violins, Viola, Cello, Continuo" in found
+    assert "not a keyboard reduction" in found
+    assert "Public Domain" in found
+
+
+def test_instrumentation_does_not_crowd_out_the_terms() -> None:
+    # The licence line must survive the cap even on a record that lists many
+    # instruments; terms are why the extract exists.
+    report = summarize(ENSEMBLE_RECORD)
+    assert "Copyright: Public Domain" in report

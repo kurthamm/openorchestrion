@@ -18,9 +18,9 @@ needs to see before making a claim:
   tied together later;
 * whether the bytes are **readable MIDI with notes**, since archives serve error
   pages with ``.mid`` names when a link rots;
-* for a page, the **lines that mention terms** — licence, copyright, permission —
-  because an item record is mostly navigation and the four lines that matter are
-  buried in it;
+* for a page, the **lines that mention terms or instrumentation** — licence,
+  copyright, permission, and what the piece is scored for — because an item
+  record is mostly navigation and the few lines that matter are buried in it;
 * for a page, the **links that lead to item records or MIDI files**, because
   finding the record is the step before reading it and a browse listing carries
   that entirely in its markup.
@@ -71,6 +71,19 @@ TERM_KEYWORDS: tuple[str, ...] = (
     "date of composition",
     "source edition",
     "publisher",
+    # What the piece is scored for. Not a rights question, but curation asks two
+    # things of an item and this is the second: a catalog that is entirely
+    # keyboard has nothing to distribute across devices that was not a keyboard
+    # part already. Several works exist in an archive both as an ensemble score
+    # and as a keyboard reduction — different files, sometimes under different
+    # terms — so the instrumentation has to be read rather than inferred from a
+    # title that names neither.
+    "instrument",
+    "scored for",
+    "arrangement",
+    "arranged",
+    "for orchestra",
+    "voice",
 )
 
 #: Link targets worth showing: an item record to read, or a file to fetch.
@@ -209,7 +222,7 @@ def summarize(
     found = term_lines(lines, max_lines=max_lines)
     if found:
         report.append("")
-        report.append(f"lines mentioning terms ({len(found)}):")
+        report.append(f"lines mentioning terms or instrumentation ({len(found)}):")
         report.extend(f"  | {line}" for line in found)
     else:
         report.append("")
