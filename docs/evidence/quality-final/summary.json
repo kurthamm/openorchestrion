@@ -1,0 +1,69 @@
+{
+  "policy_version": "complete-listening-v2",
+  "facts_file_sha256": "cd0cee2c3e9f71d7386bf486fdbf3307f7a9d33e15c9f4dab43c7ee8528b8fed",
+  "structure_file_sha256": "b004fee2906c628c60a77c4798eef64dd45caa472ad0802b53f6f33bdb1147e6",
+  "evidence_file_sha256": {
+    "maestro-evidence.json": "82b75b4465227ae37cefb28ee87dd3842ce4d9e43c2e5630c22f440299bccdff",
+    "mutopia-evidence.json": "4dcb98308a56ab6a4d3d39fc8d6e46cd88247589b1fe60c5482b697c14f7f1fd"
+  },
+  "counts": {
+    "unresolved": 19522,
+    "qualified": 5832,
+    "excluded": 539
+  },
+  "sources": {
+    "BitMidi": {
+      "unresolved": 15398,
+      "qualified": 4160,
+      "excluded": 29
+    },
+    "MAESTRO v3.0.0 (International Piano-e-Competition)": {
+      "qualified": 1276
+    },
+    "Mutopia Project": {
+      "unresolved": 4123,
+      "qualified": 396,
+      "excluded": 510
+    },
+    "Wikimedia Commons": {
+      "unresolved": 1
+    }
+  },
+  "reason_counts": {
+    "completeness_unresolved": 16960,
+    "insufficient_performance_expression": 10309,
+    "published_instrument_assignment_unresolved": 2768,
+    "confirmed_partial_arrangement": 490,
+    "unexplained_internal_silence": 101,
+    "excessive_tail": 352,
+    "unresolved_note_endings": 116,
+    "no_pitched_arrangement": 38,
+    "invalid_duration": 25,
+    "duplicate_timed_playback": 10,
+    "unreadable_or_unsupported": 1
+  },
+  "recovered_from_prior_archive": 129,
+  "qualification_basis": {
+    "structural_assessment": 4160,
+    "publisher_verified": 1672
+  },
+  "qualified_warnings": {
+    "unverified_device_setup": 2010,
+    "unverified_drum_kit": 684,
+    "unverified_sound_bank": 397,
+    "pedal_release_needed_at_stop": 255,
+    "wk220_voice_capacity_risk": 81
+  },
+  "total_originals": 25893,
+  "previous_active": 20549,
+  "archive_total_after_publication": 20061,
+  "rehearsal": {
+    "originals_verified_after_restore": 25893,
+    "published_count": 5832,
+    "restored_count": 20549,
+    "seconds": 424.15,
+    "run": "quality-20260907T231304.493061Z"
+  },
+  "same_title_groups": 826,
+  "same_title_policy": "Report only; never merge or exclude different performances by title. Only exact timed-playback fingerprints deduplicated."
+}

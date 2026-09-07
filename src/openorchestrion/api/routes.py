@@ -32,6 +32,7 @@ from ..library.metadata import (
     sidecar_path,
 )
 from ..library.readiness import readiness, source_facts
+from ..library.qualification import qualification
 from ..models import PlaybackIntent
 from ..playback import (
     PlaybackConflict,
@@ -140,6 +141,7 @@ def _performance_preview(settings: Settings, asset_id: str, payload: Performance
     except (OSError, ValueError) as exc:
         raise ApiError("analysis_unavailable", "Playback facts could not be verified for this file.", status_code=409) from exc
     return {"rendering_mode": payload.rendering.mode.value if payload.rendering else "AUTO",
+            "qualification": qualification(settings.catalog_db, asset_id),
             "readiness": readiness(facts, spec.performance_type, spec.rendering_policy)}
 
 

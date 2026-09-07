@@ -123,6 +123,7 @@ class PerformancePreviewRequest(ListeningModel):
 
 
 class PerformancePreview(ListeningModel):
+    qualification: dict | None = None
     rendering_mode: str
     readiness: PlaybackReadiness
 

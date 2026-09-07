@@ -262,6 +262,26 @@ def _stage_assets(source_library: Path, staged_library: Path) -> tuple[ManifestF
     if after != before:
         raise BackupError("library asset set changed during backup; retry the backup")
 
+    # Admission and its explanation must survive restore; otherwise subsequent
+    # imports could bypass the listening policy. Recovery archives are separate
+    # appliance data and are retained by the full curation snapshot.
+    for name in ('listening-admission.json', 'quality.sqlite3'):
+        source = source_library / name
+        if not source.exists():
+            continue
+        target = staged_library / name
+        if source.is_symlink():
+            raise BackupError(f'quality state is a symlink: {name}')
+        if name.endswith('.sqlite3'):
+            with sqlite3.connect(f'{source.resolve().as_uri()}?mode=ro', uri=True) as src, sqlite3.connect(target) as dst:
+                src.backup(dst)
+            src.close()
+            dst.close()
+        else:
+            target.write_bytes(source.read_bytes())
+        digest, size = _sha256_file(target)
+        entries.append(ManifestFile(path=f'library/{name}', size=size, sha256=digest))
+
     # Exercise the same strict sidecar/index path a restore will depend on. The
     # generated catalog proves all staged sidecars are indexable, then is deleted
     # because catalogs are not authoritative backup data.
@@ -430,6 +450,8 @@ def _safe_member_name(name: str) -> str:
 
 
 def _allowed_payload_path(path: str) -> bool:
+    if path in {'library/listening-admission.json', 'library/quality.sqlite3'}:
+        return True
     if path in {"history.db", "player-state.db"}:
         return True
     pure = PurePosixPath(path)

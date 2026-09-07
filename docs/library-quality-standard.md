@@ -1,8 +1,11 @@
 # MIDI listening quality: definition and evidence
 
 Research date: 7 September 2026. This is the project's quality definition and
-implementation specification. It does **not** certify the current 20,549 admitted
-files or silently replace the deployed `household-listening-v1` admission policy.
+implementation specification. The initial inventory below is historical. The
+[full v2 assessment and publication](library-quality-publication.md) implements
+source qualification for 5,832 performances, with publisher verification and
+structural inference labeled separately. Device fidelity remains a separate
+conditional assessment; source admission does not certify acoustic realization.
 
 ## What qualifies as a quality file
 

@@ -1,18 +1,23 @@
 # Developer handoff — 7 September 2026
 
-## Quality research and compatibility preview (not deployed)
+## Complete-listening v2 release
 
-Read the [quality definition and source research](library-quality-standard.md)
-before changing admission rules. It separates musical completeness, expression,
-technical integrity and device fidelity, with a 76-file raw-event study and
-all-20,549-file palette inventory. The [compatibility preview](library-compatibility.md)
-adds source-versus-rendered sound palettes and precise WK-220 LSB warnings.
-The tested wheel is not installed; preserve the current queue and its sound
-setting. Expanded analysis and completeness-based curation remain specified work.
-Playlists, queue editing, modes, seek, sleep and persistence belong to the other
-developer and are not modified by this change.
+The [quality publication record](library-quality-publication.md) supersedes the v1
+selection and the earlier publisher-only candidate. The full 25,893-original scan
+qualifies **5,832 performances** and retains **20,061 originals in the archive**.
+The manifest includes source evidence, structural inference, reason codes and
+input hashes for each file; 129 earlier exclusions qualify under the new evidence.
+Read the evidence summary and deployment record before modifying the library.
 
-## Current library-readiness release
+The release adds sostenuto-aware quality facts, independent arrangement evidence,
+reversible publication/recovery, a read-only qualification panel and backup of the
+v2 allowlist/evidence database. It preserves the other developer's saved playlists,
+queue editing, modes, seek, sleep, restart persistence and Cloudflare protection.
+Do not re-run the older v1 publisher or remove the admission manifest to import.
+New acquisitions require assessment before catalog admission. Normal application
+backups cover the active library; preserve the separate full archive as well.
+
+## Historical playback-readiness release
 
 The [playback-readiness release](library-playback-readiness.md) adds policy-aware
 What will play previews, all-library part facts, faster filters/repeat preparation,
@@ -40,9 +45,9 @@ The deployed runtime source was committed on the Pi as `c02a050a061bfefb99e3668c
 
 ## Deployment and data boundaries
 
-The Pi checkout is `/home/kurt/openorchestrion`; production runs the installed wheel under `/opt/openorchestrion/venv`, not an editable checkout. A Git commit alone does not deploy changes. Both application and discovery services were verified active after release. The current wheel hash is recorded in the playback-readiness release document; the listening-room document retains the earlier release and rollback history.
+The Pi checkout is `/home/kurt/openorchestrion`; production runs the installed wheel under `/opt/openorchestrion/venv`, not an editable checkout. A Git commit alone does not deploy changes. Both application and discovery services were verified active after release. The current wheel hash is recorded in the quality publication evidence; the listening-room document retains the earlier release and rollback history.
 
-The admitted library has **20,549 performances**. The **5,344 excluded files remain archived**, not deleted. Admission is enforced during full rebuild and individual reindex. Do not bypass `listening-admission.json`, reimport archived copies into the active catalog, or regenerate descriptive metadata as a side effect of UI development. Favorites belong in the sidecars, and the catalog remains rebuildable.
+The v2 library has **5,832 performances**. The **20,061 other originals remain archived**, not deleted. Admission is enforced during full rebuild and individual reindex. Do not bypass `listening-admission.json`, reimport archived copies into the active catalog, or regenerate descriptive metadata as a side effect of UI development. Favorites belong in the sidecars, and the catalog remains rebuildable.
 
 AI is deferred in the current interface. The existing provider/intent/station APIs remain compatible, but there is no assistant panel and the new browser does not call the Concierge. Automatic voicing is deterministic playback behavior, not an AI feature. Any future assistant must remain optional and use ordinary reviewable queue proposals.
 

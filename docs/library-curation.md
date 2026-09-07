@@ -2,8 +2,8 @@
 
 For the fuller definition of musical quality, evidence requirements and gaps in
 this first admission policy, see [MIDI listening quality](library-quality-standard.md).
-The following remains the deployed v1 policy, not certification of every admitted
-file as a complete, expressive performance.
+The [v2 publication](library-quality-publication.md) supersedes this historical
+v1 policy. Keep the v1 record for recovery history; do not republish it over v2.
 
 The owner prefers a substantial, varied collection of good MIDI performances over
 an unfiltered import count. Admission is decided automatically per file, not by

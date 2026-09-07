@@ -1,0 +1,57 @@
+{
+  "published": true,
+  "run": "quality-20260907T232444.393468Z",
+  "verified_originals": 25893,
+  "qualified": 5832,
+  "archived": 20061,
+  "seconds": 214.94,
+  "wheel_sha256": "a616f1471d137e8e3250d0d917eb05d8551ffb0f550e4b80374abfa693e6a9d5",
+  "rollback_wheel_sha256": "ebf265b82c3da733eafbf11fd0f03cabf91a6f4f4d8cd8cc0a5cf019ef1894e4",
+  "runtime_files": 98,
+  "queue": {
+    "items": [],
+    "current_index": null,
+    "total_duration_seconds": 0.0,
+    "command_id": null,
+    "repeat_mode": "off",
+    "shuffle": false,
+    "continuous": false
+  },
+  "collections_preserved": true,
+  "live_status": {
+    "phase": "ready",
+    "playing": false,
+    "ai": {
+      "enabled": true,
+      "provider": "deterministic-fallback",
+      "reason": "no_provider_configured_using_offline_interpreter"
+    },
+    "outputs": {
+      "ready": true,
+      "devices": [
+        "CASIO USB-MIDI:CASIO USB-MIDI MIDI 1 24:0"
+      ],
+      "reason": null
+    },
+    "library": {
+      "indexed": true,
+      "assets": 5832,
+      "compositions": 5450,
+      "genres": 57,
+      "moods": 25,
+      "themes": 17
+    }
+  },
+  "tests": 704,
+  "full_corpus_publish_restore_rehearsal": true,
+  "queue_removal": "A.JACKSON.Mercury blues K removed at owner request; completeness_unresolved; original retained in archive",
+  "verification": {
+    "python_tests": 704,
+    "ruff": "passed",
+    "repository_contracts": "passed",
+    "browser_state_tests": "passed",
+    "installed_wheel_smoke": "passed",
+    "full_snapshot_publish_restore": "25893 original hashes verified after recovery",
+    "source_baseline": "28b392a4b4fb69240bda0ccf35a4f8bf3c65f80d"
+  }
+}

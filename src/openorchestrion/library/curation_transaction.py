@@ -45,6 +45,9 @@ def apply_plan(root: Path, plan: dict, *, run_name: str | None = None) -> Path:
     from .catalog import rebuild_catalog
 
     root = root.resolve()
+    current_manifest = root / ADMISSION_FILE
+    if current_manifest.exists() and json.loads(current_manifest.read_bytes()).get('policy_version') == 'complete-listening-v2':
+        raise ValueError('v1 curation cannot replace the complete-listening-v2 policy')
     if plan.get("policy_version") != POLICY_VERSION or Path(plan["library_root"]).resolve() != root:
         raise ValueError("plan belongs to a different library or policy")
     entries = plan["entries"]
