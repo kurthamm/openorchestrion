@@ -62,6 +62,9 @@ jobs:
 
       - name: Install project and test dependencies
         run: |
+          # python-rtmidi may build from source on newer Python versions.
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
