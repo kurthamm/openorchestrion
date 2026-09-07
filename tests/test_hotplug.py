@@ -24,7 +24,7 @@ from openorchestrion.playback import (
     QueueItemSpec,
     VirtualMidiOutput,
 )
-from openorchestrion.playback.hotplug import OutputLinkMonitor
+from openorchestrion.playback.hotplug import AlsaOutputLinkProbe, OutputLinkMonitor
 from openorchestrion.playback.outputs import MidoMidiOutput
 from openorchestrion.playback import ManualClock
 
@@ -160,6 +160,7 @@ async def test_disconnect_pauses_and_reconnect_resumes_from_position(tmp_path: P
         "devices": ["Keyboard"],
         "reason": "output_disconnected",
     }
+    assert output.close_calls == 1, "the dead port handle is dropped as soon as the device is lost"
     sent_while_unplugged = len(output.sent)
     await clock.advance(2.0)
     assert len(output.sent) == sent_while_unplugged
@@ -169,7 +170,7 @@ async def test_disconnect_pauses_and_reconnect_resumes_from_position(tmp_path: P
 
     await engine.output_link_changed("Keyboard", connected=True)
 
-    assert output.close_calls == 1, "the stale hardware port must be dropped so it reopens"
+    assert output.close_calls == 2, "the stale port is dropped on loss and again before reopening"
     resumed = await engine.playback_snapshot()
     assert resumed.state == "playing"
     assert 900 <= resumed.position.position_ms <= 1100
@@ -313,3 +314,60 @@ def test_status_api_reports_a_disconnected_output(tmp_path: Path) -> None:
             "devices": ["Keyboard"],
             "reason": "output_disconnected",
         }
+
+
+THROUGH = "Midi Through:Midi Through Port-0 14:0"
+
+
+@pytest.mark.asyncio
+async def test_monitor_ignores_the_kernel_loopback_port() -> None:
+    through = MidoMidiOutput(THROUGH, client_name="openorchestrion-0")
+    keyboard = MidoMidiOutput(CASIO, client_name="openorchestrion-1")
+    engine = _RecordingEngine([through, keyboard])
+    monitor = OutputLinkMonitor(engine, _FakeProbe(), interval_seconds=1.0)
+    assert monitor.monitored_outputs == (CASIO,)
+
+
+def test_alsa_probe_sees_a_device_that_returns_under_a_new_address() -> None:
+    """Unplug, then replug as 28:0. Once the engine has closed the handle, presence rules."""
+    keyboard = MidoMidiOutput(CASIO, client_name="openorchestrion-1")
+    keyboard.port_name = CASIO
+    ports = [THROUGH, CASIO]
+    table = {"value": parse_sequencer_clients(SEQ_CLIENTS)}
+    probe = AlsaOutputLinkProbe(list_ports=lambda: list(ports), read_table=lambda: table["value"])
+    assert probe.is_connected(keyboard) is True
+
+    ports.remove(CASIO)
+    unplugged = "\n".join(
+        line for line in SEQ_CLIENTS.splitlines() if "24:0" not in line and "CASIO" not in line
+    )
+    table["value"] = parse_sequencer_clients(unplugged)
+    assert probe.is_connected(keyboard) is False
+
+    renumbered = "CASIO USB-MIDI:CASIO USB-MIDI MIDI 1 28:0"
+    ports.append(renumbered)
+    # The engine closes the handle when it learns of the disconnect.
+    keyboard.port_name = None
+    assert probe.is_connected(keyboard) is True
+    assert resolve_output_port(keyboard.name, ports) == renumbered
+
+
+def test_alsa_probe_catches_a_fast_replug_that_kept_the_old_address() -> None:
+    """Device present under the same 24:0, but our subscription to it is gone."""
+    keyboard = MidoMidiOutput(CASIO, client_name="openorchestrion-1")
+    keyboard.port_name = CASIO
+    no_link = SEQ_CLIENTS.replace("    Connecting To: 24:0[r:0]\n", "")
+    probe = AlsaOutputLinkProbe(
+        list_ports=lambda: [THROUGH, CASIO],
+        read_table=lambda: parse_sequencer_clients(no_link),
+    )
+    assert probe.is_connected(keyboard) is False
+
+
+def test_alsa_probe_without_a_sequencer_table_uses_presence_only() -> None:
+    keyboard = MidoMidiOutput(CASIO, client_name="openorchestrion-1")
+    keyboard.port_name = CASIO
+    probe = AlsaOutputLinkProbe(list_ports=lambda: [CASIO], read_table=lambda: None)
+    assert probe.is_connected(keyboard) is True
+    probe = AlsaOutputLinkProbe(list_ports=lambda: [THROUGH], read_table=lambda: None)
+    assert probe.is_connected(keyboard) is False

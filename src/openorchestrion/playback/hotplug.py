@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import Protocol
 
 from openorchestrion.midi.devices import (
+    SequencerClient,
     client_link_targets,
+    is_kernel_loopback_port,
     list_output_ports,
     port_link_target,
     read_sequencer_clients,
@@ -31,10 +34,25 @@ class OutputLinkProbe(Protocol):
 
 
 class AlsaOutputLinkProbe:
-    """Presence via the MIDI backend; subscription health via the ALSA sequencer table."""
+    """Presence via the MIDI backend; subscription health via the ALSA sequencer table.
+
+    A closed output (``port_name`` is None) is judged on presence alone.  The
+    engine closes an output's handle as soon as it is reported disconnected, so
+    a device that returns under a new ALSA address is seen as present again and
+    reopened by its stable base name on the next send.
+    """
+
+    def __init__(
+        self,
+        *,
+        list_ports: Callable[[], list[str]] = list_output_ports,
+        read_table: Callable[[], dict[int, SequencerClient] | None] = read_sequencer_clients,
+    ) -> None:
+        self._list_ports = list_ports
+        self._read_table = read_table
 
     def is_connected(self, output: MidoMidiOutput) -> bool:
-        available = list_output_ports()
+        available = self._list_ports()
         if resolve_output_port(output.name, available) is None:
             return False
         if output.port_name is None or output.client_name is None:
@@ -43,7 +61,7 @@ class AlsaOutputLinkProbe:
         target = port_link_target(output.port_name)
         if target is None:
             return True
-        table = read_sequencer_clients()
+        table = self._read_table()
         if table is None:
             return True
         return target in client_link_targets(table, output.client_name)
@@ -62,10 +80,12 @@ class OutputLinkMonitor:
         self.engine = engine
         self.probe = probe
         self.interval_seconds = interval_seconds
+        # Only real hardware is monitored: the kernel's Midi Through loopback
+        # can never be unplugged and would only add noise.
         self._outputs = tuple(
             output
             for output in engine.router.outputs.values()
-            if isinstance(output, MidoMidiOutput)
+            if isinstance(output, MidoMidiOutput) and not is_kernel_loopback_port(output.name)
         )
         self._connected: dict[str, bool] = {}
         self._task: asyncio.Task[None] | None = None
@@ -101,14 +121,23 @@ class OutputLinkMonitor:
         self._task = None
 
     async def _run(self) -> None:
+        failing = False
         while True:
             try:
                 await self.check_once()
             except asyncio.CancelledError:
                 raise
             except Exception:
-                log.exception("MIDI output hot-plug check failed; monitoring stopped")
-                return
+                # A transient enumeration failure must not end monitoring for
+                # the life of the process. Log the first failure of a streak;
+                # later ticks retry quietly until a probe succeeds again.
+                if not failing:
+                    log.exception("MIDI output hot-plug check failed; retrying")
+                failing = True
+            else:
+                if failing:
+                    log.info("MIDI output hot-plug check recovered")
+                failing = False
             await asyncio.sleep(self.interval_seconds)
 
 

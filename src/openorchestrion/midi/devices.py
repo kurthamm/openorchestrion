@@ -43,6 +43,11 @@ def port_link_target(name: str) -> tuple[int, int] | None:
     return int(match.group("client")), int(match.group("port"))
 
 
+def is_kernel_loopback_port(name: str) -> bool:
+    """True for the ALSA ``snd-seq-dummy`` Midi Through ports, which are never instruments."""
+    return port_base_name(name).startswith("Midi Through")
+
+
 def resolve_output_port(name: str, available: list[str]) -> str | None:
     """Find the current port for a device, even if ALSA renumbered it after a replug."""
     if name in available:

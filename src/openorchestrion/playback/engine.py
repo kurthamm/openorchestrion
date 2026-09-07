@@ -133,6 +133,10 @@ class PlaybackEngine:
                 if self._state == "playing":
                     await self._pause_locked()
                     self._auto_paused = True
+                # Drop the dead handle now. A closed output is judged on device
+                # presence alone, so the return of the keyboard is noticed even
+                # when ALSA gives it a new address or reuses the old one.
+                await self.router.outputs[name].close()
             self.events.publish("state.devices", self.outputs_state())
             self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
 
