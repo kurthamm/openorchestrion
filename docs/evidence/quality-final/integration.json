@@ -1,0 +1,10 @@
+{
+  "integrated_main": "b3f697d437dc1d3a9675db01de4f6ef72f6e5a7e",
+  "wheel_sha256": "6520c3c57fc6d3246611c2fdcf32feface334ccb3e61e6c88c33e9b32c6292ef",
+  "runtime_files": 101,
+  "tests": 704,
+  "library_count": 5832,
+  "queue_and_collections_preserved": true,
+  "installed_wheel_smoke": "passed",
+  "offsite_backup_support_preserved": true
+}

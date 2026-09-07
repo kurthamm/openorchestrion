@@ -6,7 +6,16 @@ export function playbackNotes(preview) {
     h('h2', { text: 'What will play' }),
     h('p', { role: 'status', text: `Instrument preview unavailable: ${preview.error}. Reopen these details to retry.` }));
   const r = preview.readiness;
+  const q = preview.qualification;
   return h('section', { class: 'detail-section' },
+    q ? h('section', { class: 'detail-section' },
+      h('h2', { text: 'Why this performance is in the library' }),
+      h('p', {}, h('strong', { text: q.verification === 'publisher_verified' ? 'Publisher verified. ' : 'Structurally assessed. ' }), q.completeness),
+      h('p', { text: q.basis }),
+      h('p', { class: 'technical-note', text: q.limitation }),
+      h('details', {}, h('summary', { text: 'Expression and pedal detail' }),
+        q.parts.map(p => h('p', { text: `Channel ${p.channel}: ${p.velocity_values} attack velocities; ${p.controllers.filter(c => [1,2,7,11,64,66,67,91,93].includes(c.cc)).map(c => `${({1:'modulation',2:'breath',7:'volume',11:'expression',64:'sustain',66:'sostenuto',67:'soft pedal',91:'reverb',93:'chorus'})[c.cc]} ${c.min}–${c.max}${c.distinct > 1 ? ' (changing)' : ' (constant)'}`).join(', ') || 'no listed pedal or expression controllers'}${p.pressure ? '; pressure encoded' : ''}` })))
+    ) : null,
     h('h2', { text: 'What will play' }),
     h('p', { class: 'readiness-summary', text: `${r.parts.length} sounding ${r.parts.length === 1 ? 'part' : 'parts'} · up to ${r.peak_notes} simultaneous MIDI notes` }),
     h('p', { text: r.status === 'caution' ? 'Playback has compatibility concerns listed below.' : 'No structural playback blocker found. Musical completeness and sound quality are not certified.' }),

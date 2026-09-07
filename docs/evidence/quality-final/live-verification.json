@@ -1,0 +1,20 @@
+{
+  "catalog_admission_quality_identity_sets_match": true,
+  "live_count": 5832,
+  "qualification_previews": [
+    {
+      "asset_id": "sha256:00343cf7d446c770cf42acd4e6ee0d0962f3675734ca33131e4b22436ba93bc4",
+      "verification": "publisher_verified",
+      "parts": 1
+    },
+    {
+      "asset_id": "sha256:0006b7e40086c796bb177d89038118cb896bdbd1b3ef7c7cb32de04fc6ef84f5",
+      "verification": "structural_assessment",
+      "parts": 1
+    }
+  ],
+  "excluded_song_returns_404": true,
+  "services_active": true,
+  "live_smoke": "passed",
+  "browser_homepage": "Shows 5,832 performances; playback stopped and queue empty"
+}

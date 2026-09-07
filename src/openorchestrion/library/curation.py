@@ -29,7 +29,7 @@ def admitted_ids(root: Path) -> set[str] | None:
     if not path.exists():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("policy_version") != POLICY_VERSION or not isinstance(data.get("asset_ids"), list):
+    if data.get("policy_version") not in (POLICY_VERSION, "complete-listening-v2") or not isinstance(data.get("asset_ids"), list):
         raise ValueError("invalid listening admission manifest")
     ids = set(data["asset_ids"])
     if any(not isinstance(x, str) or not re.fullmatch(r"sha256:[0-9a-f]{64}", x) for x in ids):
