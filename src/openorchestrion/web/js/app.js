@@ -12,8 +12,9 @@ import { mountRenderingControls } from './views/rendering.js';
 const $ = (id) => document.getElementById(id);
 const names = { discover: 'Discover', library: 'Music library', favorites: 'Favorites', queue: 'Play queue', recent: 'Recently played', settings: 'Playback & devices' };
 const filterKeys = ['genre', 'mood', 'era', 'arrangement', 'composer', 'source'];
-const state = { status: null, queue: { items: [] }, playback: {}, connection: 'connecting' };
+const state = { status: null, queue: { items: [] }, playback: {}, collections: [], connection: 'connecting' };
 const assets = new Map();
+const selectedQueueItems = new Set();
 const pendingFavorites = new Set();
 let view = 'discover', params = new URLSearchParams(), catalogRequest, routeVersion = 0;
 let positionAnchor = null, queueBusy = false, facets = null, detailVersion = 0;
@@ -77,6 +78,8 @@ function row(item, index = 0, queueIndex = null) {
     h('span', { class: 'track-arrangement', text: queued ? (queueIndex === state.queue.current_index ? 'Current performance' : readable(item.rendering?.mode || 'Queued')) : readable(item.performance_type) }),
     h('span', { class: 'track-time', text: formatSeconds(item.duration_seconds) }),
     h('div', { class: 'track-actions' }, queued ? [
+      h('input', { type: 'checkbox', 'aria-label': `Select ${item.title}`, checked: selectedQueueItems.has(item.asset_id), onChange: e => { if (e.target.checked) selectedQueueItems.add(item.asset_id); else selectedQueueItems.delete(item.asset_id); drawQueue(); } }),
+      icon('⇥', `Play ${item.title} next`, () => mutateQueue(() => api.playNext(item.asset_id))),
       icon('↑', `Move ${item.title} up`, () => mutateQueue(() => api.reorderQueue(item.asset_id, index - 1)), { disabled: index === 0 }),
       icon('↓', `Move ${item.title} down`, () => mutateQueue(() => api.reorderQueue(item.asset_id, index + 1)), { disabled: index === state.queue.items.length - 1 }),
       icon('×', `Remove ${item.title} from queue`, () => mutateQueue(() => api.removeFromQueue(item.asset_id))),
@@ -186,9 +189,31 @@ function drawQueue() {
   $('queue-summary').textContent = `${number(state.queue.items.length)} performance${state.queue.items.length === 1 ? '' : 's'} · ${formatSeconds(state.queue.total_duration_seconds)} total`;
   $('start-queue').disabled = !ready() || !state.queue.items.length;
   $('clear-queue').disabled = !state.queue.items.length;
+  $('save-queue').disabled = !state.queue.items.length;
+  $('remove-selected').disabled = !selectedQueueItems.size;
+  $('repeat-mode').value = state.queue.repeat_mode || 'off';
+  $('shuffle-mode').checked = Boolean(state.queue.shuffle);
+  $('continuous-mode').checked = Boolean(state.queue.continuous);
   if (view !== 'queue') return;
   if (!state.queue.items.length) empty($('queue-list'), 'Make yourself a listening session.', 'Use + beside any performance to add it here. Build your queue before connecting an instrument.');
   else render($('queue-list'), state.queue.items.map((item, index) => row(item, index, index)));
+}
+async function refreshCollections() {
+  try {
+    const result = await api.collections(); state.collections = result.items;
+    render($('saved-collections'), h('option', { value: '', text: 'Saved…' }), result.items.map(item => h('option', { value: item.id, text: `${item.kind === 'station' ? 'Station' : 'Playlist'} · ${item.name}` })));
+  } catch (error) { toast(error.message, true); }
+}
+async function savePlaylist() {
+  const name = prompt('Name this playlist:')?.trim(); if (!name) return;
+  try { await api.saveCollection({ name, kind: 'playlist' }); await refreshCollections(); toast(`Saved “${name}”.`); } catch (error) { toast(error.message, true); }
+}
+async function saveStation() {
+  const intent = { mode: 'station' };
+  const map = { genre: 'genres', mood: 'moods', era: 'eras', composer: 'composers', arrangement: 'performance_types', source: 'include_tags' };
+  for (const [filter, field] of Object.entries(map)) if (params.get(filter)) intent[field] = [params.get(filter)];
+  const name = prompt('Name this station:')?.trim(); if (!name) return;
+  try { await api.saveCollection({ name, kind: 'station', intent }); await refreshCollections(); toast(`Saved station “${name}”.`); } catch (error) { toast(error.message, true); }
 }
 async function refreshQueue() { try { state.queue = await api.queue(); drawQueue(); updatePlayer(); } catch (error) { toast(error.message, true); } }
 async function loadHistory() {
@@ -263,6 +288,8 @@ function updatePlayer() {
   $('skip').disabled = !state.queue.items.length || state.connection !== 'live';
   for (const id of ['volume', 'settings-volume']) if (document.activeElement !== $(id)) $(id).value = state.playback.volume ?? 100;
   $('volume').setAttribute('aria-valuetext', `${state.playback.volume ?? 100} percent`);
+  const remaining = state.playback.sleep_timer_remaining_seconds;
+  $('timer-status').textContent = state.playback.stop_after_current ? 'Playback will stop after the current performance.' : remaining == null ? 'No sleep timer is active.' : `Playback stops in ${formatSeconds(remaining)}.`;
   updateProgress(); if (playing) ticker.start(); else ticker.stop();
 }
 function applyPlayback(value) { if (value.command_id === pendingCommandId) pendingCommandId = null; state.playback = value; positionAnchor = anchor(value.position); updatePlayer(); }
@@ -286,11 +313,21 @@ const socket = new StateSocket({ onConnectionChange: connection => { state.conne
 $('search-form').addEventListener('submit', e => { e.preventDefault(); const next = ['library', 'favorites'].includes(view) ? Object.fromEntries(params) : {}; delete next.offset; next.text = $('search-input').value.trim(); go(view === 'favorites' ? 'favorites' : 'library', next); });
 $('sort').onchange = e => changeFilter('sort', e.target.value);
 $('clear-filters').onclick = () => go(view === 'favorites' ? 'favorites' : 'library');
+$('save-station').onclick = saveStation;
 $('close-detail').onclick = () => $('detail').close();
 $('detail').addEventListener('close', () => { detailVersion++; });
 $('refresh-status').onclick = refreshStatus;
 $('start-queue').onclick = () => transport('play');
 $('clear-queue').onclick = async () => { if (await confirmAction('Clear your queue?', 'This ends the current listening session and removes every queued performance.', 'Clear queue')) await mutateQueue(() => api.clearQueue()); };
+$('save-queue').onclick = savePlaylist;
+$('load-collection').onclick = async () => { const id = $('saved-collections').value; if (id) await mutateQueue(() => api.loadCollection(id), 'Loaded saved collection.'); };
+$('delete-collection').onclick = async () => { const id = $('saved-collections').value; if (!id) return; const item = state.collections.find(value => value.id === id); if (await confirmAction('Delete saved collection?', `Delete “${item?.name || 'this collection'}”?`, 'Delete')) { try { await api.deleteCollection(id); await refreshCollections(); toast('Deleted saved collection.'); } catch (error) { toast(error.message, true); } } };
+$('remove-selected').onclick = async () => { const ids = [...selectedQueueItems]; if (!ids.length) return; await mutateQueue(async () => { const result = await api.removeManyFromQueue(ids); selectedQueueItems.clear(); return result; }, 'Removed selected performances.'); };
+async function updateModes() { await mutateQueue(() => api.setPlaybackModes({ repeatMode: $('repeat-mode').value, shuffle: $('shuffle-mode').checked, continuous: $('continuous-mode').checked })); }
+$('repeat-mode').onchange = updateModes; $('shuffle-mode').onchange = updateModes; $('continuous-mode').onchange = updateModes;
+$('set-sleep').onclick = async () => { try { const minutes = Number($('sleep-minutes').value); applyPlayback(await api.sleepTimer({ seconds: minutes ? minutes * 60 : null })); toast(minutes ? `Sleep timer set for ${minutes} minutes.` : 'Sleep timer cleared.'); } catch (error) { toast(error.message, true); } };
+$('stop-after-current').onclick = async () => { try { applyPlayback(await api.sleepTimer({ afterCurrent: !state.playback.stop_after_current })); } catch (error) { toast(error.message, true); } };
+$('progress').onclick = async e => { const duration = state.playback.now_playing?.duration_seconds; if (!duration) return; const box = $('progress').getBoundingClientRect(); const fraction = Math.max(0, Math.min(1, (e.clientX - box.left) / box.width)); try { applyPlayback(await api.seek(duration * fraction)); } catch (error) { toast(error.message, true); } };
 $('play').onclick = () => transport(state.playback.state === 'playing' ? 'pause' : 'play');
 $('stop').onclick = () => transport('stop'); $('skip').onclick = () => transport('skip'); $('panic').onclick = () => transport('panic');
 $('volume').onchange = $('settings-volume').onchange = async e => { try { applyPlayback(await api.setVolume(Number(e.target.value))); } catch (error) { toast(error.message, true); updatePlayer(); } };
@@ -299,4 +336,4 @@ document.querySelector('.skip').addEventListener('click', event => { event.preve
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refreshStatus(); });
 // Device settings remain reachable on narrow screens even when no warning is shown.
 $('search-form').after(h('a', { href: '#settings', class: 'icon-btn settings-shortcut', 'aria-label': 'Playback and devices', text: '⚙' }));
-route(); void loadDiscover(); void refreshStatus(); socket.connect();
+route(); void loadDiscover(); void refreshStatus(); void refreshCollections(); socket.connect();

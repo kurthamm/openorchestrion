@@ -15,6 +15,7 @@ from openorchestrion.playback import (
     QueueItemSpec,
     VirtualMidiOutput,
 )
+from openorchestrion.player_state import PlayerStateStore
 
 
 @dataclass
@@ -73,7 +74,7 @@ def _write_midi(
     return MidiFile(path).length
 
 
-async def _engine(*, two_outputs: bool = False):
+async def _engine(*, two_outputs: bool = False, state_store: PlayerStateStore | None = None):
     clock = ManualClock()
     output_a = VirtualMidiOutput("A", clock)
     outputs = [output_a]
@@ -83,8 +84,73 @@ async def _engine(*, two_outputs: bool = False):
         outputs.append(output_b)
     router = MidiOutputRouter(outputs, default_device="A")
     history = FakeHistory()
-    engine = PlaybackEngine(router=router, history=history, clock=clock)
+    engine = PlaybackEngine(router=router, history=history, clock=clock, state_store=state_store)
     return engine, clock, history, output_a, output_b
+
+
+@pytest.mark.asyncio
+async def test_queue_modes_editing_seek_and_restart_are_durable(tmp_path: Path) -> None:
+    first = tmp_path / "first.mid"
+    second = tmp_path / "second.mid"
+    duration = _write_midi(first, beats=8)
+    _write_midi(second, beats=8)
+    store = PlayerStateStore(tmp_path / "player-state.db")
+    engine, clock, _, _, _ = await _engine(state_store=store)
+    await engine.set_queue([
+        QueueItemSpec("first", "First", duration, str(first)),
+        QueueItemSpec("second", "Second", duration, str(second)),
+    ])
+    await engine.set_modes(repeat_mode="queue", shuffle=True, continuous=True)
+    await engine.play_next("second")
+    await engine.transport("play")
+    await clock.advance(0.5)
+    sought = await engine.seek(1.25)
+    assert sought.state == "playing"
+    assert sought.position.position_ms == 1250
+    await engine.close()
+
+    restored, _, _, _, _ = await _engine(state_store=PlayerStateStore(store.path))
+    queue = await restored.queue_snapshot()
+    playback = await restored.playback_snapshot()
+    assert [item.asset_id for item in queue.items] == ["first", "second"]
+    assert (queue.repeat_mode, queue.shuffle, queue.continuous) == ("queue", True, True)
+    assert playback.state == "stopped"
+    assert playback.position.position_ms >= 1250
+    resumed = await restored.transport("play")
+    assert resumed.position.position_ms >= 1250
+
+
+@pytest.mark.asyncio
+async def test_seek_while_paused_remains_resumable(tmp_path: Path) -> None:
+    midi = tmp_path / "song.mid"
+    duration = _write_midi(midi, beats=8)
+    engine, _, _, _, _ = await _engine()
+    await engine.set_queue([QueueItemSpec("song", "Song", duration, str(midi))])
+    await engine.transport("play")
+    await engine.transport("pause")
+    sought = await engine.seek(1.0)
+    assert sought.state == "paused"
+    assert (await engine.transport("play")).position.position_ms == 1000
+
+
+@pytest.mark.asyncio
+async def test_stop_after_current_prevents_automatic_advance(tmp_path: Path) -> None:
+    first = tmp_path / "first.mid"
+    second = tmp_path / "second.mid"
+    duration = _write_midi(first, beats=1)
+    _write_midi(second, beats=1)
+    engine, clock, _, _, _ = await _engine()
+    await engine.set_queue([
+        QueueItemSpec("first", "First", duration, str(first)),
+        QueueItemSpec("second", "Second", duration, str(second)),
+    ])
+    await engine.set_sleep_timer(after_current=True)
+    await engine.transport("play")
+    await clock.advance(duration + 0.01)
+    snapshot = await engine.playback_snapshot()
+    assert snapshot.state == "stopped"
+    assert snapshot.now_playing.asset_id == "first"
+    assert snapshot.stop_after_current is False
 
 
 @pytest.mark.asyncio

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from openorchestrion.midi.devices import is_kernel_loopback_port, list_output_ports
+from openorchestrion.player_state import PlayerStateStore
 
 from .clock import SystemClock
 from .history_adapter import SqliteHistoryRecorder
-from .outputs import MidoMidiOutput, MidiOutputRouter, VirtualMidiOutput
+from .outputs import MidiOutputRouter, MidoMidiOutput, VirtualMidiOutput
 from .routed_engine import PlaybackEngine
 
 
@@ -34,5 +35,7 @@ def create_default_playback(settings: object) -> PlaybackEngine:
 
     default_device = virtual_name if virtual_enabled else (outputs[0].name if outputs else None)
     router = MidiOutputRouter(outputs, default_device=default_device, allow_sysex=False)
-    history = SqliteHistoryRecorder(getattr(settings, "history_db"), clock)
-    return PlaybackEngine(router=router, history=history, clock=clock)
+    history = SqliteHistoryRecorder(settings.history_db, clock)
+    state_path = getattr(settings, "player_state_db", None)
+    state_store = PlayerStateStore(state_path) if state_path is not None else None
+    return PlaybackEngine(router=router, history=history, clock=clock, state_store=state_store)

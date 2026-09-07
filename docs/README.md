@@ -46,6 +46,7 @@ This directory contains the living design and implementation specification.
 ## Runtime state and listening history
 
 - [Durable play history](play-history.md) — queued/started/substantial/completed semantics, no-repeat windows, staleness and backup boundaries.
+- [Player workflows](player-workflows.md) — saved playlists/stations, queue editing, playback modes, seeking, timers, and restart recovery.
 
 ## Hardware
 

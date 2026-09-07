@@ -340,6 +340,8 @@ class PlaybackState(BaseModel):
         le=100,
         description="Master volume 0..100 applied to every output; 100 preserves the file's balance.",
     )
+    sleep_timer_remaining_seconds: int | None = Field(default=None, ge=0)
+    stop_after_current: bool = False
 
 
 class QueueEntry(BaseModel):
@@ -362,6 +364,9 @@ class QueueState(BaseModel):
     current_index: int | None = Field(default=None, ge=0)
     total_duration_seconds: float = 0.0
     command_id: UUID | None = None
+    repeat_mode: Literal["off", "track", "queue"] = "off"
+    shuffle: bool = False
+    continuous: bool = False
 
 
 class TransportCommand(BaseModel):
@@ -381,6 +386,24 @@ class VolumeCommand(BaseModel):
 
     level: int = Field(ge=0, le=100, strict=True, description="0 is silent, 100 is the file's own balance.")
     command_id: UUID | None = None
+
+
+class PlaybackModesRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    repeat_mode: Literal["off", "track", "queue"] = "off"
+    shuffle: bool = False
+    continuous: bool = False
+
+
+class SeekRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    position_seconds: float = Field(ge=0)
+
+
+class SleepTimerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    seconds: int | None = Field(default=None, ge=1, le=86400)
+    after_current: bool = False
 
 
 ProgramSelector = StrictInt | Annotated[str, Field(min_length=1, max_length=100)]
@@ -463,6 +486,46 @@ class QueueRemoveRequest(BaseModel):
 
     asset_id: str
     command_id: UUID | None = None
+
+
+class QueueBulkRemoveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    asset_ids: list[str] = Field(min_length=1)
+
+
+class CollectionCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=100)
+    kind: Literal["playlist", "station"]
+    asset_ids: list[str] = Field(default_factory=list)
+    intent: PlaybackIntent | None = None
+
+    @model_validator(mode="after")
+    def validate_source(self):
+        if self.kind == "station" and self.intent is None:
+            raise ValueError("station requires intent")
+        return self
+
+
+class CollectionRenameRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=100)
+
+
+class SavedCollectionModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str
+    name: str
+    kind: Literal["playlist", "station"]
+    asset_ids: list[str] = Field(default_factory=list)
+    intent: PlaybackIntent | None = None
+    created_at: str
+    updated_at: str
+
+
+class CollectionsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    items: list[SavedCollectionModel]
 
 
 # --------------------------------------------------------------------------

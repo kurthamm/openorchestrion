@@ -20,6 +20,7 @@ from openorchestrion.history import (
 from openorchestrion.library.catalog import catalog_stats, get_asset, rebuild_catalog
 from openorchestrion.library.importer import import_midi
 from openorchestrion.library.metadata import update_metadata
+from openorchestrion.player_state import PlayerStateStore
 from openorchestrion.testing.midi_fixtures import generate_suite
 
 
@@ -81,6 +82,22 @@ def _write_zip(path: Path, entries: dict[str, tuple[zipfile.ZipInfo, bytes]]) ->
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for name, (info, payload) in entries.items():
             archive.writestr(info, payload)
+
+
+def test_backup_restores_saved_collections_and_player_session(tmp_path: Path) -> None:
+    root, asset_id = _state(tmp_path)
+    store = PlayerStateStore(root / "player-state.db")
+    store.save_collection(name="Evening", kind="playlist", asset_ids=[asset_id])
+    store.save_session({"queue": [{"asset_id": asset_id}], "volume": 72})
+    archive = tmp_path / "state.zip"
+    restored = tmp_path / "restored"
+
+    create_backup(root, archive)
+    restore_backup(archive, restored)
+
+    recovered = PlayerStateStore(restored / "player-state.db")
+    assert recovered.list_collections()[0].asset_ids == (asset_id,)
+    assert recovered.load_session()["volume"] == 72
 
 
 def _replace_member(source: Path, destination: Path, member: str, payload: bytes) -> None:

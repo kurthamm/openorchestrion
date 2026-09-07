@@ -479,3 +479,17 @@ The browser keeps ordinary source details visible if the preview fails.
 These are source/policy facts with WK-220 reference limits, not device-profile
 binding, an acoustic quality score or the policy of an existing queue item.
 See [analysis semantics, cache maintenance and release evidence](library-playback-readiness.md).
+
+## Saved collections and player controls (September 2026)
+
+`GET/POST /api/collections`, `PATCH/DELETE /api/collections/{id}`, and
+`POST /api/collections/{id}/load` manage durable playlists and station intents.
+Playlist creation may omit `asset_ids` to snapshot the active queue.
+
+Queue editing adds `POST /api/queue/remove-many` (`asset_ids`) and
+`POST /api/queue/play-next` (`asset_id`). `POST /api/playback/modes` accepts
+`repeat_mode` (`off`, `track`, or `queue`), `shuffle`, and `continuous`.
+`POST /api/playback/seek` accepts `position_seconds`. The sleep control is
+`POST /api/playback/sleep-timer`, with nullable `seconds` and `after_current`.
+Queue responses include all three playback modes; playback responses include
+`sleep_timer_remaining_seconds` and `stop_after_current`.
