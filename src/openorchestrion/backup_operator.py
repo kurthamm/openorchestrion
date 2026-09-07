@@ -122,7 +122,7 @@ def _state_has_durable_payload(root: Path) -> bool:
     for entry in root.iterdir():
         if entry.name == "setup.json" and entry.is_file() and not entry.is_symlink():
             continue
-        if entry.name == "history.db":
+        if entry.name in {"history.db", "player-state.db"}:
             return True
         if entry.name != "library" or entry.is_symlink() or not entry.is_dir():
             return True

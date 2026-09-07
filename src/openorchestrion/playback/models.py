@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 from openorchestrion.midi.router import RoutingPlan
 
@@ -45,6 +46,9 @@ class QueueSnapshot:
     current_index: int | None
     total_duration_seconds: float
     command_id: str | None = None
+    repeat_mode: str = "off"
+    shuffle: bool = False
+    continuous: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -77,6 +81,8 @@ class PlaybackSnapshot:
     position: PositionSnapshot | None
     command_id: str | None = None
     volume: int = 100
+    sleep_timer_remaining_seconds: int | None = None
+    stop_after_current: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

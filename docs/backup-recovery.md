@@ -47,7 +47,7 @@ The reference state root defaults to `/var/lib/openorchestrion`. A custom develo
 
 The destination must live **outside** the state root. The command reports archive path, asset count, payload file count, whether history was included, and logical bytes. Add `--json` for machine-readable output.
 
-Backup is safe while the service is active because sidecars are atomic documents and `history.db` is captured with SQLite's backup API rather than copied live.
+Backup is safe while the service is active because sidecars are atomic documents and both `history.db` and `player-state.db` are captured with SQLite's backup API rather than copied live.
 
 ### Inspect / preflight an archive
 

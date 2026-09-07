@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import multiprocessing
+import sqlite3
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from functools import partial
@@ -15,9 +16,14 @@ from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 
 from ..ai import ConciergeResult, MusicConcierge
 from ..history import apply_no_repeat_window
-from ..library.catalog import catalog_facets, catalog_stats, get_asset, reindex_asset, search_catalog
 from ..library.browse import browse, browse_facets, performance_detail
-from ..library.readiness import readiness, source_facts
+from ..library.catalog import (
+    catalog_facets,
+    catalog_stats,
+    get_asset,
+    reindex_asset,
+    search_catalog,
+)
 from ..library.metadata import (
     AssetNotFoundError,
     MetadataConflictError,
@@ -25,6 +31,7 @@ from ..library.metadata import (
     set_favorite,
     sidecar_path,
 )
+from ..library.readiness import readiness, source_facts
 from ..models import PlaybackIntent
 from ..playback import (
     PlaybackConflict,
@@ -36,12 +43,22 @@ from ..playback import (
     RenderingPolicy,
 )
 from ..playback.voicing import suggest_program_overrides
+from ..player_state import PlayerStateStore
 from ..stations import StationConstraints, build_station
 from .errors import ApiError
-from .listening_models import BrowseFacets, BrowsePage, PerformanceDetail, PerformancePreview, PerformancePreviewRequest
+from .listening_models import (
+    BrowseFacets,
+    BrowsePage,
+    PerformanceDetail,
+    PerformancePreview,
+    PerformancePreviewRequest,
+)
 from .models import (
     TRANSPORT_ACTIONS,
     AiState,
+    CollectionCreateRequest,
+    CollectionRenameRequest,
+    CollectionsResponse,
     ConciergeAskRequest,
     ConciergeEnvelope,
     ConciergeResponse,
@@ -56,17 +73,22 @@ from .models import (
     LibraryAsset,
     LibraryAssetDetail,
     LibraryCounts,
-    LibraryFacets,
     LibraryEnvelope,
+    LibraryFacets,
     LibrarySearchResponse,
     OutputsState,
     PlaybackEnvelope,
+    PlaybackModesRequest,
     PlaybackState,
+    QueueBulkRemoveRequest,
     QueueEnvelope,
     QueueRemoveRequest,
     QueueReorderRequest,
     QueueReplaceRequest,
     QueueState,
+    SavedCollectionModel,
+    SeekRequest,
+    SleepTimerRequest,
     SnapshotEnvelope,
     SnapshotPayload,
     StationPreviewRequest,
@@ -140,6 +162,13 @@ def _sessions(request: Request) -> ConciergeSessions:
 
 def _playback(connection: Connection) -> PlaybackEngine:
     return connection.app.state.playback
+
+
+def _player_store(connection: Connection) -> PlayerStateStore:
+    path = _settings(connection).player_state_db
+    if path is None:
+        raise ApiError("internal_error", "Player state storage is not configured.", status_code=503)
+    return PlayerStateStore(path)
 
 
 def _outputs_state(connection: Connection) -> OutputsState:
@@ -643,6 +672,101 @@ async def remove_from_queue(request: Request, payload: QueueRemoveRequest) -> Qu
     except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
         raise _translate_playback_error(exc) from exc
     return _queue_state_model(snapshot)
+
+
+@router.post("/queue/remove-many", response_model=QueueState)
+async def remove_many_from_queue(request: Request, payload: QueueBulkRemoveRequest) -> QueueState:
+    try:
+        return _queue_state_model(await _playback(request).remove_many(payload.asset_ids))
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+
+
+@router.post("/queue/play-next", response_model=QueueState)
+async def queue_play_next(request: Request, payload: QueueRemoveRequest) -> QueueState:
+    try:
+        return _queue_state_model(await _playback(request).play_next(payload.asset_id))
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+
+
+@router.post("/playback/modes", response_model=QueueState)
+async def playback_modes(request: Request, payload: PlaybackModesRequest) -> QueueState:
+    return _queue_state_model(await _playback(request).set_modes(
+        repeat_mode=payload.repeat_mode, shuffle=payload.shuffle, continuous=payload.continuous,
+    ))
+
+
+@router.post("/playback/seek", response_model=PlaybackState)
+async def playback_seek(request: Request, payload: SeekRequest) -> PlaybackState:
+    try:
+        return _playback_state_model(await _playback(request).seek(payload.position_seconds))
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+
+
+@router.post("/playback/sleep-timer", response_model=PlaybackState)
+async def playback_sleep_timer(request: Request, payload: SleepTimerRequest) -> PlaybackState:
+    return _playback_state_model(await _playback(request).set_sleep_timer(
+        payload.seconds, after_current=payload.after_current,
+    ))
+
+
+def _collection_model(value: Any) -> SavedCollectionModel:
+    return SavedCollectionModel.model_validate(value.to_dict())
+
+
+@router.get("/collections", response_model=CollectionsResponse)
+async def collections(request: Request) -> CollectionsResponse:
+    values = await asyncio.to_thread(_player_store(request).list_collections)
+    return CollectionsResponse(items=[_collection_model(value) for value in values])
+
+
+@router.post("/collections", response_model=SavedCollectionModel)
+async def save_collection(request: Request, payload: CollectionCreateRequest) -> SavedCollectionModel:
+    asset_ids = payload.asset_ids
+    if payload.kind == "playlist" and not asset_ids:
+        queue = await _playback(request).queue_snapshot()
+        asset_ids = [item.asset_id for item in queue.items]
+    try:
+        value = await asyncio.to_thread(
+            _player_store(request).save_collection,
+            name=payload.name, kind=payload.kind, asset_ids=asset_ids,
+            intent=payload.intent.model_dump(mode="json") if payload.intent else None,
+        )
+    except (ValueError, sqlite3.IntegrityError) as exc:
+        raise ApiError("request_invalid", str(exc), status_code=409) from exc
+    return _collection_model(value)
+
+
+@router.post("/collections/{collection_id}/load", response_model=QueueState)
+async def load_collection(request: Request, collection_id: str) -> QueueState:
+    value = await asyncio.to_thread(_player_store(request).get_collection, collection_id)
+    if value is None:
+        raise ApiError("asset_not_found", "Saved collection was not found.", status_code=404)
+    payload = QueueReplaceRequest(
+        asset_ids=list(value.asset_ids),
+        intent=PlaybackIntent.model_validate(value.intent) if value.intent else None,
+    )
+    specs = await _selection(request, _queue_specs, payload, _settings(request))
+    return _queue_state_model(await _playback(request).set_queue(specs))
+
+
+@router.patch("/collections/{collection_id}", response_model=SavedCollectionModel)
+async def rename_collection(request: Request, collection_id: str, payload: CollectionRenameRequest) -> SavedCollectionModel:
+    try:
+        value = await asyncio.to_thread(_player_store(request).rename_collection, collection_id, payload.name)
+    except (ValueError, sqlite3.IntegrityError) as exc:
+        raise ApiError("request_invalid", str(exc), status_code=409) from exc
+    if value is None:
+        raise ApiError("asset_not_found", "Saved collection was not found.", status_code=404)
+    return _collection_model(value)
+
+
+@router.delete("/collections/{collection_id}", status_code=204)
+async def delete_collection(request: Request, collection_id: str) -> None:
+    if not await asyncio.to_thread(_player_store(request).delete_collection, collection_id):
+        raise ApiError("asset_not_found", "Saved collection was not found.", status_code=404)
 
 
 @router.post("/volume", response_model=PlaybackState)

@@ -30,6 +30,7 @@ from uuid import uuid4
 
 from .history import HISTORY_SCHEMA_VERSION
 from .library.catalog import CatalogError, rebuild_catalog
+from .player_state import SCHEMA_VERSION as PLAYER_STATE_SCHEMA_VERSION
 
 BACKUP_FORMAT = "openorchestrion-data-backup"
 BACKUP_VERSION = 1
@@ -300,16 +301,50 @@ def _stage_history(source: Path, destination: Path) -> ManifestFile:
         raise BackupError(f"history path is not a regular file: {source}")
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as incoming:
-            with closing(sqlite3.connect(destination)) as outgoing:
-                incoming.backup(outgoing)
-                outgoing.commit()
+        with (
+            closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as incoming,
+            closing(sqlite3.connect(destination)) as outgoing,
+        ):
+            incoming.backup(outgoing)
+            outgoing.commit()
     except sqlite3.DatabaseError as exc:
         destination.unlink(missing_ok=True)
         raise BackupError(f"could not snapshot history database: {exc}") from exc
     _validate_history_db(destination)
     digest, size = _sha256_file(destination)
     return ManifestFile(path="history.db", size=size, sha256=digest)
+
+
+def _validate_player_state_db(path: Path) -> None:
+    try:
+        with closing(sqlite3.connect(f"file:{path}?mode=ro", uri=True)) as conn:
+            quick = conn.execute("PRAGMA quick_check").fetchone()
+            if quick is None or quick[0] != "ok":
+                raise BackupError(f"player state database quick_check failed: {quick!r}")
+            row = conn.execute("SELECT version FROM schema_info").fetchone()
+            if row is None or int(row[0]) != PLAYER_STATE_SCHEMA_VERSION:
+                found = None if row is None else row[0]
+                raise BackupError(f"unsupported player state schema version {found!r}")
+    except BackupError:
+        raise
+    except (sqlite3.DatabaseError, OSError, ValueError) as exc:
+        raise BackupError(f"invalid player state database {path}: {exc}") from exc
+
+
+def _stage_player_state(source: Path, destination: Path) -> ManifestFile:
+    if source.is_symlink() or not source.is_file():
+        raise BackupError(f"player state path is not a regular file: {source}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with closing(sqlite3.connect(f"file:{source}?mode=ro", uri=True)) as incoming:
+            with closing(sqlite3.connect(destination)) as outgoing:
+                incoming.backup(outgoing)
+    except sqlite3.DatabaseError as exc:
+        destination.unlink(missing_ok=True)
+        raise BackupError(f"could not snapshot player state database: {exc}") from exc
+    _validate_player_state_db(destination)
+    digest, size = _sha256_file(destination)
+    return ManifestFile(path="player-state.db", size=size, sha256=digest)
 
 
 def _manifest_bytes(manifest: _Manifest) -> bytes:
@@ -360,6 +395,9 @@ def create_backup(state_root: str | Path, destination: str | Path) -> BackupRepo
         if history.exists():
             files.append(_stage_history(history, staging / "history.db"))
             history_included = True
+        player_state = root / "player-state.db"
+        if player_state.exists():
+            files.append(_stage_player_state(player_state, staging / "player-state.db"))
         manifest = _Manifest(
             created_at=datetime.now(UTC).isoformat(),
             files=tuple(sorted(files, key=lambda entry: entry.path)),
@@ -392,7 +430,7 @@ def _safe_member_name(name: str) -> str:
 
 
 def _allowed_payload_path(path: str) -> bool:
-    if path == "history.db":
+    if path in {"history.db", "player-state.db"}:
         return True
     pure = PurePosixPath(path)
     if len(pure.parts) != 3 or pure.parts[:2] != ("library", "assets"):
@@ -573,6 +611,9 @@ def restore_backup(archive_path: str | Path, state_root: str | Path) -> RestoreR
         history_restored = (staging / "history.db").is_file()
         if history_restored:
             _validate_history_db(staging / "history.db")
+        player_state_restored = (staging / "player-state.db").is_file()
+        if player_state_restored:
+            _validate_player_state_db(staging / "player-state.db")
 
         # Recheck immediately before publication so another process cannot fill
         # an initially-empty target while a large archive is being verified.

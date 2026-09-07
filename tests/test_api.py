@@ -110,6 +110,7 @@ def _settings(tmp_path: Path, *, with_library: bool) -> Settings:
         library_root=root,
         catalog_db=root / "catalog.db",
         history_db=root / "history.db",
+        player_state_db=root / "player-state.db",
         virtual_midi=True,
     )
 
@@ -261,6 +262,35 @@ def test_queue_and_transport_run_against_virtual_midi(stocked_client: TestClient
     )
     assert stopped.status_code == 200
     assert stopped.json()["state"] == "stopped"
+
+
+def test_saved_collections_queue_editing_modes_seek_and_timer(stocked_client: TestClient) -> None:
+    assets = stocked_client.get("/api/library/search", params={"limit": 2}).json()["items"]
+    ids = [item["asset_id"] for item in assets]
+    assert stocked_client.post("/api/queue", json={"asset_ids": ids}).status_code == 200
+
+    saved = stocked_client.post("/api/collections", json={"name": "Test set", "kind": "playlist"})
+    assert saved.status_code == 200
+    collection_id = saved.json()["id"]
+    assert stocked_client.get("/api/collections").json()["items"][0]["asset_ids"] == ids
+
+    modes = stocked_client.post(
+        "/api/playback/modes",
+        json={"repeat_mode": "queue", "shuffle": True, "continuous": True},
+    )
+    assert modes.json()["repeat_mode"] == "queue"
+    assert stocked_client.post("/api/queue/play-next", json={"asset_id": ids[1]}).status_code == 200
+    assert stocked_client.post("/api/queue/remove-many", json={"asset_ids": [ids[1]]}).status_code == 200
+    assert stocked_client.post(f"/api/collections/{collection_id}/load").status_code == 200
+
+    assert stocked_client.post("/api/transport/play", json={}).status_code == 200
+    sought = stocked_client.post("/api/playback/seek", json={"position_seconds": 0.01})
+    assert sought.status_code == 200
+    timer = stocked_client.post(
+        "/api/playback/sleep-timer", json={"seconds": 60, "after_current": False}
+    )
+    assert timer.json()["sleep_timer_remaining_seconds"] in {59, 60}
+    assert stocked_client.delete(f"/api/collections/{collection_id}").status_code == 204
 
 
 def test_playback_routes_publish_real_success_models() -> None:

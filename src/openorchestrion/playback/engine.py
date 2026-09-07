@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import asyncio
-
-from mido import Message
+import hashlib
+import random
 from collections import OrderedDict
+from collections.abc import Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import Any, Literal
+
+from mido import Message
 
 from openorchestrion.midi.router import RoutingPlan
+from openorchestrion.player_state import PlayerStateStore
 
 from .clock import Clock, SystemClock
 from .events import PlaybackEventBus
@@ -55,6 +59,7 @@ class PlaybackEngine:
         clock: Clock | None = None,
         event_bus: PlaybackEventBus | None = None,
         command_cache_size: int = 256,
+        state_store: PlayerStateStore | None = None,
     ) -> None:
         self.clock = clock or SystemClock()
         self.router = router
@@ -81,6 +86,73 @@ class PlaybackEngine:
         self._volume = 100
         self._cc7_base: dict[tuple[str, int], int] = {}
         self._source_cache: tuple[tuple, MidiTimeline] | None = None
+        self._state_store = state_store
+        self._repeat_mode: Literal["off", "track", "queue"] = "off"
+        self._shuffle = False
+        self._continuous = False
+        self._stop_after_current = False
+        self._sleep_deadline: float | None = None
+        self._sleep_task: asyncio.Task[None] | None = None
+        self._restore_state()
+
+    @staticmethod
+    def _spec_to_dict(spec: QueueItemSpec) -> dict[str, Any]:
+        policy = spec.rendering_policy
+        return {
+            "asset_id": spec.asset_id, "title": spec.title,
+            "duration_seconds": spec.duration_seconds, "midi_path": spec.midi_path,
+            "composition_id": spec.composition_id, "composer": spec.composer,
+            "performance_type": spec.performance_type,
+            "device_preferences": list(spec.device_preferences),
+            "routing_preferences": dict(spec.routing_preferences),
+            "rendering_policy": None if policy is None else {
+                "mode": policy.mode.value, "piano_program": policy.piano_program,
+                "program_overrides": [[entry.channel, entry.program] for entry in policy.program_overrides],
+            },
+        }
+
+    @staticmethod
+    def _spec_from_dict(value: dict[str, Any]) -> QueueItemSpec:
+        from .rendering import RenderingPolicy
+        raw_policy = value.pop("rendering_policy", None)
+        policy = None if raw_policy is None else RenderingPolicy.from_values(
+            mode=raw_policy["mode"], piano_program=raw_policy.get("piano_program", 0),
+            program_overrides=raw_policy.get("program_overrides", ()),
+        )
+        value["device_preferences"] = tuple(value.get("device_preferences", ()))
+        return QueueItemSpec(**value, rendering_policy=policy)
+
+    def _restore_state(self) -> None:
+        if self._state_store is None:
+            return
+        try:
+            saved = self._state_store.load_session()
+            if not saved:
+                return
+            self._queue = [RuntimeQueueItem(self._spec_from_dict(dict(item))) for item in saved.get("queue", [])]
+            index = saved.get("current_index")
+            self._current_index = index if isinstance(index, int) and 0 <= index < len(self._queue) else (0 if self._queue else None)
+            self._position_seconds = max(0.0, float(saved.get("position_seconds", 0)))
+            self._volume = max(0, min(100, int(saved.get("volume", 100))))
+            self._repeat_mode = saved.get("repeat_mode", "off") if saved.get("repeat_mode") in {"off", "track", "queue"} else "off"
+            self._shuffle = bool(saved.get("shuffle", False))
+            self._continuous = bool(saved.get("continuous", False))
+            self._state = "stopped" if self._queue else "idle"
+        except (KeyError, OSError, RuntimeError, TypeError, ValueError):
+            # Corrupt optional session state must never prevent appliance boot.
+            self._queue = []
+            self._current_index = None
+
+    def _persist_locked(self) -> None:
+        if self._state_store is None:
+            return
+        self._state_store.save_session({
+            "queue": [self._spec_to_dict(item.spec) for item in self._queue],
+            "current_index": self._current_index,
+            "position_seconds": self._position_now_locked(),
+            "volume": self._volume, "repeat_mode": self._repeat_mode,
+            "shuffle": self._shuffle, "continuous": self._continuous,
+        })
 
     def _load_source(self, path: Path) -> MidiTimeline:
         """Reuse the current source on resume/replay; never cache output routes.
@@ -90,8 +162,13 @@ class PlaybackEngine:
         Rendering and dispatch must continue to leave source messages untouched.
         """
         stat = path.stat()
+        # Some filesystems have coarse timestamps, so same-size in-place MIDI
+        # edits can otherwise look identical to the cache. Hashing is still far
+        # cheaper than decoding and validating a dense timeline.
+        with path.open("rb") as source:
+            digest = hashlib.file_digest(source, "sha256").digest()
         key = (str(path.resolve()), stat.st_dev, stat.st_ino, stat.st_size,
-               stat.st_mtime_ns, stat.st_ctime_ns)
+               stat.st_mtime_ns, stat.st_ctime_ns, digest)
         if self._source_cache is not None and self._source_cache[0] == key:
             return self._source_cache[1]
         timeline = MidiTimeline.from_file(path)
@@ -143,6 +220,7 @@ class PlaybackEngine:
                 async with self._send_lock:
                     await self._send_volume_messages()
             snapshot = self._playback_snapshot_locked(command_id)
+            self._persist_locked()
             self._remember_command(command_id, operation)
             self.events.publish("state.playback", snapshot.to_dict())
             return snapshot
@@ -273,6 +351,9 @@ class PlaybackEngine:
             current_index=self._current_index,
             total_duration_seconds=sum(item.spec.duration_seconds for item in self._queue),
             command_id=command_id,
+            repeat_mode=self._repeat_mode,
+            shuffle=self._shuffle,
+            continuous=self._continuous,
         )
 
     def _playback_snapshot_locked(self, command_id: str | None = None) -> PlaybackSnapshot:
@@ -302,7 +383,73 @@ class PlaybackEngine:
             position=position,
             command_id=command_id,
             volume=self._volume,
+            sleep_timer_remaining_seconds=(
+                max(0, round(self._sleep_deadline - self.clock.now()))
+                if self._sleep_deadline is not None else None
+            ),
+            stop_after_current=self._stop_after_current,
         )
+
+    async def set_modes(self, *, repeat_mode: str, shuffle: bool, continuous: bool) -> QueueSnapshot:
+        if repeat_mode not in {"off", "track", "queue"}:
+            raise ValueError("repeat_mode must be off, track, or queue")
+        async with self._lock:
+            self._repeat_mode = repeat_mode  # type: ignore[assignment]
+            self._shuffle = bool(shuffle)
+            self._continuous = bool(continuous)
+            self._persist_locked()
+            snapshot = self._queue_snapshot_locked()
+            self.events.publish("state.queue", snapshot.to_dict())
+            return snapshot
+
+    async def seek(self, position_seconds: float) -> PlaybackSnapshot:
+        if position_seconds < 0:
+            raise ValueError("position_seconds must be non-negative")
+        async with self._lock:
+            current = self._current_item_locked()
+            if current is None:
+                raise PlaybackConflict("the queue is empty")
+            target = min(position_seconds, current.spec.duration_seconds)
+            previous_state = self._state
+            was_playing = previous_state == "playing"
+            if self._state in {"playing", "paused"}:
+                await self._interrupt_locked(mark_skipped=False, reset_position=False)
+            self._position_seconds = target
+            self._state = "paused" if previous_state in {"playing", "paused"} else "stopped"
+            if was_playing and target < current.spec.duration_seconds:
+                await self._begin_current_locked(start_position=target)
+            self._persist_locked()
+            snapshot = self._playback_snapshot_locked()
+            self.events.publish("state.playback", snapshot.to_dict())
+            return snapshot
+
+    async def set_sleep_timer(self, seconds: int | None = None, *, after_current: bool = False) -> PlaybackSnapshot:
+        if seconds is not None and not 1 <= seconds <= 86400:
+            raise ValueError("seconds must be between 1 and 86400")
+        async with self._lock:
+            if self._sleep_task is not None:
+                self._sleep_task.cancel()
+                self._sleep_task = None
+            self._sleep_deadline = self.clock.now() + seconds if seconds is not None else None
+            self._stop_after_current = bool(after_current)
+            if seconds is not None:
+                self._sleep_task = asyncio.create_task(self._sleep_then_stop(seconds))
+            snapshot = self._playback_snapshot_locked()
+            self.events.publish("state.playback", snapshot.to_dict())
+            return snapshot
+
+    async def _sleep_then_stop(self, seconds: int) -> None:
+        try:
+            await asyncio.sleep(seconds)
+            async with self._lock:
+                await self._interrupt_locked(mark_skipped=True, reset_position=True)
+                self._state = "stopped" if self._queue else "idle"
+                self._sleep_deadline = None
+                self._sleep_task = None
+                self._persist_locked()
+                self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
+        except asyncio.CancelledError:
+            return
 
     async def queue_snapshot(self, *, command_id: str | None = None) -> QueueSnapshot:
         async with self._lock:
@@ -364,6 +511,7 @@ class PlaybackEngine:
                     self._current_index = 0
                     self._state = "idle"
             snapshot = self._queue_snapshot_locked(command_id)
+            self._persist_locked()
             self._remember_command(command_id, operation)
             self.events.publish("state.queue", snapshot.to_dict())
             return snapshot
@@ -384,6 +532,7 @@ class PlaybackEngine:
             self._remember_command(command_id, operation)
             self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
             snapshot = self._queue_snapshot_locked(command_id)
+            self._persist_locked()
             self.events.publish("state.queue", snapshot.to_dict())
             return snapshot
 
@@ -411,6 +560,7 @@ class PlaybackEngine:
             if current is not None:
                 self._current_index = self._queue.index(current)
             snapshot = self._queue_snapshot_locked(command_id)
+            self._persist_locked()
             self._remember_command(command_id, operation)
             self.events.publish("state.queue", snapshot.to_dict())
             return snapshot
@@ -445,11 +595,58 @@ class PlaybackEngine:
             elif self._current_index is not None and index < self._current_index:
                 self._current_index -= 1
             snapshot = self._queue_snapshot_locked(command_id)
+            self._persist_locked()
             self.events.publish("state.queue", snapshot.to_dict())
             self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
             if active and was_active and self._current_index is not None:
                 await self._begin_current_locked(start_position=0.0)
             self._remember_command(command_id, operation)
+            return snapshot
+
+    async def remove_many(self, asset_ids: Sequence[str]) -> QueueSnapshot:
+        wanted = set(asset_ids)
+        if not wanted:
+            raise PlaybackConflict("asset_ids cannot be empty")
+        async with self._lock:
+            existing = {item.spec.asset_id for item in self._queue}
+            missing = wanted - existing
+            if missing:
+                raise PlaybackConflict(f"asset is not in the queue: {min(missing)}")
+            current = self._current_item_locked()
+            remove_current = current is not None and current.spec.asset_id in wanted
+            was_active = self._state in {"playing", "paused"}
+            if remove_current and was_active:
+                await self._interrupt_locked(mark_skipped=True, reset_position=True)
+            self._queue = [item for item in self._queue if item.spec.asset_id not in wanted]
+            if not self._queue:
+                self._current_index = None
+                self._state = "idle"
+            elif current in self._queue:
+                self._current_index = self._queue.index(current)
+            else:
+                self._current_index = min(self._current_index or 0, len(self._queue) - 1)
+                if was_active:
+                    await self._begin_current_locked(start_position=0.0)
+            self._persist_locked()
+            queue = self._queue_snapshot_locked()
+            self.events.publish("state.queue", queue.to_dict())
+            self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
+            return queue
+
+    async def play_next(self, asset_id: str) -> QueueSnapshot:
+        async with self._lock:
+            index = next((i for i, item in enumerate(self._queue) if item.spec.asset_id == asset_id), None)
+            if index is None:
+                raise PlaybackConflict(f"asset is not in the queue: {asset_id}")
+            target = min((self._current_index or 0) + 1, len(self._queue) - 1)
+            current = self._current_item_locked()
+            item = self._queue.pop(index)
+            self._queue.insert(target, item)
+            if current is not None:
+                self._current_index = self._queue.index(current)
+            self._persist_locked()
+            snapshot = self._queue_snapshot_locked()
+            self.events.publish("state.queue", snapshot.to_dict())
             return snapshot
 
     async def transport(
@@ -485,6 +682,7 @@ class PlaybackEngine:
                 if self._queue:
                     self._state = "stopped"
             snapshot = self._playback_snapshot_locked(command_id)
+            self._persist_locked()
             self._remember_command(command_id, operation)
             self.events.publish("state.playback", snapshot.to_dict())
             return snapshot
@@ -494,7 +692,11 @@ class PlaybackEngine:
             raise PlaybackConflict("the queue is empty")
         if self._state == "playing":
             return
-        start_position = self._position_seconds if self._state == "paused" else 0.0
+        start_position = (
+            self._position_seconds
+            if self._state in {"paused", "stopped"} and self._position_seconds > 0
+            else 0.0
+        )
         await self._begin_current_locked(start_position=start_position)
 
     async def _pause_locked(self) -> None:
@@ -734,8 +936,29 @@ class PlaybackEngine:
                 await self.history.completed(item.play_id, duration_seconds)
                 item.play_id = None
             await self._panic_locked()
-            if self._current_index is not None and self._current_index + 1 < len(self._queue):
-                self._current_index += 1
+            if self._stop_after_current:
+                self._stop_after_current = False
+                self._state = "stopped"
+                self._active_duration_seconds = duration_seconds
+                self._persist_locked()
+                self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
+                return
+            if self._repeat_mode == "track":
+                self._position_seconds = 0.0
+                self._active_duration_seconds = None
+                await self._begin_current_locked(start_position=0.0)
+            elif self._current_index is not None and self._current_index + 1 < len(self._queue):
+                if self._shuffle:
+                    choices = [i for i in range(len(self._queue)) if i != self._current_index]
+                    self._current_index = random.choice(choices) if choices else self._current_index
+                else:
+                    self._current_index += 1
+                self._position_seconds = 0.0
+                self._active_duration_seconds = None
+                self.events.publish("state.queue", self._queue_snapshot_locked().to_dict())
+                await self._begin_current_locked(start_position=0.0)
+            elif self._repeat_mode == "queue" or self._continuous:
+                self._current_index = random.randrange(len(self._queue)) if self._shuffle else 0
                 self._position_seconds = 0.0
                 self._active_duration_seconds = None
                 self.events.publish("state.queue", self._queue_snapshot_locked().to_dict())
@@ -743,6 +966,7 @@ class PlaybackEngine:
             else:
                 self._state = "stopped"
                 self._active_duration_seconds = duration_seconds
+                self._persist_locked()
                 self.events.publish(
                     "state.playback", self._playback_snapshot_locked().to_dict()
                 )
@@ -783,10 +1007,21 @@ class PlaybackEngine:
             if self._closed:
                 return
             self._closed = True
+            position = self._position_now_locked()
             self._generation += 1
             if self._worker is not None and not self._worker.done():
                 self._worker.cancel()
             self._worker = None
+            current = self._current_item_locked()
+            if self._state in {"playing", "paused"} and current is not None and current.play_id is not None:
+                await self.history.progress(current.play_id, position)
+            self._position_seconds = position
+            self._run_anchor_clock = None
+            self._state = "stopped" if self._queue else "idle"
+            if self._sleep_task is not None:
+                self._sleep_task.cancel()
+                self._sleep_task = None
+            self._persist_locked()
             with suppress(Exception):
                 await self._panic_locked()
             await self.router.close()

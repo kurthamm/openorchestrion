@@ -160,6 +160,18 @@ export const api = {
       method: 'POST',
       body: { asset_id: assetId, command_id: id },
     }),
+  removeManyFromQueue: (assetIds) => request('/api/queue/remove-many', { method: 'POST', body: { asset_ids: assetIds } }),
+  playNext: (assetId) => request('/api/queue/play-next', { method: 'POST', body: { asset_id: assetId } }),
+  setPlaybackModes: ({ repeatMode = 'off', shuffle = false, continuous = false }) =>
+    request('/api/playback/modes', { method: 'POST', body: { repeat_mode: repeatMode, shuffle, continuous } }),
+  seek: (positionSeconds) => request('/api/playback/seek', { method: 'POST', body: { position_seconds: positionSeconds } }),
+  sleepTimer: ({ seconds = null, afterCurrent = false } = {}) =>
+    request('/api/playback/sleep-timer', { method: 'POST', body: { seconds, after_current: afterCurrent } }),
+  collections: () => request('/api/collections'),
+  saveCollection: (body) => request('/api/collections', { method: 'POST', body }),
+  loadCollection: (id) => request(`/api/collections/${encodeURIComponent(id)}/load`, { method: 'POST' }),
+  renameCollection: (id, name) => request(`/api/collections/${encodeURIComponent(id)}`, { method: 'PATCH', body: { name } }),
+  deleteCollection: (id) => request(`/api/collections/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   transport: (action, id = commandId()) =>
     request(`/api/transport/${encodeURIComponent(action)}`, {

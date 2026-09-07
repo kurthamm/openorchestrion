@@ -182,7 +182,7 @@ See [docs/appliance-install.md](docs/appliance-install.md).
 
 ## Backup and recovery
 
-OpenOrchestrion treats the Pi as replaceable hardware. The application-data backup format contains content-addressed MIDI objects, sidecars, and a SQLite-safe history snapshot, with exact manifest digests.
+OpenOrchestrion treats the Pi as replaceable hardware. The application-data backup format contains content-addressed MIDI objects, sidecars, a SQLite-safe history snapshot, and durable playlists/player session state, with exact manifest digests.
 
 Restore verifies the archive, rebuilds the disposable catalog before publication, and rejects traversal, unexpected files, symlinks, duplicate members, digest mismatches, malformed sidecars, and corrupt history. Privileged replacement creates a rollback backup and restores the previous state if the new service cannot become healthy.
 

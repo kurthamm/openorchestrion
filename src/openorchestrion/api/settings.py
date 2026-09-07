@@ -49,19 +49,23 @@ class Settings:
     library_root: Path
     catalog_db: Path
     history_db: Path
+    player_state_db: Path | None = None
     virtual_midi: bool = False
     ai_provider: str | None = None
     ai_model: str = DEFAULT_AI_MODEL
     ai_timeout_seconds: float = DEFAULT_AI_TIMEOUT_SECONDS
 
     @classmethod
-    def from_env(cls, environ: Mapping[str, str] | None = None) -> "Settings":
+    def from_env(cls, environ: Mapping[str, str] | None = None) -> Settings:
         env = os.environ if environ is None else environ
         root = Path(env.get("OPENORCHESTRION_LIBRARY_ROOT", DEFAULT_LIBRARY_ROOT))
         return cls(
             library_root=root,
             catalog_db=Path(env.get("OPENORCHESTRION_CATALOG_DB", str(root / "catalog.db"))),
             history_db=Path(env.get("OPENORCHESTRION_HISTORY_DB", str(root / "history.db"))),
+            player_state_db=Path(
+                env.get("OPENORCHESTRION_PLAYER_STATE_DB", str(root / "player-state.db"))
+            ),
             virtual_midi=_env_bool(env.get("OPENORCHESTRION_VIRTUAL_MIDI")),
             ai_provider=_ai_provider(env.get("OPENORCHESTRION_AI_PROVIDER")),
             ai_model=(env.get("OPENORCHESTRION_AI_MODEL", DEFAULT_AI_MODEL).strip() or DEFAULT_AI_MODEL),
