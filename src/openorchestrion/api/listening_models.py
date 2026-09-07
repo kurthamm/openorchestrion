@@ -61,6 +61,8 @@ class EncodedChannel(ListeningModel):
 
 
 class PlaybackSound(ListeningModel):
+    mapping_status: str
+    mapping_note: str
     program: int
     name: str
     bank_msb: int
@@ -96,7 +98,17 @@ class ReadinessFlag(ListeningModel):
     message: str
 
 
+class SoundPalette(ListeningModel):
+    kind: str
+    label: str
+    sounding_channels: int
+    pitched_sound_count: int
+    percussion: bool
+
+
 class PlaybackReadiness(ListeningModel):
+    source_palette: SoundPalette
+    playback_palette: SoundPalette
     version: int
     status: str
     parts: list[SoundingPart]

@@ -1,5 +1,17 @@
 # Developer handoff — 7 September 2026
 
+## Quality research and compatibility preview (not deployed)
+
+Read the [quality definition and source research](library-quality-standard.md)
+before changing admission rules. It separates musical completeness, expression,
+technical integrity and device fidelity, with a 76-file raw-event study and
+all-20,549-file palette inventory. The [compatibility preview](library-compatibility.md)
+adds source-versus-rendered sound palettes and precise WK-220 LSB warnings.
+The tested wheel is not installed; preserve the current queue and its sound
+setting. Expanded analysis and completeness-based curation remain specified work.
+Playlists, queue editing, modes, seek, sleep and persistence belong to the other
+developer and are not modified by this change.
+
 ## Current library-readiness release
 
 The [playback-readiness release](library-playback-readiness.md) adds policy-aware

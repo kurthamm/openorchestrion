@@ -17,6 +17,7 @@ from pathlib import Path
 from ..midi.gm import GM_PROGRAM_NAMES
 from ..playback.rendering import RenderingMode, RenderingPolicy
 from .midi_scan import read_events
+from .compatibility import annotate_wk220, sound_palette
 
 VERSION = 1
 LIMITATION = (
@@ -169,6 +170,7 @@ def readiness(facts: dict, performance_type: str | None, policy: RenderingPolicy
             part["sounds"] = [{"program": program + 1, "name": GM_PROGRAM_NAMES[program],
                                "bank_msb": 0, "bank_lsb": 0, "implicit": False,
                                "note_count": part["note_count"]}]
+    annotate_wk220(parts)
     flags = []
 
     def flag(code, severity, message):
@@ -183,17 +185,20 @@ def readiness(facts: dict, performance_type: str | None, policy: RenderingPolicy
         flag("wk220_over_48", "warning", f"Estimated peak {peak} notes exceeds the WK-220's nominal 48-voice capacity; notes may be stolen.")
     elif peak > 24:
         flag("wk220_over_24", "info", f"Estimated peak {peak} notes: some WK-220 tones have a 24-voice limit; sound choice matters.")
-    if any(s["bank_msb"] or s["bank_lsb"] or (p["percussion"] and s["program"] != 1) for p in parts for s in p["sounds"]):
+    if any(s["mapping_status"] == "unverified" for p in parts for s in p["sounds"]):
         flag("unverified_sound_mapping", "warning", "Non-default banks or drum kits need device-specific mapping. GM names identify the program slot; the actual sound is unverified.")
+    if any(s["bank_lsb"] for p in parts for s in p["sounds"]):
+        flag("wk220_bank_lsb_ignored", "warning", "The WK-220 ignores bank LSB selection. Requested variations may sound different; affected sounds are identified below.")
     if facts["sysex_count"]:
         flag("sysex_blocked", "info", "Device setup in SysEx is blocked by the player; the source may expect sounds or effects that will not be configured.")
     if any(s["implicit"] for p in parts for s in p["sounds"]):
         flag("default_program", "info", "Some notes precede any program change. The player starts pitched channels on Acoustic Grand Piano and channel 10 on its default drum kit.")
     # A clue about source completeness, never an automatic quality verdict.
     if performance_type == "MULTI_INSTRUMENT" and len(facts["parts"]) < 2:
-        flag("sparse_arrangement", "info", "The catalog describes multiple instruments but the source uses only one sounding channel. This may be a reduction, sequential sounds or an incomplete export.")
+        flag("sparse_arrangement", "info", "The catalog labels this multi-instrument, but only one MIDI channel contains notes. See the source sound palette below. Channel count alone does not establish musical completeness or performer count.")
     return {"version": VERSION, "status": "caution" if any(f["severity"] == "warning" for f in flags) else "structurally_playable",
             "parts": parts, "peak_notes": peak, "flags": flags, "limitation": LIMITATION,
+            "source_palette": sound_palette(facts["parts"]), "playback_palette": sound_palette(parts),
             "reference_device": "Casio WK-220 (reference limits; not automatic device identification)"}
 
 

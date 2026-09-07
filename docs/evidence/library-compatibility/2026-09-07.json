@@ -1,0 +1,30 @@
+{
+  "assets": 20549,
+  "flags_distinct_assets": {
+    "default_program": 3884,
+    "sparse_arrangement": 4343,
+    "sysex_blocked": 7217,
+    "unverified_sound_mapping": 4209,
+    "wk220_bank_lsb_ignored": 642,
+    "wk220_over_24": 2212,
+    "wk220_over_48": 120
+  },
+  "mode": "source without rendering overrides",
+  "mutations": 0,
+  "single_channel_multi_instrument_labels": {
+    "acoustic_piano": 2347,
+    "device_dependent": 132,
+    "multiple_instruments": 25,
+    "percussion_only": 5,
+    "piano_default": 313,
+    "single_instrument": 1521
+  },
+  "source_palettes": {
+    "acoustic_piano": 4193,
+    "device_dependent": 2005,
+    "multiple_instruments": 11824,
+    "percussion_only": 5,
+    "piano_default": 661,
+    "single_instrument": 1861
+  }
+}
