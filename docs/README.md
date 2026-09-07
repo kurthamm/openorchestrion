@@ -14,6 +14,7 @@ This directory contains the living design and implementation specification.
 - [Requirements](requirements.md) — stable FR/NFR IDs and acceptance tests.
 - [Reference build](reference-build.md) — Pi 5 4 GB, 7-inch appliance display, headless alternative.
 - [Raspberry Pi appliance installation](appliance-install.md) — boot-to-service systemd packaging, kiosk/headless install, updates, logs and recovery.
+- [Cloudflare remote access](cloudflare-remote-access.md) — authenticated `piano.hamm.me` tunnel, exact-email Access policy, verification and recovery.
 - [First-run setup and local configuration](setup-and-configuration.md) — secure Setup screen, local admin command, secrets boundary and readiness semantics.
 - [Roadmap](../ROADMAP.md) — staged implementation plan.
 

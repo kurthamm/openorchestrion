@@ -154,8 +154,16 @@ for temporary diagnostics.
 ### Network boundary
 
 The reference service binds to `0.0.0.0` so phones/tablets on the household LAN can reach it.
-There is currently no Internet-facing authentication layer. **Do not port-forward the service
-or expose port 8000 directly to the public Internet.**
+The application does not implement an Internet-facing authentication layer. **Do not
+port-forward the service or expose port 8000 directly to the public Internet.**
+
+The reference deployment also supports authenticated remote access through a
+Cloudflare Tunnel. This does not change the application's trust model: the public
+hostname must be protected by Cloudflare Access before traffic reaches the
+application, and the router must not forward port 8000. See
+[Cloudflare remote access](cloudflare-remote-access.md) for the deployed
+`piano.hamm.me` configuration, exact-email allow policy, verification and
+recovery procedure.
 
 ## Friendly LAN discovery
 
