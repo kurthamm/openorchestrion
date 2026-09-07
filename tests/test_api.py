@@ -416,3 +416,15 @@ def test_openapi_schema_publishes_the_contract(empty_client: TestClient) -> None
         "/api/transport/{action}",
     ):
         assert path in paths
+
+
+def test_facets_reflect_the_catalog(stocked_client: TestClient, empty_client: TestClient) -> None:
+    empty = empty_client.get("/api/library/facets").json()
+    assert all(empty[key] == [] for key in ("genres", "moods", "themes", "eras", "composers"))
+    body = stocked_client.get("/api/library/facets", params={"limit": 5}).json()
+    assert body["indexed"] is True
+    for key in ("genres", "moods", "themes", "eras", "composers"):
+        assert isinstance(body[key], list) and len(body[key]) <= 5
+        for entry in body[key]:
+            assert entry["count"] >= 1 and entry["value"]
+    assert stocked_client.get("/api/library/facets", params={"limit": 0}).status_code == 422

@@ -12,7 +12,7 @@ import { anchor, createTicker } from './position.js';
 import { StateSocket } from './socket.js';
 import { ensureSessionId, getState, setState, subscribe } from './store.js';
 import { renderHealth } from './views/health.js';
-import { renderAskResult, renderStations, STATIONS } from './views/listen.js';
+import { renderAskResult, renderStations, stationsFor } from './views/listen.js';
 import { renderNowPlaying, updateProgress } from './views/nowplaying.js';
 import { renderFacets, renderResults } from './views/browse.js';
 import { renderHistory, renderQueue } from './views/queue.js';
@@ -259,6 +259,17 @@ const handlers = {
   },
 };
 
+async function loadFacets() {
+  try {
+    const facets = await api.facets();
+    setState({ facets });
+    renderStations(nodes.stations, handlers, facets);
+  } catch (error) {
+    // Browse and stations keep their static fallbacks; nothing else depends on this.
+    console.warn('library facets unavailable', error);
+  }
+}
+
 async function loadStatus() {
   try {
     setState({ status: await api.status() });
@@ -357,6 +368,7 @@ function applyEnvelope(envelope) {
       break;
     case 'state.library':
       setState({ status: { ...getState().status, library: envelope.payload } });
+      void loadFacets();
       if (getState().view === 'setup') void loadSetup();
       break;
     case 'error':
@@ -427,7 +439,8 @@ nodes.askInput.addEventListener('keydown', (event) => {
 });
 
 nodes.surprise.addEventListener('click', () => {
-  const station = STATIONS[Math.floor(Math.random() * STATIONS.length)];
+  const stations = stationsFor(getState().facets);
+  const station = stations[Math.floor(Math.random() * stations.length)];
   void handlers.playStation(station);
 });
 
@@ -438,9 +451,10 @@ nodes.searchForm.addEventListener('submit', (event) => {
 
 // ------------------------------------------------------------------- start
 
-renderStations(nodes.stations, handlers);
+renderStations(nodes.stations, handlers, null);
 ensureSessionId();
 void loadStatus();
+void loadFacets();
 void loadSetup({ autoRoute: true });
 socket.connect();
 

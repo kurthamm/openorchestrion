@@ -87,6 +87,26 @@ class LibraryCounts(BaseModel):
     themes: int = 0
 
 
+class FacetEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    value: str
+    count: int = Field(ge=1)
+
+
+class LibraryFacets(BaseModel):
+    """Categories that exist in this library, most common first, for browse and station lists."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    indexed: bool
+    genres: list[FacetEntry] = Field(default_factory=list)
+    moods: list[FacetEntry] = Field(default_factory=list)
+    themes: list[FacetEntry] = Field(default_factory=list)
+    eras: list[FacetEntry] = Field(default_factory=list)
+    composers: list[FacetEntry] = Field(default_factory=list)
+
+
 class SystemStatus(BaseModel):
     """Aggregate appliance state for the Now Playing header and status screens."""
 

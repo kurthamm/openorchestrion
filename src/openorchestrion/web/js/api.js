@@ -103,6 +103,7 @@ export const api = {
 
   search: (params) => request(`/api/library/search${query(params)}`),
   libraryStats: () => request('/api/library/stats'),
+  facets: () => request('/api/library/facets'),
   asset: (assetId) => request(`/api/library/assets/${encodeURIComponent(assetId)}`),
 
   setFavorite: (assetId, favorite, id = commandId()) =>

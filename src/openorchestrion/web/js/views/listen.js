@@ -20,10 +20,52 @@ export const STATIONS = [
   { id: 'two-pianos', label: 'Two pianos', intent: { performance_types: ['TWO_PIANO', 'PIANO_DUET'] } },
 ];
 
-export function renderStations(node, handlers) {
+function label(value) {
+  return value.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function facetHas(list, value) {
+  return (list || []).some((entry) => entry.value === value);
+}
+
+/**
+ * Stations offered on the Listen screen.
+ *
+ * The curated presets lead when the library can honour them; then one station
+ * per genre and theme the catalog actually holds, most common first, so a
+ * library full of baroque, film scores or video-game music gets stations for
+ * those instead of a fixed six that may match nothing.
+ */
+export function stationsFor(facets, { genres = 10, themes = 8 } = {}) {
+  if (!facets?.indexed) return STATIONS;
+  const covered = new Set();
+  const stations = [];
+  for (const station of STATIONS) {
+    const intent = station.intent;
+    const ok =
+      (intent.genres || []).every((g) => facetHas(facets.genres, g)) &&
+      (intent.themes || []).every((t) => facetHas(facets.themes, t)) &&
+      (intent.moods || []).every((m) => facetHas(facets.moods, m));
+    if (!ok) continue;
+    stations.push(station);
+    for (const g of intent.genres || []) covered.add(`genre:${g}`);
+    for (const t of intent.themes || []) covered.add(`theme:${t}`);
+  }
+  for (const entry of (facets.genres || []).slice(0, genres)) {
+    if (covered.has(`genre:${entry.value}`)) continue;
+    stations.push({ id: `genre-${entry.value}`, label: label(entry.value), intent: { genres: [entry.value] } });
+  }
+  for (const entry of (facets.themes || []).slice(0, themes)) {
+    if (covered.has(`theme:${entry.value}`)) continue;
+    stations.push({ id: `theme-${entry.value}`, label: label(entry.value), intent: { themes: [entry.value] } });
+  }
+  return stations.length ? stations : STATIONS;
+}
+
+export function renderStations(node, handlers, facets) {
   render(
     node,
-    STATIONS.map((station) =>
+    stationsFor(facets).map((station) =>
       h('button', {
         class: 'chip',
         type: 'button',
