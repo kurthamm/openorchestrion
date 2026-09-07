@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+
+from mido import Message
 from collections import OrderedDict
 from contextlib import suppress
 from dataclasses import dataclass
@@ -73,6 +75,11 @@ class PlaybackEngine:
         self._closed = False
         self._disconnected: set[str] = set()
         self._auto_paused = False
+        # Master volume, 0..100. Applied by scaling every Channel Volume (CC7)
+        # the file sends and by re-sending the scaled value on change, so the
+        # file's own balance between parts is preserved at any level.
+        self._volume = 100
+        self._cc7_base: dict[tuple[str, int], int] = {}
 
     @property
     def output_names(self) -> tuple[str, ...]:
@@ -81,6 +88,47 @@ class PlaybackEngine:
     @property
     def outputs_ready(self) -> bool:
         return self.router.ready and not self._disconnected
+
+    @property
+    def volume(self) -> int:
+        return self._volume
+
+    def _scaled_cc7(self, base: int) -> int:
+        return max(0, min(127, round(base * self._volume / 100)))
+
+    def _outgoing(self, routed: RoutedMessage) -> Message:
+        """The message actually sent: Channel Volume is scaled by the master volume."""
+        message = routed.message
+        if message.type == "control_change" and message.control == 7:
+            self._cc7_base[(routed.destination_device, message.channel)] = message.value
+            return message.copy(value=self._scaled_cc7(message.value))
+        return message
+
+    async def _send_volume_messages(self) -> None:
+        """Send the scaled Channel Volume for every channel of every output. Caller holds _send_lock."""
+        for name, output in self.router.outputs.items():
+            for channel in range(16):
+                base = self._cc7_base.get((name, channel), 100)
+                await output.send(
+                    Message("control_change", channel=channel, control=7, value=self._scaled_cc7(base))
+                )
+
+    async def set_volume(self, level: int, *, command_id: str | None = None) -> PlaybackSnapshot:
+        """Set the master volume (0..100) and apply it to every output immediately."""
+        if not isinstance(level, int) or not 0 <= level <= 100:
+            raise ValueError("volume must be an integer between 0 and 100")
+        async with self._lock:
+            operation = "volume"
+            if not self._check_command(command_id, operation):
+                return self._playback_snapshot_locked(command_id)
+            self._volume = level
+            if self.router.ready and not self._disconnected:
+                async with self._send_lock:
+                    await self._send_volume_messages()
+            snapshot = self._playback_snapshot_locked(command_id)
+            self._remember_command(command_id, operation)
+            self.events.publish("state.playback", snapshot.to_dict())
+            return snapshot
 
     @property
     def disconnected_outputs(self) -> tuple[str, ...]:
@@ -226,6 +274,7 @@ class PlaybackEngine:
             now_playing=now_playing,
             position=position,
             command_id=command_id,
+            volume=self._volume,
         )
 
     async def queue_snapshot(self, *, command_id: str | None = None) -> QueueSnapshot:
@@ -543,6 +592,10 @@ class PlaybackEngine:
             if generation != self._generation:
                 return False
             await self.router.reset_channels()
+            # Reset All Controllers leaves Channel Volume at its default of 100;
+            # the file's own CC7 messages, if any, are scaled as they arrive.
+            self._cc7_base.clear()
+            await self._send_volume_messages()
         return True
 
     async def _run_track(
@@ -566,7 +619,7 @@ class PlaybackEngine:
                     async with self._send_lock:
                         if generation != self._generation:
                             return
-                        await routed.output.send(routed.message)
+                        await routed.output.send(self._outgoing(routed))
 
             threshold = (
                 min(
@@ -605,7 +658,7 @@ class PlaybackEngine:
                     async with self._send_lock:
                         if generation != self._generation:
                             return
-                        await dispatch.routed.output.send(dispatch.routed.message)
+                        await dispatch.routed.output.send(self._outgoing(dispatch.routed))
                     index += 1
 
             await self.clock.sleep_until(

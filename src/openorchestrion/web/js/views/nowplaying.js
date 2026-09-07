@@ -59,6 +59,7 @@ export function renderNowPlaying(node, state, handlers, anchored) {
           h('p', { class: 'np-sub', text: 'Ask for something, or pick a station.' }),
         ),
         transportRow(state, handlers, playing),
+        volumeRow(state, handlers),
       ),
     );
     return;
@@ -100,6 +101,7 @@ export function renderNowPlaying(node, state, handlers, anchored) {
         h('span', { class: 'np-time', text: formatClock(Math.max(0, durationMs - elapsed)) }),
       ),
       transportRow(state, handlers, playing),
+      volumeRow(state, handlers),
     ),
   );
 }
@@ -158,4 +160,26 @@ function transportRow(state, handlers, playing) {
   );
 
   return h('div', { class: 'np-transport', role: 'group', 'aria-label': 'Transport controls' }, buttons);
+}
+
+/** Master volume for every output; the server echoes the applied level in PlaybackState. */
+function volumeRow(state, handlers) {
+  const level = Number.isInteger(state.playback?.volume) ? state.playback.volume : 100;
+  return h(
+    'div',
+    { class: 'np-volume', role: 'group', 'aria-label': 'Volume' },
+    h('span', { class: 'np-volume-glyph', 'aria-hidden': 'true', text: level === 0 ? '🔇' : '🔊' }),
+    h('input', {
+      type: 'range',
+      class: 'np-volume-slider',
+      min: '0',
+      max: '100',
+      step: '1',
+      value: String(level),
+      'aria-label': 'Master volume',
+      'aria-valuetext': `${level} percent`,
+      onChange: (event) => handlers.setVolume(Number(event.target.value)),
+    }),
+    h('span', { class: 'np-volume-value', text: `${level}%` }),
+  );
 }

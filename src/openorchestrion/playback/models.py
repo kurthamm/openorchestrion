@@ -76,6 +76,7 @@ class PlaybackSnapshot:
     now_playing: NowPlayingSnapshot | None
     position: PositionSnapshot | None
     command_id: str | None = None
+    volume: int = 100
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

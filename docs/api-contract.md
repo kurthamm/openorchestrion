@@ -305,6 +305,20 @@ A transport request may contain only an optional UUID command ID:
 an active history attempt appropriately and perform MIDI cleanup. `panic` fans
 cleanup across every configured destination.
 
+### Master volume
+
+```text
+POST /api/volume
+{"level": 65, "command_id": "..."}
+```
+
+`level` is an integer 0..100 and applies to every output at once, whether or not
+anything is playing, and to every later track. The engine implements it by
+scaling each Channel Volume (CC7) message the file sends and by re-sending the
+scaled value on every channel when the level changes, so the file's own balance
+between parts is preserved at any level. Note velocities are never altered. The
+response is the resulting `PlaybackState`, which carries the applied `volume`.
+
 ## 10. Playback state
 
 `PlaybackState` is authoritative:
@@ -326,7 +340,8 @@ cleanup across every configured destination.
     "rate": 1.0,
     "server_time": "2026-08-22T17:00:00+00:00"
   },
-  "command_id": null
+  "command_id": null,
+  "volume": 100
 }
 ```
 
