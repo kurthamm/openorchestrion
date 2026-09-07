@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -16,6 +17,7 @@ from ..library.metadata import (
     MetadataConflictError,
     MetadataError,
     set_favorite,
+    sidecar_path,
 )
 from ..models import PlaybackIntent
 from ..playback import (
@@ -24,8 +26,10 @@ from ..playback import (
     PlaybackError,
     PlaybackOutputError,
     QueueItemSpec,
+    RenderingMode,
     RenderingPolicy,
 )
+from ..playback.voicing import suggest_program_overrides
 from ..stations import StationConstraints, build_station
 from .errors import ApiError
 from .models import (
@@ -206,9 +210,31 @@ def _station_constraints(settings: Settings, intent: PlaybackIntent) -> StationC
     return constraints
 
 
+def _default_rendering_policy(settings: Settings, record: dict[str, Any]) -> RenderingPolicy | None:
+    """Voicing correction applied when a queue request names no rendering.
+
+    Orchestral score exports routinely carry poor General MIDI choices (solo
+    string patches on whole sections, no Program Change at all). The stored
+    deterministic analysis is enough to correct them; solo, duet and chamber
+    files produce no suggestion and keep their source arrangement exactly.
+    Passing ``rendering.mode = "ORIGINAL"`` explicitly disables this.
+    """
+    with sidecar_path(settings.library_root, record["asset_id"]).open("r", encoding="utf-8") as fh:
+        analysis = json.load(fh)["deterministic_analysis"]
+    overrides = suggest_program_overrides(analysis)
+    if not overrides:
+        return None
+    return RenderingPolicy.from_values(mode=RenderingMode.OVERRIDE, program_overrides=overrides)
+
+
 def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[QueueItemSpec]:
     catalog_db = _require_catalog(settings)
     rendering_policy = payload.rendering.to_policy() if payload.rendering is not None else None
+
+    def policy_for(record: dict[str, Any]) -> RenderingPolicy | None:
+        if payload.rendering is not None:
+            return rendering_policy
+        return _default_rendering_policy(settings, record)
     if payload.intent is not None:
         station = build_station(
             catalog_db,
@@ -241,7 +267,7 @@ def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[Queue
                     record,
                     settings,
                     intent=payload.intent,
-                    rendering_policy=rendering_policy,
+                    rendering_policy=policy_for(record),
                 )
             )
         return specs
@@ -256,7 +282,7 @@ def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[Queue
                 status_code=404,
                 detail={"asset_id": asset_id},
             )
-        specs.append(_asset_spec(record, settings, rendering_policy=rendering_policy))
+        specs.append(_asset_spec(record, settings, rendering_policy=policy_for(record)))
     return specs
 
 

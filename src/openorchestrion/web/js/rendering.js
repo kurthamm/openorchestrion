@@ -3,7 +3,7 @@
 const STORAGE_KEY = 'oo.rendering';
 
 export const DEFAULT_RENDERING = Object.freeze({
-  mode: 'ORIGINAL',
+  mode: 'AUTO',
   pianoProgram: 0,
   overrides: [],
 });
@@ -15,9 +15,9 @@ function integer(value, fallback) {
 
 export function normalizeRenderingPreference(value) {
   const source = value && typeof value === 'object' ? value : {};
-  const mode = ['ORIGINAL', 'PIANO_ONLY', 'OVERRIDE'].includes(source.mode)
+  const mode = ['AUTO', 'ORIGINAL', 'PIANO_ONLY', 'OVERRIDE'].includes(source.mode)
     ? source.mode
-    : 'ORIGINAL';
+    : 'AUTO';
   const pianoProgram = Math.min(7, Math.max(0, integer(source.pianoProgram, 0)));
   const seen = new Set();
   const overrides = [];
@@ -58,7 +58,12 @@ export function saveRenderingPreference(preference, storage) {
 /** Translate browser preference into the public queue request shape. */
 export function renderingPayload(preference) {
   const normalized = normalizeRenderingPreference(preference);
-  if (normalized.mode === 'ORIGINAL') return null;
+  // Omitting the field lets the server apply automatic voicing to orchestral
+  // score exports; ORIGINAL is sent explicitly to hear the file exactly as written.
+  if (normalized.mode === 'AUTO') return null;
+  if (normalized.mode === 'ORIGINAL') {
+    return { mode: 'ORIGINAL', piano_program: 0, program_overrides: [] };
+  }
   if (normalized.mode === 'PIANO_ONLY') {
     return {
       mode: 'PIANO_ONLY',

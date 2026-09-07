@@ -15,9 +15,13 @@ The preference is kept in browser local storage for convenience. It is not durab
 
 ## Modes
 
+### Automatic voicing (default)
+
+The browser omits the optional `rendering` field entirely. The server then corrects orchestral score exports whose General MIDI choices would sound wrong on a hardware tone generator: whole string sections written on solo Violin/Viola/Cello patches become String Ensemble, horn parts exported as English Horn become French Horn, and parts with no Program Change are voiced from their track names (Flauto, Corni, Violino I, ...). The decision uses only the deterministic analysis already stored in the sidecar and applies only to files with six or more pitched parts that include winds, brass or timpani; solo piano, duets and chamber music play exactly as written.
+
 ### Original arrangement
 
-Preserves the source arrangement. The browser omits the optional `rendering` field entirely, preserving the pre-rendering queue request shape.
+Sends `mode: "ORIGINAL"` explicitly, which disables automatic voicing and preserves the source arrangement exactly.
 
 ### Piano only
 

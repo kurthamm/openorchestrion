@@ -39,11 +39,13 @@ def test_rendering_stylesheet_and_panel_ship_with_the_web_app() -> None:
     assert 'id="rendering-panel"' in shell
 
 
-def test_default_original_mode_omits_rendering_from_queue_request() -> None:
+def test_default_automatic_mode_omits_rendering_and_original_is_explicit() -> None:
     core = (WEB_ROOT / "js" / "rendering.js").read_text(encoding="utf-8")
     api = (WEB_ROOT / "js" / "api.js").read_text(encoding="utf-8")
 
-    assert "if (normalized.mode === 'ORIGINAL') return null" in core
+    assert "mode: 'AUTO'," in core
+    assert "if (normalized.mode === 'AUTO') return null" in core
+    assert "return { mode: 'ORIGINAL', piano_program: 0, program_overrides: [] };" in core
     assert "if (selectedRendering) body.rendering = selectedRendering" in api
     assert "renderingPayload(loadRenderingPreference())" in api
 
