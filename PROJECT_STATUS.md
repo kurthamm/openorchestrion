@@ -131,6 +131,11 @@ The project has manufacturer-evidence profiles and procurement candidates from C
 
 ## Current work lanes
 
+See the [issue-based next-work review](docs/next-steps.md) for the recommended order and the WK-220 hardware results already reported in issue #1.
+
+- **Issue #84:** next major implementation lane: deterministic CT-X700 foreground / WK-220 support orchestration, with configurable profiles, load limits, explainable assignments and a visible plan.
+
+
 - **Issue #64:** deepen genuine chamber/orchestral starter repertoire. Source reports now keep instrumentation/arrangement clues independent from rights lines so an ensemble score is not confused with a keyboard reduction.
 - **Issue #10:** publication lane. The first slice creates the OpenOrchestrion v2 living white paper and static project site while keeping hardware photos/results explicitly pending.
 - **Issue #6:** timing harness is implemented; the controlled Raspberry Pi 5 loaded run remains open.

@@ -38,7 +38,7 @@ Use a separate copied library and history database with injected `VirtualMidiOut
 
 ## Remaining evidence and known limits
 
-- No keyboard is connected. Physical sound, device bank/drum behavior, timing under hardware load and acoustic synchronization remain unverified.
+- At redesign deployment no keyboard was connected; it has since returned as a ready CASIO USB-MIDI output. Issue #1 reports the WK-220 checklist passed on September 6 on an earlier build. See [the corrected next-work review](next-steps.md) for that evidence. CT-X700 validation, loaded timing benchmarks and two-engine acoustic synchronization remain outstanding.
 - Arrangement, creator and source labels still reflect imperfect upstream metadata. The detail view deliberately distinguishes catalog labels from encoded MIDI evidence; the UI does not certify musical completeness.
 - Full-library facet counts are not counts for the current filtered subset.
 - Legacy UI modules and historical UX documents remain for compatibility/context. The listening-room document describes the current browser experience; old prompt-first and automatic setup-redirect descriptions are superseded.
