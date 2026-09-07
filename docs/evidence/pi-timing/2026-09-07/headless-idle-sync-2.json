@@ -1,0 +1,70 @@
+{
+  "cases": [
+    {
+      "failures": [
+        "A p95 jitter 437.487 ms > 2.000 ms",
+        "A p99 jitter 437.487 ms > 5.000 ms",
+        "A max jitter 437.487 ms > 10.000 ms",
+        "A drift -7562.043 ms exceeds \u00b15.000 ms",
+        "B p95 jitter 437.487 ms > 2.000 ms",
+        "B p99 jitter 437.487 ms > 5.000 ms",
+        "B max jitter 437.487 ms > 10.000 ms",
+        "B drift -7562.067 ms exceeds \u00b15.000 ms"
+      ],
+      "fixture": "sync-click.mid",
+      "logical_duration_seconds": 7.5625,
+      "name": "sync-click-two-output",
+      "output_summaries": {
+        "A": {
+          "count": 32,
+          "drift_ms": -7562.042704,
+          "max_abs_interval_jitter_ms": 437.487315,
+          "max_abs_relative_error_ms": 7562.042704,
+          "mean_interval_error_ms": -243.936861,
+          "p95_abs_interval_jitter_ms": 437.487223,
+          "p95_abs_relative_error_ms": 7258.939215,
+          "p99_abs_interval_jitter_ms": 437.487293,
+          "scheduled_span_seconds": 7.5625
+        },
+        "B": {
+          "count": 32,
+          "drift_ms": -7562.066779,
+          "max_abs_interval_jitter_ms": 437.487203,
+          "max_abs_relative_error_ms": 7562.066779,
+          "mean_interval_error_ms": -243.937638,
+          "p95_abs_interval_jitter_ms": 437.487185,
+          "p95_abs_relative_error_ms": 7258.963469,
+          "p99_abs_interval_jitter_ms": 437.487203,
+          "scheduled_span_seconds": 7.5625
+        }
+      },
+      "passed": false,
+      "two_output_skew": {
+        "max_abs_skew_ms": 0.917665,
+        "mean_signed_skew_ms": -0.895301,
+        "p95_abs_skew_ms": 0.903804,
+        "pair_count": 16
+      },
+      "wall_duration_seconds": 7.577637
+    }
+  ],
+  "environment": {
+    "cpu_count": 4,
+    "event_loop": "_UnixSelectorEventLoop",
+    "implementation": "CPython",
+    "machine": "aarch64",
+    "platform": "Linux-6.18.34+rpt-rpi-2712-aarch64-with-glibc2.41",
+    "processor": "",
+    "python": "3.13.5"
+  },
+  "generated_at": "2026-09-07T17:35:07.509107+00:00",
+  "passed": false,
+  "targets": {
+    "max_drift_ms": 5.0,
+    "max_interval_jitter_ms": 10.0,
+    "max_two_output_skew_ms": 3.0,
+    "p95_interval_jitter_ms": 2.0,
+    "p95_two_output_skew_ms": 1.0,
+    "p99_interval_jitter_ms": 5.0
+  }
+}

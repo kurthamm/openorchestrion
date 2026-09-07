@@ -12,7 +12,7 @@ The major remaining engineering evidence is physical rather than architectural: 
 
 ## Current deployed handoff
 
-The [developer handoff](docs/developer-handoff.md) identifies the published integration branch, exact deployed source, validation evidence and remaining limits. The September listening-room redesign is deployed on the Pi and published on `codex/listening-room-redesign`; it is not yet represented as merged into `main`.
+The [developer handoff](docs/developer-handoff.md) identifies the shared `main` baseline, exact deployed source, validation evidence and remaining limits. [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the reliability, curated library and listening-room changes on September 7. The [single-keyboard release record](docs/single-keyboard-release-2026-09.md) tracks its CI, installed wheel and Pi timing evidence.
 
 ## Implemented product stack
 
@@ -133,14 +133,14 @@ The project has manufacturer-evidence profiles and procurement candidates from C
 
 See the [issue-based next-work review](docs/next-steps.md) for the recommended order and the WK-220 hardware results already reported in issue #1.
 
-- **Current priority:** integrate the deployed branch and measure Pi timing with the existing WK-220 setup.
+- **Integrated:** the deployed listening-room branch is merged into `main`; the primary Pi checkout follows that baseline. Current validation covers the existing WK-220 setup, with the exact result and limits in the single-keyboard release record.
 - **Issue #84:** deferred by the owner until the new keyboard is available, together with CT-X700 validation and physical two-engine testing. Retain the orchestration plan for later; do not implement its UI or policy now.
 
 
 - **Issue #64:** deepen genuine chamber/orchestral starter repertoire. Source reports now keep instrumentation/arrangement clues independent from rights lines so an ensemble score is not confused with a keyboard reduction.
 - **Issue #10:** publication lane. The first slice creates the OpenOrchestrion v2 living white paper and static project site while keeping hardware photos/results explicitly pending.
-- **Issue #6:** timing harness is implemented; the controlled Raspberry Pi 5 loaded run remains open.
-- **Issue #1:** physical first-engine proof remains open.
+- **Issue #6:** the headless WK-220 loaded 120-minute run passed all software targets; raw JSON and environmental evidence are committed in the release record. Kiosk/two-output and acoustic evidence remain separate, so the broader issue stays open.
+- **Issue #1:** the WK-220 checklist was previously reported passed; CT-X700-specific proof remains deferred. The new headless endurance evidence does not replace acoustic/conformance measurements.
 - **Issue #11:** complementary Yamaha/second-engine validation follows first-engine proof.
 - **Issue #8:** reference enclosure/BOM follows acquisition of the physical build.
 

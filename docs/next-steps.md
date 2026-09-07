@@ -8,8 +8,8 @@ Reviewed the seven open GitHub issues, the roadmap, current deployed source, and
 
 ## Recommended order
 
-1. **Integrate the already-deployed work.** The reliability, library-admission and listening-room changes are published on `codex/listening-room-redesign`, but not merged into `main`. Reconcile against current main, retain independent planning work such as `docs/two-engine-orchestration.md`, run CI on the integration result, then establish one shared development baseline. This review does not merge branches or close issues.
-2. **Complete the loaded Pi timing evidence — [#6](https://github.com/kurthamm/openorchestrion/issues/6).** The 14 synthetic fixtures and benchmark harness are implemented. Follow `pi-timing-benchmark.md`: named load profiles, short repeatability passes, 120-minute endurance runs, temperature/undervoltage evidence and retained JSON results. Software scheduler jitter is distinct from physical MIDI-to-audio latency.
+1. **Integration completed.** [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the reliability, library-admission and listening-room changes into `main`, preserving independent acquisition tools and `docs/two-engine-orchestration.md`. CI passed on Python 3.11–3.13, and the primary Pi checkout now follows main. See the [release record](single-keyboard-release-2026-09.md).
+2. **Current headless timing milestone completed — [#6](https://github.com/kurthamm/openorchestrion/issues/6).** Three corrected idle checks, three loaded checks and a full 120-minute WK-220 loaded run passed all software targets on September 7. The release record retains raw reports, invalid earlier attempts, environment evidence and Auto Power Off setup. Kiosk, physical two-output and acoustic measurements remain separate pending evidence; this does not close all of #6.
 3. **Consolidate the current single-keyboard experience.** Address reproducible defects and documentation gaps in the existing WK-220 setup; preserve the curated library and current playback behavior.
 
 ## Deferred until the new keyboard is available
@@ -29,4 +29,4 @@ When this deferred work resumes, the orchestration UI should extend the new perf
 | [#8 — enclosure and BOM](https://github.com/kurthamm/openorchestrion/issues/8) | Follow a stable physical arrangement and power/cabling/cooling requirements. |
 | [#11 — complementary Yamaha engine](https://github.com/kurthamm/openorchestrion/issues/11) | Later expansion. The newer #84 reference plan prioritizes the two Casios; reconcile the older Yamaha lane rather than purchasing or implementing against it automatically. |
 
-AI remains deferred at the owner's request. None of this review changes playback, starts an endurance test, activates a provider or claims an issue is complete.
+AI remains deferred at the owner's request. Integration and current-keyboard timing work were subsequently authorized and are recorded in the release document. No provider or new-keyboard feature was activated; the broader hardware issues are not closed by these software/headless results.

@@ -1,0 +1,118 @@
+{
+  "started_at": "2026-09-07T17:34:46.624297+00:00",
+  "profile": "headless-idle",
+  "source_tree": "be4228689d1748b319e3423cb5233d1d58ee6a73",
+  "power_supply": "not externally verified",
+  "display": "no Chromium kiosk process; headless deployment",
+  "hardware": "WK-220 per owner and prior issue evidence; generic CASIO USB-MIDI endpoint",
+  "commands": [
+    {
+      "command": [
+        "uname",
+        "-a"
+      ],
+      "returncode": 0,
+      "stdout": "Linux openOrchestrion 6.18.34+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.18.34-1+rpt1 (2026-06-09) aarch64 GNU/Linux\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "cat",
+        "/etc/os-release"
+      ],
+      "returncode": 0,
+      "stdout": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.6\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "lscpu"
+      ],
+      "returncode": 0,
+      "stdout": "Architecture:                            aarch64\nCPU op-mode(s):                          32-bit, 64-bit\nByte Order:                              Little Endian\nCPU(s):                                  4\nOn-line CPU(s) list:                     0-3\nVendor ID:                               ARM\nModel name:                              Cortex-A76\nModel:                                   1\nThread(s) per core:                      1\nCore(s) per cluster:                     4\nSocket(s):                               -\nCluster(s):                              1\nStepping:                                r4p1\nFrequency boost:                         disabled\nCPU(s) scaling MHz:                      75%\nCPU max MHz:                             2400.0000\nCPU min MHz:                             1500.0000\nBogoMIPS:                                108.00\nFlags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp\nL1d cache:                               256 KiB (4 instances)\nL1i cache:                               256 KiB (4 instances)\nL2 cache:                                2 MiB (4 instances)\nL3 cache:                                2 MiB (1 instance)\nNUMA node(s):                            8\nNUMA node0 CPU(s):                       0-3\nNUMA node1 CPU(s):                       0-3\nNUMA node2 CPU(s):                       0-3\nNUMA node3 CPU(s):                       0-3\nNUMA node4 CPU(s):                       0-3\nNUMA node5 CPU(s):                       0-3\nNUMA node6 CPU(s):                       0-3\nNUMA node7 CPU(s):                       0-3\nVulnerability Gather data sampling:      Not affected\nVulnerability Ghostwrite:                Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Not affected\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Not affected\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; CSV2, BHB\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Not affected\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "lsusb",
+        "-t"
+      ],
+      "returncode": 0,
+      "stdout": "/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/2p, 480M\n/:  Bus 002.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/1p, 5000M\n/:  Bus 003.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/2p, 480M\n    |__ Port 001: Dev 008, If 0, Class=Audio, Driver=snd-usb-audio, 12M\n    |__ Port 001: Dev 008, If 1, Class=Audio, Driver=snd-usb-audio, 12M\n/:  Bus 004.Port 001: Dev 001, Class=root_hub, Driver=xhci-hcd/1p, 5000M\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "lsblk",
+        "-o",
+        "NAME,TYPE,SIZE,TRAN,MOUNTPOINTS"
+      ],
+      "returncode": 0,
+      "stdout": "NAME        TYPE  SIZE TRAN MOUNTPOINTS\nloop0       loop   92M      \nmmcblk0     disk   29G mmc  \n\u251c\u2500mmcblk0p1 part  512M mmc  /boot/firmware\n\u2514\u2500mmcblk0p2 part 28.5G mmc  /\nzram0       disk    2G      [SWAP]\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "cat",
+        "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor"
+      ],
+      "returncode": 0,
+      "stdout": "ondemand\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "vcgencmd",
+        "get_throttled"
+      ],
+      "returncode": 0,
+      "stdout": "throttled=0xe0000\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "vcgencmd",
+        "measure_temp"
+      ],
+      "returncode": 0,
+      "stdout": "temp=51.6'C\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "systemctl",
+        "show",
+        "openorchestrion.service",
+        "-p",
+        "MainPID",
+        "-p",
+        "NRestarts",
+        "-p",
+        "ActiveEnterTimestamp"
+      ],
+      "returncode": 0,
+      "stdout": "MainPID=45816\nNRestarts=0\nActiveEnterTimestamp=Mon 2026-09-07 12:16:13 EDT\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "pgrep",
+        "-a",
+        "chromium"
+      ],
+      "returncode": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "sha256sum",
+        "/tmp/openorchestrion-listening-release/new/openorchestrion-0.1.0.dev0-py3-none-any.whl"
+      ],
+      "returncode": 0,
+      "stdout": "94e08cc804dcd5e2efb85f4fb294670d9476c482ba25d214ec5125e7cd328bca  /tmp/openorchestrion-listening-release/new/openorchestrion-0.1.0.dev0-py3-none-any.whl\n",
+      "stderr": ""
+    }
+  ],
+  "network": "wlan0 was the active default route; private IPs omitted from published copy"
+}

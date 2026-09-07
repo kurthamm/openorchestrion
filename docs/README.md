@@ -4,7 +4,8 @@ This directory contains the living design and implementation specification.
 
 ## Start here
 
-- [Current developer handoff](developer-handoff.md) — published integration branch, deployment parity, verification commands and outstanding evidence.
+- [Current developer handoff](developer-handoff.md) — shared main baseline, deployment parity, verification commands and outstanding evidence.
+- [September single-keyboard release](single-keyboard-release-2026-09.md) — integration, benchmark repair, installed-wheel identity and Pi evidence.
 
 - [Pi implementation review and fixes](implementation-review.md) — reproduced defects, fixes, validation, and explicit remaining limits.
 
@@ -50,6 +51,7 @@ This directory contains the living design and implementation specification.
 - [Hardware selection](hardware-selection.md)
 - [Supported/candidate hardware](supported-hardware.md)
 - [Casio CT-X700 reference profile](hardware/casio-ct-x700.md)
+- [Casio WK-220 unattended playback setup](hardware/casio-wk-220.md) — disabling Auto Power Off using the keyboard's startup buttons.
 - [Raspberry Pi timing benchmark protocol](pi-timing-benchmark.md) — reproducible loaded scheduler/jitter/drift evidence for Issue #6.
 - Machine-readable profiles: [`../device-profiles/`](../device-profiles/)
 
