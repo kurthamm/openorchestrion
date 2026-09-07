@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from typing import Protocol
 
 import mido
+
+from openorchestrion.midi.devices import list_output_ports, port_base_name, resolve_output_port
 from mido import Message
 
 from openorchestrion.midi.router import MidiRoute, RoutingPlan
@@ -56,22 +58,41 @@ class VirtualMidiOutput:
 
 
 class MidoMidiOutput:
-    """Lazy mido output wrapper so app startup does not seize hardware ports."""
+    """Lazy mido output wrapper so app startup does not seize hardware ports.
 
-    def __init__(self, name: str, *, profile: DeviceProfile | None = None) -> None:
+    ``name`` is the stable identity used by routing plans and device profiles.
+    The port actually opened may carry a different ALSA ``client:port`` suffix
+    after a device is unplugged and re-enumerated; ``port_name`` tracks that.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        profile: DeviceProfile | None = None,
+        client_name: str | None = None,
+    ) -> None:
         self.name = name
         self.profile = profile
+        self.client_name = client_name
+        self.base_name = port_base_name(name)
+        self.port_name: str | None = None
         self._port = None
 
     async def send(self, message: Message) -> None:
         if self._port is None:
-            self._port = mido.open_output(self.name)
+            resolved = resolve_output_port(self.name, list_output_ports())
+            if resolved is None:
+                raise PlaybackOutputError(f"MIDI output {self.name!r} is not connected")
+            self._port = mido.open_output(resolved, client_name=self.client_name)
+            self.port_name = resolved
         self._port.send(message)
 
     async def close(self) -> None:
         if self._port is not None:
             self._port.close()
             self._port = None
+        self.port_name = None
 
 
 @dataclass(frozen=True, slots=True)

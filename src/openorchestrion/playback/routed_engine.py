@@ -10,7 +10,6 @@ from .engine import PlaybackConflict, PlaybackError
 from .engine import PlaybackEngine as BasePlaybackEngine
 from .engine import _Dispatch
 from .models import RuntimeQueueItem
-from .outputs import PlaybackOutputError
 from .rendering import render_timeline
 from .routing import RoutingDecision, RoutingEndpoint, plan_routing
 from .timeline import MidiTimeline
@@ -44,8 +43,7 @@ class PlaybackEngine(BasePlaybackEngine):
         current = self._current_item_locked()
         if current is None:
             raise PlaybackConflict("there is no current queue item")
-        if not self.router.ready:
-            raise PlaybackOutputError("no MIDI output is available")
+        self._require_outputs_locked()
         if current.play_id is None:
             current.play_id = await self.history.queued(
                 asset_id=current.spec.asset_id,

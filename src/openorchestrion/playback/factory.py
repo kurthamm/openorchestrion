@@ -13,7 +13,12 @@ def create_default_playback(settings: object) -> PlaybackEngine:
     clock = SystemClock()
     outputs = []
     try:
-        outputs.extend(MidoMidiOutput(name) for name in list_output_ports())
+        # A unique sequencer client name per output lets the hot-plug monitor
+        # verify this process's own subscription in /proc/asound/seq/clients.
+        outputs.extend(
+            MidoMidiOutput(name, client_name=f"openorchestrion-{index}")
+            for index, name in enumerate(list_output_ports())
+        )
     except Exception:
         # Missing ALSA/rtmidi is a normal degraded state on a development machine.
         pass

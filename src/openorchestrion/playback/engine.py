@@ -5,7 +5,7 @@ from collections import OrderedDict
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Sequence
+from typing import Any, Literal, Sequence
 
 from openorchestrion.midi.router import RoutingPlan
 
@@ -71,6 +71,8 @@ class PlaybackEngine:
         self._generation = 0
         self._commands: OrderedDict[str, str] = OrderedDict()
         self._closed = False
+        self._disconnected: set[str] = set()
+        self._auto_paused = False
 
     @property
     def output_names(self) -> tuple[str, ...]:
@@ -78,7 +80,61 @@ class PlaybackEngine:
 
     @property
     def outputs_ready(self) -> bool:
-        return self.router.ready
+        return self.router.ready and not self._disconnected
+
+    @property
+    def disconnected_outputs(self) -> tuple[str, ...]:
+        return tuple(sorted(self._disconnected))
+
+    def outputs_state(self) -> dict[str, Any]:
+        """The ``OutputsState`` payload shared by the status API and ``state.devices``."""
+        if not self.router.ready:
+            return {"ready": False, "devices": [], "reason": "no_midi_output"}
+        if self._disconnected:
+            return {
+                "ready": False,
+                "devices": list(self.output_names),
+                "reason": "output_disconnected",
+            }
+        return {"ready": True, "devices": list(self.output_names), "reason": None}
+
+    def _require_outputs_locked(self) -> None:
+        if not self.router.ready:
+            raise PlaybackOutputError("no MIDI output is available")
+        if self._disconnected:
+            names = ", ".join(self.disconnected_outputs)
+            raise PlaybackOutputError(f"MIDI output disconnected: {names}")
+
+    async def output_link_changed(self, name: str, *, connected: bool) -> None:
+        """React to a physical output appearing or disappearing.
+
+        Losing an output while playing pauses at the current position rather
+        than playing on into a dead port.  When every output is back, a pause
+        the engine itself caused is resumed; a pause the user asked for is kept.
+        """
+        if name not in self.router.outputs:
+            raise ValueError(f"unknown MIDI output {name!r}")
+        async with self._lock:
+            if connected:
+                if name not in self._disconnected:
+                    return
+                self._disconnected.discard(name)
+                # Drop the stale handle so the next send reopens the port and
+                # re-subscribes to the re-enumerated device.
+                await self.router.outputs[name].close()
+                if self._auto_paused and not self._disconnected:
+                    self._auto_paused = False
+                    if self._state == "paused":
+                        await self._begin_current_locked(start_position=self._position_seconds)
+            else:
+                if name in self._disconnected:
+                    return
+                self._disconnected.add(name)
+                if self._state == "playing":
+                    await self._pause_locked()
+                    self._auto_paused = True
+            self.events.publish("state.devices", self.outputs_state())
+            self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
 
     def _check_command(self, command_id: str | None, operation: str) -> bool:
         """Return False for a successful prior command; do not cache failures."""
@@ -309,8 +365,10 @@ class PlaybackEngine:
                 return self._playback_snapshot_locked(command_id)
             if action == "play":
                 await self._play_locked()
+                self._auto_paused = False
             elif action == "pause":
                 await self._pause_locked()
+                self._auto_paused = False
             elif action == "stop":
                 was_active = self._state in {"playing", "paused"}
                 await self._interrupt_locked(mark_skipped=True, reset_position=True)
@@ -424,8 +482,7 @@ class PlaybackEngine:
         current = self._current_item_locked()
         if current is None:
             raise PlaybackConflict("there is no current queue item")
-        if not self.router.ready:
-            raise PlaybackOutputError("no MIDI output is available")
+        self._require_outputs_locked()
         if current.play_id is None:
             current.play_id = await self.history.queued(
                 asset_id=current.spec.asset_id,
