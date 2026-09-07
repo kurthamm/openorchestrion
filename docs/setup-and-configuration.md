@@ -1,5 +1,7 @@
 # First-run setup and local configuration
 
+> Current browser behavior: see the [listening-room redesign](web-listening-room.md) and [developer handoff](developer-handoff.md). Prompt-first navigation and forced setup redirects described in older sections are superseded; backend contracts remain compatible.
+
 OpenOrchestrion is a household LAN appliance, not an Internet account service. The first-run
 Setup screen therefore tells the operator what is ready and what still needs attention, but it
 **does not accept system settings or provider secrets from a browser**.
@@ -137,9 +139,11 @@ sudo -u openorchestrion /opt/openorchestrion/venv/bin/openorchestrion-reindex \
   /var/lib/openorchestrion/library
 ```
 
-After importing or attaching MIDI hardware, press **Refresh** on Setup or reload the application.
-The screen uses authoritative server state, so there is no separate browser configuration cache
-to reconcile.
+After an import and its catalog rebuild, press **Refresh** on Setup or reload the application.
+Imports/tagging performed with deferred reindexing do not appear until the batch rebuild finishes.
+Physical MIDI discovery continues even when the service boots without a keyboard. First and
+additional attachments are detected on the next poll (normally within one second); refresh
+Setup to inspect readiness. A reconnect retains the known device identity and active routing.
 
 ## Setup API
 

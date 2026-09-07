@@ -153,6 +153,16 @@ class PlaybackEngine:
             names = ", ".join(self.disconnected_outputs)
             raise PlaybackOutputError(f"MIDI output disconnected: {names}")
 
+    async def add_output(self, output) -> None:
+        """Register a newly discovered destination without changing an active plan."""
+        async with self._lock:
+            if output.name in self.router.outputs:
+                return
+            self.router.outputs[output.name] = output
+            if self.router.default_device is None:
+                self.router.default_device = output.name
+            self.events.publish("state.devices", self.outputs_state())
+
     async def output_link_changed(self, name: str, *, connected: bool) -> None:
         """React to a physical output appearing or disappearing.
 
@@ -338,6 +348,25 @@ class PlaybackEngine:
                     self._state = "idle"
             snapshot = self._queue_snapshot_locked(command_id)
             self._remember_command(command_id, operation)
+            self.events.publish("state.queue", snapshot.to_dict())
+            return snapshot
+
+    async def clear_queue(self, *, command_id: str | None = None) -> QueueSnapshot:
+        """Stop and empty the session atomically, including command replay protection."""
+        async with self._lock:
+            operation = "queue:clear"
+            if not self._check_command(command_id, operation):
+                return self._queue_snapshot_locked(command_id)
+            await self._interrupt_locked(mark_skipped=True, reset_position=True)
+            self._queue = []
+            self._current_index = None
+            self._state = "idle"
+            self._position_seconds = 0.0
+            self._active_duration_seconds = None
+            self._run_anchor_clock = None
+            self._remember_command(command_id, operation)
+            self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
+            snapshot = self._queue_snapshot_locked(command_id)
             self.events.publish("state.queue", snapshot.to_dict())
             return snapshot
 

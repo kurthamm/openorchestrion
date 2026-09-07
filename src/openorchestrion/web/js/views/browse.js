@@ -7,6 +7,7 @@
 
 import { h, notice, render } from '../dom.js';
 import { formatSeconds } from '../position.js';
+import { favoriteValue } from '../favorites.js';
 
 export const FACETS = [
   { key: 'genre', value: 'classical', label: 'Classical' },
@@ -104,7 +105,7 @@ export function renderResults(node, state, handlers) {
 }
 
 function assetRow(item, state, handlers) {
-  const favorite = state.localFavorites.has(item.asset_id) || item.favorite;
+  const favorite = favoriteValue(state, item);
   const unsaved = state.localFavorites.has(item.asset_id) && !state.favoritesPersist;
 
   return h(
@@ -114,6 +115,7 @@ function assetRow(item, state, handlers) {
       'button',
       {
         class: `fav${favorite ? ' is-on' : ''}${unsaved ? ' is-unsaved' : ''}`,
+        disabled: state.pendingFavorites.has(item.asset_id),
         type: 'button',
         'aria-pressed': favorite ? 'true' : 'false',
         'aria-label': favorite ? `Remove ${item.title || 'this piece'} from favorites` : `Add ${item.title || 'this piece'} to favorites`,

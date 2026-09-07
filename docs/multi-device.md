@@ -46,7 +46,7 @@ source arrangement < rendering mode < explicit program override
 
 Supported policies are:
 
-- **ORIGINAL**: the default. Preserve the accepted source channels, Bank Select,
+- **ORIGINAL**: an explicit request to preserve the accepted source channels, Bank Select,
   Program Change, percussion and arrangement. With no overrides this is the
   compatibility path and no transformed timeline is needed.
 - **PIANO_ONLY**: suppress General MIDI percussion, suppress source Bank Select /
@@ -55,6 +55,11 @@ Supported policies are:
   sustain and track/channel identity.
 - **OVERRIDE**: preserve the arrangement while forcing selected pitched MIDI
   channels to specific General MIDI programs.
+
+The browser defaults to **AUTO**, which omits the HTTP rendering field and lets the
+server derive orchestral voicing corrections. Explicit ORIGINAL disables those
+corrections. The low-level rendering API still preserves the source when no policy
+is supplied; that is separate from the HTTP queue default.
 
 Rendering preferences live on the queue/playback attempt, not in curated
 metadata. The stored `.mid` bytes, SHA-256 identity, deterministic analysis and
@@ -136,13 +141,11 @@ Both                    ─ finale ──┘
 
 ## Failure behavior
 
-If a secondary device disappears during playback, the routing engine should either:
-
-- reroute compatible parts to a remaining engine;
-- continue with reduced instrumentation; or
-- stop safely and issue all-notes-off.
-
-The chosen behavior should be configurable by performance/routing profile.
+If the link monitor detects a known device disappearing, playback pauses and panics
+remaining outputs. When every required output returns, only a monitor-induced pause
+auto-resumes. A user pause remains paused. A MIDI send exception follows the worker
+failure path: fail history, stop, and attempt panic on all outputs. Automatic rerouting
+or reduced-instrumentation fallback is not implemented.
 
 ## Multi-room future
 

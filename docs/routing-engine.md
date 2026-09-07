@@ -79,7 +79,11 @@ the same amount until the earliest delay is zero. Relative timing is unchanged.
 
 ## Device failure
 
-The default failure policy is `stop`.
+The default routing failure policy for send/dispatch errors is `stop`.
+
+Physical link loss detected by the monitor is handled separately: pause, clean up,
+then auto-resume when the known outputs return. User-requested pauses do not
+auto-resume. Neither path silently reassigns parts to a different sound engine.
 
 If an explicitly routed output disappears or throws during playback, the worker
 fails the active history attempt, stops playback, and runs Panic across every
@@ -93,9 +97,11 @@ parts, but the automatic planner does not select it.
 
 `VirtualMidiOutput` and `MidoMidiOutput` can carry an optional `DeviceProfile`.
 Profiles provide nominal polyphony, instrument-family preferences, and latency
-compensation to the planner. Exact physical-port-to-profile binding is deployment
-configuration and should be established during reference-hardware validation;
-it is not inferred from a USB port name.
+compensation to the planner. The production factory currently creates generic
+outputs without loading profiles. `config/devices.example.yaml` is a design example,
+not an active configuration loader. Physical-port/profile binding still needs an
+implementation and calibration before claiming configured device affinity or latency
+compensation on the appliance. It is not inferred from a USB port name.
 
 ## Examples
 

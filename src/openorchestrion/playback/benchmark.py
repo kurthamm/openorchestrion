@@ -227,6 +227,9 @@ def _expected_sends(
 ) -> dict[str, list[ExpectedSend]]:
     expected = {name: [] for name in router.output_names}
     for event in timeline.events:
+        # Measure note timing, excluding channel initialization and cleanup.
+        if event.message.type not in {"note_on", "note_off"}:
+            continue
         routed = router.route_message(event.message, plan=plan)
         if routed is None:
             continue
@@ -246,13 +249,18 @@ def _capture(
     expected: Sequence[ExpectedSend],
     output: VirtualMidiOutput,
 ) -> list[CapturedSend]:
-    # Completion invokes Panic, which intentionally adds cleanup messages after
-    # the musical timeline. The expected musical count cleanly separates them.
-    musical = output.sent[: len(expected)]
+    # The engine sends GM reset/program messages BEFORE the timeline as well as
+    # Panic controllers after it. A prefix slice mistakes resets for music.
+    # Keep every note so missing/extra/reordered notes cannot silently pass.
+    musical = [send for send in output.sent if send.message.type in {"note_on", "note_off"}]
     if len(musical) != len(expected):
         raise RuntimeError(
             f"{output.name}: captured {len(musical)} musical sends, expected {len(expected)}"
         )
+    for index, (expected_item, actual) in enumerate(zip(expected, musical, strict=True)):
+        identity = (actual.message.type, actual.message.channel, actual.message.note)
+        if identity != (expected_item.message_type, expected_item.channel, expected_item.note):
+            raise RuntimeError(f"{output.name}: musical send {index} does not match expected note")
     return [
         CapturedSend(
             scheduled_seconds=expected_item.scheduled_seconds,

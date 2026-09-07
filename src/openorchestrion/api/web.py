@@ -36,8 +36,9 @@ class _AppShell(StaticFiles):
 
     async def get_response(self, path: str, scope: object) -> Response:
         response = await super().get_response(path, scope)  # type: ignore[arg-type]
-        if path in {".", "index.html"}:
-            response.headers["Cache-Control"] = "no-store"
+        # Unbundled module names are stable across releases. Revalidate assets
+        # instead of allowing heuristic caching to mix old APIs with a new shell.
+        response.headers["Cache-Control"] = "no-store" if path in {".", "index.html"} else "no-cache"
         return response
 
 

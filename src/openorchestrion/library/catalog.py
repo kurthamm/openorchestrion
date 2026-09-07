@@ -10,6 +10,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
+from .curation import admitted_ids
+
 CATALOG_SCHEMA_VERSION = 1
 TAG_FIELDS = {
     "genres": "genre",
@@ -392,12 +394,16 @@ def rebuild_catalog(
     indexed = 0
     skipped = 0
     errors: list[str] = []
+    admitted = admitted_ids(root)
     conn = _connect(temporary)
     try:
         initialize_schema(conn)
         for sidecar in sorted(assets_dir.glob("*.json")):
             try:
                 document = _read_sidecar(sidecar, root)
+                if admitted is not None and document["asset_id"] not in admitted:
+                    skipped += 1
+                    continue
                 _index_document(conn, document, sidecar_path=sidecar, library_root=root)
                 indexed += 1
             except (CatalogError, KeyError, TypeError, ValueError) as exc:
@@ -452,11 +458,14 @@ def reindex_asset(
     digest = asset_id.split(":", 1)[-1]
     sidecar = root / "assets" / f"{digest}.json"
     document = _read_sidecar(sidecar, root)
+    admitted = admitted_ids(root)
+    eligible = admitted is None or document["asset_id"] in admitted
 
     with closing(_connect(catalog)) as conn, conn:
         # ON DELETE CASCADE clears tags, channels, programs and tracks.
         conn.execute("DELETE FROM assets WHERE asset_id = ?", (document["asset_id"],))
-        _index_document(conn, document, sidecar_path=sidecar, library_root=root)
+        if eligible:
+            _index_document(conn, document, sidecar_path=sidecar, library_root=root)
         # Retitling an asset changes its derived composition_id, so the row it
         # used to point at can be left with nothing referencing it. Without
         # this, repeated edits inflate the composition count indefinitely.
@@ -468,7 +477,7 @@ def reindex_asset(
             )
             """
         )
-    return True
+    return eligible
 
 
 def search_catalog(

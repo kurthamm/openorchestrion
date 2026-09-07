@@ -67,6 +67,35 @@ def test_inspect_fully_verifies_without_publishing_state(tmp_path: Path) -> None
     assert not any(path.name == "state" for path in tmp_path.iterdir() if path.is_dir() and path != root)
 
 
+@pytest.mark.parametrize("fail_candidate_rename", [False, True])
+def test_swap_failure_restarts_preserved_original(tmp_path, monkeypatch, fail_candidate_rename):
+    live, _ = _state(tmp_path, "live", fixture="single-note.mid", title="Old")
+    new, _ = _state(tmp_path, "new", fixture="velocity-ladder.mid", title="New")
+    incoming = tmp_path / "incoming.zip"
+    create_backup(new, incoming)
+    calls = []
+    _mock_root_service(monkeypatch, calls)
+    monkeypatch.setattr(operator, "_wait_service_health", lambda *a, **kw: calls.append("health"))
+    original_replace = operator.os.replace
+
+    def failing_replace(source, destination):
+        source = Path(source)
+        if (not fail_candidate_rename and source == live) or (
+            fail_candidate_rename and source.name.startswith(".live.candidate.")
+        ):
+            raise OSError("simulated swap failure")
+        return original_replace(source, destination)
+
+    monkeypatch.setattr(operator.os, "replace", failing_replace)
+    with pytest.raises(OperatorError, match="original state was restored"):
+        replace_from_backup(
+            incoming, live, replace_existing=True, health_url="http://example.invalid"
+        )
+    assert _title(live) == "Old"
+    assert calls == ["stop:openorchestrion.service", "start:openorchestrion.service", "health"]
+    assert not list(tmp_path.glob(".live.previous.*"))
+
+
 def test_fresh_installer_skeleton_can_be_replaced_without_replace_flag(tmp_path: Path) -> None:
     source, _ = _state(tmp_path, "source", fixture="single-note.mid", title="Restored")
     archive = tmp_path / "backup.zip"

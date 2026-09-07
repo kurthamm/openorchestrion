@@ -19,6 +19,7 @@ Implemented today:
 - robust MIDI import and deterministic analysis;
 - SHA-256 content-addressed assets with durable JSON sidecars;
 - curated metadata, favorites, bulk tagging, and re-analysis;
+- [automated listening-library admission](docs/library-curation.md), reversible quality archives, and admission gating for new imports;
 - rebuildable SQLite catalog plus durable listening history;
 - evidence-backed rights/provenance and verified-open starter repertoire;
 - deterministic Smart Stations with no-repeat, diversity, compatibility, and relaxation diagnostics;
@@ -27,7 +28,7 @@ Implemented today:
 - synchronized multi-output routing from one master timeline;
 - `SOLO_PIANO`, `MULTI_INSTRUMENT`, `PIANO_DUET`, `TWO_PIANO`, and `DUELING_PIANO` routing semantics;
 - non-destructive Original, Piano Only, and General MIDI Override rendering;
-- responsive kiosk/phone/tablet/desktop web UI;
+- [responsive listening-room UI](docs/web-listening-room.md) with paginated search, favorites, queue and MIDI performance details;
 - first-run setup and privileged local configuration;
 - optional `openorchestrion.local` discovery via Avahi/mDNS;
 - systemd appliance packaging and non-editable wheel smoke tests;
@@ -47,20 +48,9 @@ See [PROJECT_STATUS.md](PROJECT_STATUS.md) for the detailed live status.
 
 ## The appliance experience
 
-The goal is a household music appliance, not a DAW:
+The [listening room](docs/web-listening-room.md) opens with music collections and repertoire to explore. Browse the complete admitted catalog, combine search and filters, save favorites, inspect a performance’s MIDI instruments, and build a queue. A persistent player keeps the session within reach on desktop, tablet and phone.
 
-```text
-┌──────────────────────────────────────────────────────┐
-│                  OpenOrchestrion                     │
-│                                                      │
-│  What do you want to hear?                           │
-│  ┌────────────────────────────────────────────────┐  │
-│  │ Recognizable Christmas piano while we eat     │  │
-│  └────────────────────────────────────────────────┘  │
-│                                                      │
-│                   ▶ Make it happen                   │
-└──────────────────────────────────────────────────────┘
-```
+The current interface deliberately has no AI prompt or assistant panel. The existing Concierge backend remains available for a future, separately designed integration. Browsing, favorites and queue building work without an AI provider or a connected keyboard.
 
 The same application runs on the attached touchscreen and household browsers. Closing every browser does not stop playback because the backend owns the queue and timeline.
 
@@ -215,11 +205,15 @@ Then open the local service in a browser. Virtual MIDI uses the same playback ab
 pytest -q
 ruff check --select E4,E7,E9,F .
 python .github/scripts/validate_repo.py
+node .github/scripts/test-web.mjs
 ```
 
 CI also builds a real wheel, installs it non-editably outside the checkout, boots the appliance with no physical MIDI output, verifies health and packaged web assets, and requires graceful shutdown.
 
 ## Publication
+
+The [Pi implementation review](docs/implementation-review.md) records the September 2026
+reliability fixes, regression checks, and remaining hardware/deployment validation.
 
 - [OpenOrchestrion v2 white paper](docs/whitepaper/OpenOrchestrion_White_Paper_v2.md)
 - [Project site source](site/)

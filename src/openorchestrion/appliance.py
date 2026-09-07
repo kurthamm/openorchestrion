@@ -240,11 +240,22 @@ def validate_durable_paths(settings: Settings) -> list[str]:
     for label, path in values.items():
         if not path.is_absolute():
             errors.append(f"{label} is not absolute: {path}")
-    if not settings.library_root.is_dir():
-        errors.append(f"library_root does not exist: {settings.library_root}")
-    for label, path in (("catalog_db", settings.catalog_db), ("history_db", settings.history_db)):
-        if not path.parent.is_dir():
-            errors.append(f"{label} parent does not exist: {path.parent}")
+    directories = {
+        "library_root": settings.library_root,
+        "catalog_db parent": settings.catalog_db.parent,
+        "history_db parent": settings.history_db.parent,
+    }
+    for label, path in directories.items():
+        try:
+            if not path.is_dir():
+                errors.append(f"{label} does not exist: {path}")
+        except PermissionError:
+            errors.append(
+                f"cannot inspect {label}: {path}; run openorchestrion-smoke "
+                "as the service account (sudo -u openorchestrion) or an administrator"
+            )
+        except OSError as exc:
+            errors.append(f"cannot inspect {label}: {path}: {exc}")
     return errors
 
 

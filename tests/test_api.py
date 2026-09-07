@@ -18,6 +18,87 @@ COMMAND_ID_4 = "00000000-0000-4000-8000-000000000004"
 COMMAND_ID_5 = "00000000-0000-4000-8000-000000000005"
 
 
+def test_listening_room_api_and_atomic_clear(stocked_client):
+    client = stocked_client
+    page = client.get('/api/library/browse?limit=2').json()
+    assert len(page['items']) == 2 and page['total'] > 2 and page['has_more']
+    asset_id = page['items'][0]['asset_id']
+    assert client.get(f'/api/library/assets/{asset_id}/performance').status_code == 200
+    assert client.get('/api/library/assets/missing/performance').status_code == 404
+    assert client.get('/api/library/browse?sort=bad').status_code == 422
+    assert client.get('/api/library/browse?offset=-1').status_code == 422
+    assert client.get('/api/library/browse/facets').json()['total'] == page['total']
+    assert client.post('/api/queue', json={'asset_ids': [asset_id]}).status_code == 200
+    assert client.post('/api/transport/play', json={}).status_code == 200
+    cleared = client.post('/api/queue/clear', json={'command_id': COMMAND_ID_5})
+    assert cleared.status_code == 200
+    assert cleared.json()['items'] == [] and cleared.json()['current_index'] is None
+    assert not client.get('/api/status').json()['playing']
+    # A retry after a lost response cannot erase a newer session.
+    client.post('/api/queue', json={'asset_ids': [asset_id]})
+    assert len(client.post('/api/queue/clear', json={'command_id': COMMAND_ID_5}).json()['items']) == 1
+
+
+@pytest.mark.parametrize("endpoint,payload", [
+    ("/api/stations/preview", {"intent": {"genres": ["classical"]}}),
+    ("/api/concierge/ask", {"prompt": "classical music"}),
+    ("/api/queue", {"intent": {"genres": ["classical"]}}),
+])
+def test_slow_selection_does_not_block_the_event_loop(stocked_client, monkeypatch, endpoint, payload):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event
+    from openorchestrion.api import routes
+
+    entered, release = Event(), Event()
+    original = routes.build_station
+    # A thread executor allows this deliberately blocked fake to share its
+    # release event; ordinary endpoint tests use the real spawned process.
+    stocked_client.app.state.selection_executor.shutdown()
+    stocked_client.app.state.selection_executor = ThreadPoolExecutor(max_workers=1)
+
+    def slow_selection(*args, **kwargs):
+        entered.set()
+        assert release.wait(5), "selection was never released"
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(routes, "build_station", slow_selection)
+    with ThreadPoolExecutor(max_workers=2) as callers:
+        request = callers.submit(stocked_client.post, endpoint, json=payload)
+        try:
+            assert entered.wait(3)
+            # Health runs on the same event loop as MIDI. It must run before
+            # the selector finishes, not just return after its blocking work.
+            health = callers.submit(stocked_client.get, "/api/health")
+            assert health.result(timeout=1).status_code == 200
+            assert not request.done()
+        finally:
+            release.set()
+        assert request.result(timeout=3).status_code == 200
+
+
+def test_selection_worker_has_a_separate_process(stocked_client):
+    import os
+    from types import SimpleNamespace
+    from openorchestrion.api.routes import _selection
+
+    connection = SimpleNamespace(app=stocked_client.app)
+    worker_pid = stocked_client.portal.call(_selection, connection, os.getpid)
+    assert worker_pid != os.getpid()
+
+
+def test_selection_worker_failure_does_not_require_service_restart(stocked_client):
+    import os
+    from types import SimpleNamespace
+    from openorchestrion.api.errors import ApiError
+    from openorchestrion.api.routes import _selection
+
+    connection = SimpleNamespace(app=stocked_client.app)
+    with pytest.raises(ApiError, match="Retry") as failure:
+        stocked_client.portal.call(_selection, connection, os._exit, 1)
+    assert failure.value.status_code == 503
+    assert stocked_client.portal.call(_selection, connection, os.getpid) != os.getpid()
+
+
 def _settings(tmp_path: Path, *, with_library: bool) -> Settings:
     root = tmp_path / "library"
     if with_library:

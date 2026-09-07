@@ -24,7 +24,8 @@ const initial = {
   askError: null,
   search: { query: '', items: [], loading: false, ran: false },
   history: { items: [], loading: false, error: null },
-  localFavorites: new Set(),
+  localFavorites: new Map(),
+  pendingFavorites: new Set(),
   favoritesPersist: true,
 };
 

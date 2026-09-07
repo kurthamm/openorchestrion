@@ -76,13 +76,16 @@ class OutputLinkMonitor:
         probe: OutputLinkProbe,
         *,
         interval_seconds: float = 1.0,
+        discover_ports: Callable[[], list[str]] | None = None,
     ) -> None:
         self.engine = engine
         self.probe = probe
         self.interval_seconds = interval_seconds
+        self._discover_ports = discover_ports
+        self._discovery_index = 0
         # Only real hardware is monitored: the kernel's Midi Through loopback
         # can never be unplugged and would only add noise.
-        self._outputs = tuple(
+        self._outputs = list(
             output
             for output in engine.router.outputs.values()
             if isinstance(output, MidoMidiOutput) and not is_kernel_loopback_port(output.name)
@@ -95,18 +98,36 @@ class OutputLinkMonitor:
         return tuple(output.name for output in self._outputs)
 
     async def check_once(self) -> None:
+        if self._discover_ports is not None:
+            available = list(await asyncio.to_thread(self._discover_ports))
+            # Consume each known device once, including devices whose ALSA
+            # address changed. Only unmatched physical ports are new outputs.
+            for output in self._outputs:
+                resolved = resolve_output_port(output.name, available)
+                if resolved is not None:
+                    available.remove(resolved)
+            for name in available:
+                if is_kernel_loopback_port(name):
+                    continue
+                output = MidoMidiOutput(
+                    name, client_name=f"openorchestrion-hotplug-{self._discovery_index}"
+                )
+                self._discovery_index += 1
+                await self.engine.add_output(output)
+                self._outputs.append(output)
         for output in self._outputs:
-            connected = self.probe.is_connected(output)
+            connected = await asyncio.to_thread(self.probe.is_connected, output)
             previous = self._connected.get(output.name)
-            self._connected[output.name] = connected
             if previous is None and connected:
+                self._connected[output.name] = connected
                 continue
             if previous == connected:
                 continue
             await self.engine.output_link_changed(output.name, connected=connected)
+            self._connected[output.name] = connected
 
     async def start(self) -> None:
-        if not self._outputs or self._task is not None:
+        if (not self._outputs and self._discover_ports is None) or self._task is not None:
             return
         self._task = asyncio.create_task(self._run(), name="openorchestrion:hotplug")
 

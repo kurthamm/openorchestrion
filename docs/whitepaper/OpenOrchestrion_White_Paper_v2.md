@@ -315,7 +315,10 @@ For general multichannel material, the planner can prefer a sound engine based o
 
 ### 9.3 Device failure
 
-Silent mid-performance reassignment can be musically wrong. If an active required destination disappears, the conservative behavior is to stop the performance and panic remaining outputs instead of silently moving Piano II or a routed part to another engine without user intent.
+Silent mid-performance reassignment can be musically wrong. Physical link loss
+pauses the performance and cleans up remaining outputs; a monitor-induced pause
+resumes when known outputs return, while a user pause remains paused. A dispatch
+exception stops/fails playback. Neither path silently moves a part to another engine.
 
 ---
 
@@ -323,7 +326,10 @@ Silent mid-performance reassignment can be musically wrong. If an active require
 
 Different hardware synthesizers may not convert the same arriving MIDI event to audible sound at exactly the same latency.
 
-OpenOrchestrion supports a configured latency offset per device. The software benchmark separately measures scheduler behavior, while physical validation will measure MIDI-to-audio latency and relative acoustic alignment between real sound engines.
+The routing model supports latency offsets on attached device profiles. The current
+production factory still creates generic endpoints: a deployment profile-binding path
+and physical calibration remain pending. The software benchmark measures scheduler
+behavior; physical validation must measure MIDI-to-audio latency and acoustic alignment.
 
 This distinction matters:
 
@@ -340,6 +346,9 @@ The final two-engine calibration procedure must account for all three rather tha
 A MIDI asset can be rendered differently without changing the stored object.
 
 Three queue-time modes are implemented:
+
+The browser defaults to AUTO: it omits the rendering field and the server derives
+orchestral voicing corrections. Explicit Original Arrangement disables those corrections.
 
 ### Original Arrangement
 

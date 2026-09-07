@@ -1,5 +1,7 @@
 # UX and Control Surfaces
 
+> Current browser behavior: see the [listening-room redesign](web-listening-room.md) and [developer handoff](developer-handoff.md). Prompt-first navigation and forced setup redirects described in older sections are superseded; backend contracts remain compatible.
+
 ## Product intent
 
 OpenOrchestrion should feel like a household music appliance, not a DAW, Linux workstation, or MIDI utility. A person should be able to walk up to the system, ask for music, and hear it without understanding MIDI channels, sound banks, routing, or library internals.

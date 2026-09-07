@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import asyncio
 import json
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
+from functools import partial
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 
 from ..ai import ConciergeResult, MusicConcierge
 from ..history import apply_no_repeat_window
 from ..library.catalog import catalog_facets, catalog_stats, get_asset, reindex_asset, search_catalog
+from ..library.browse import browse, browse_facets, performance_detail
 from ..library.metadata import (
     AssetNotFoundError,
     MetadataConflictError,
@@ -32,6 +37,7 @@ from ..playback import (
 from ..playback.voicing import suggest_program_overrides
 from ..stations import StationConstraints, build_station
 from .errors import ApiError
+from .listening_models import BrowseFacets, BrowsePage, PerformanceDetail
 from .models import (
     TRANSPORT_ACTIONS,
     AiState,
@@ -75,6 +81,34 @@ router = APIRouter(prefix="/api")
 Connection = Request | WebSocket
 
 
+@router.get('/library/browse', response_model=BrowsePage)
+async def listening_library(
+    request: Request, text: str = Query('', max_length=200),
+    genre: str = '', mood: str = '', era: str = '', composer: str = '',
+    source: str = '', arrangement: str = '', favorite: bool = False,
+    sort: Literal['title', 'composer', 'duration', 'newest'] = 'title',
+    offset: int = Query(0, ge=0), limit: int = Query(40, ge=1, le=100),
+) -> dict[str, Any]:
+    return await asyncio.to_thread(
+        browse, _require_catalog(_settings(request)), text=text, genre=genre, mood=mood,
+        era=era, composer=composer, source=source, arrangement=arrangement,
+        favorite=favorite, sort=sort, offset=offset, limit=limit,
+    )
+
+
+@router.get('/library/browse/facets', response_model=BrowseFacets)
+async def listening_facets(request: Request) -> dict[str, Any]:
+    return await asyncio.to_thread(browse_facets, _require_catalog(_settings(request)))
+
+
+@router.get('/library/assets/{asset_id}/performance', response_model=PerformanceDetail)
+async def listening_performance(request: Request, asset_id: str) -> dict[str, Any]:
+    result = await asyncio.to_thread(performance_detail, _require_catalog(_settings(request)), asset_id)
+    if result is None:
+        raise ApiError('asset_not_found', 'This performance is no longer in the listening library.', status_code=404)
+    return result
+
+
 def _settings(connection: Connection) -> Settings:
     return connection.app.state.settings
 
@@ -93,6 +127,26 @@ def _playback(connection: Connection) -> PlaybackEngine:
 
 def _outputs_state(connection: Connection) -> OutputsState:
     return OutputsState.model_validate(_playback(connection).outputs_state())
+
+
+def create_selection_executor() -> ProcessPoolExecutor:
+    return ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context("spawn"))
+
+
+async def _selection(connection: Connection, function: Any, *args: Any, **kwargs: Any) -> Any:
+    """CPU-heavy selection has a separate process, never a second MIDI owner."""
+    executor = connection.app.state.selection_executor
+    try:
+        return await asyncio.get_running_loop().run_in_executor(
+            executor, partial(function, *args, **kwargs)
+        )
+    except BrokenProcessPool as exc:
+        if connection.app.state.selection_executor is executor:
+            connection.app.state.selection_executor = create_selection_executor()
+            await asyncio.to_thread(executor.shutdown, wait=True, cancel_futures=True)
+        raise ApiError(
+            "internal_error", "Selection worker stopped. Retry the request.", status_code=503
+        ) from exc
 
 
 def _library_counts(catalog_db: Path) -> LibraryCounts:
@@ -129,7 +183,7 @@ async def _system_status(connection: Connection) -> SystemStatus:
     settings = _settings(connection)
     concierge = _concierge(connection)
     outputs = _outputs_state(connection)
-    library = _library_counts(settings.catalog_db)
+    library = await asyncio.to_thread(_library_counts, settings.catalog_db)
     playback = await _playback(connection).playback_snapshot()
     ai = AiState(
         enabled=True,
@@ -210,6 +264,14 @@ def _station_constraints(settings: Settings, intent: PlaybackIntent) -> StationC
             days=intent.repeat_window_days,
         )
     return constraints
+
+
+def _build_station(settings: Settings, intent: PlaybackIntent, **kwargs: Any) -> Any:
+    """Run selection and its history reads together outside the MIDI event loop."""
+    return build_station(
+        _require_catalog(settings), intent,
+        constraints=_station_constraints(settings, intent), **kwargs,
+    )
 
 
 def _default_rendering_policy(settings: Settings, record: dict[str, Any]) -> RenderingPolicy | None:
@@ -322,10 +384,11 @@ async def concierge_ask(request: Request, payload: ConciergeAskRequest) -> Conci
     preview: StationQueueModel | None = None
     if settings.catalog_db.is_file():
         preview = _station_queue_model(
-            build_station(
-                settings.catalog_db,
+            await _selection(
+                request,
+                _build_station,
+                settings,
                 result.intent,
-                constraints=_station_constraints(settings, result.intent),
             )
         )
     return ConciergeResponse(
@@ -341,11 +404,11 @@ async def concierge_ask(request: Request, payload: ConciergeAskRequest) -> Conci
 @router.post("/stations/preview", response_model=StationQueueModel)
 async def stations_preview(request: Request, payload: StationPreviewRequest) -> StationQueueModel:
     settings = _settings(request)
-    catalog_db = _require_catalog(settings)
-    queue = build_station(
-        catalog_db,
+    queue = await _selection(
+        request,
+        _build_station,
+        settings,
         payload.intent,
-        constraints=_station_constraints(settings, payload.intent),
         seed=payload.seed,
         max_tracks=payload.max_tracks,
     )
@@ -359,7 +422,7 @@ async def validate_intent(intent: PlaybackIntent) -> PlaybackIntent:
 
 @router.get("/library/stats", response_model=LibraryCounts)
 async def library_stats(request: Request) -> LibraryCounts:
-    return _library_counts(_settings(request).catalog_db)
+    return await asyncio.to_thread(_library_counts, _settings(request).catalog_db)
 
 
 @router.get("/library/facets", response_model=LibraryFacets)
@@ -370,7 +433,8 @@ async def library_facets(
     settings = _settings(request)
     if not settings.catalog_db.is_file():
         return LibraryFacets(indexed=False)
-    return LibraryFacets(indexed=True, **catalog_facets(settings.catalog_db, limit=limit))
+    facets = await asyncio.to_thread(catalog_facets, settings.catalog_db, limit=limit)
+    return LibraryFacets(indexed=True, **facets)
 
 
 @router.get("/library/search", response_model=LibrarySearchResponse)
@@ -390,7 +454,8 @@ async def library_search(
     settings = _settings(request)
     if not settings.catalog_db.is_file():
         return LibrarySearchResponse(items=[], count=0)
-    rows = search_catalog(
+    rows = await asyncio.to_thread(
+        search_catalog,
         settings.catalog_db,
         text=text,
         composer=composer,
@@ -433,7 +498,7 @@ async def history_recent(
         return HistoryResponse(items=[], count=0)
     from ..history import history_summaries
 
-    summaries = list(reversed(history_summaries(settings.history_db)))[:limit]
+    summaries = list(reversed(await asyncio.to_thread(history_summaries, settings.history_db)))[:limit]
     items = [HistoryEntry.model_validate(summary.to_dict()) for summary in summaries]
     return HistoryResponse(items=items, count=len(items))
 
@@ -445,7 +510,10 @@ async def history_recent(
 )
 async def library_asset(request: Request, asset_id: str) -> LibraryAssetDetail:
     settings = _settings(request)
-    record = get_asset(settings.catalog_db, asset_id) if settings.catalog_db.is_file() else None
+    record = (
+        await asyncio.to_thread(get_asset, settings.catalog_db, asset_id)
+        if settings.catalog_db.is_file() else None
+    )
     if record is None:
         raise ApiError(
             "asset_not_found",
@@ -478,7 +546,7 @@ async def set_favorite_endpoint(
     """
     settings = _settings(request)
     try:
-        set_favorite(settings.library_root, asset_id, payload.favorite)
+        await asyncio.to_thread(set_favorite, settings.library_root, asset_id, payload.favorite)
     except AssetNotFoundError as exc:
         raise ApiError(
             "asset_not_found",
@@ -501,7 +569,7 @@ async def set_favorite_endpoint(
             detail={"asset_id": asset_id},
         ) from exc
 
-    reindex_asset(settings.catalog_db, settings.library_root, asset_id)
+    await asyncio.to_thread(reindex_asset, settings.catalog_db, settings.library_root, asset_id)
     return await library_asset(request, asset_id)
 
 
@@ -513,8 +581,9 @@ async def get_queue(request: Request) -> QueueState:
 @router.post("/queue", response_model=QueueState)
 async def replace_queue(request: Request, payload: QueueReplaceRequest) -> QueueState:
     try:
+        specs = await _selection(request, _queue_specs, payload, _settings(request))
         snapshot = await _playback(request).set_queue(
-            _queue_specs(payload, _settings(request)),
+            specs,
             mode=payload.mode,
             command_id=str(payload.command_id) if payload.command_id else None,
         )
@@ -529,6 +598,17 @@ async def reorder_queue(request: Request, payload: QueueReorderRequest) -> Queue
         snapshot = await _playback(request).reorder(
             payload.asset_id,
             payload.to_index,
+            command_id=str(payload.command_id) if payload.command_id else None,
+        )
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+    return _queue_state_model(snapshot)
+
+
+@router.post("/queue/clear", response_model=QueueState)
+async def clear_queue(request: Request, payload: TransportCommand) -> QueueState:
+    try:
+        snapshot = await _playback(request).clear_queue(
             command_id=str(payload.command_id) if payload.command_id else None,
         )
     except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:

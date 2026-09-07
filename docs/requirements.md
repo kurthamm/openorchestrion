@@ -2,6 +2,24 @@
 
 This document captures the current requirements discussed for OpenOrchestrion. IDs are intentionally stable so future issues and tests can reference them.
 
+## Implementation status (September 2026)
+
+This is a requirements baseline, not a claim that every listed capability ships.
+See [the implementation review](implementation-review.md) for verified behavior.
+
+| Requirement area | Current status |
+|---|---|
+| FR-012 full browser administration | Superseded for sensitive operations by local administrator CLI tools; browser setup is readiness plus a harmless marker |
+| FR-004 full browse dimensions | Partial: search and genre/mood/theme chips; dedicated era/source browsing remains deferred |
+| FR-048 tempo/transpose | Deferred |
+| FR-060 discovery / FR-064 link loss | Implemented, including discovery after hardware-free boot and known-device reconnect |
+| FR-062 profiles / FR-082 calibration | Models/planner implemented; production profile binding and physical calibration remain pending |
+| FR-120 backups | Local verified application-data archive implemented; configuration/secrets are separate and off-device scheduling is not integrated |
+| FR-125 / NFR-017 recovery and timing evidence | Physical reference runs remain pending; automated tests do not substitute for them |
+
+Other future features retain their original IDs; implementation details and explicit
+future labels in the subsystem documents take precedence over design-era shorthand.
+
 ## Functional requirements
 
 ### Appliance / UI

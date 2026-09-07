@@ -98,6 +98,10 @@ The replacement sequence is:
 
 If the new service fails startup/health, the operator stops it, swaps the exact previous state tree back into place, restarts it, and checks health again. If the original state itself cannot be restarted, the rollback ZIP and failed restored tree are retained for manual recovery rather than being silently deleted.
 
+If a filesystem swap fails before the replacement is published, the operator also
+restarts and health-checks the preserved original tree. Service recovery does not
+depend on a new tree having become live.
+
 For custom non-reference state roots, tests/recovery tooling may use `--no-service-control`. That switch is intentionally forbidden for `/var/lib/openorchestrion`.
 
 ## Verified application-data archive

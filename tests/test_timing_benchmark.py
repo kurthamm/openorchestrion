@@ -1,14 +1,69 @@
 from __future__ import annotations
 
 import pytest
+from mido import Message, MidiFile, MidiTrack
 
 from openorchestrion.playback.benchmark import (
     CapturedSend,
+    ExpectedSend,
     TimingTargets,
+    _capture,
     _failures,
+    _run_case,
     summarize_skew,
     summarize_timing,
 )
+from openorchestrion.playback.clock import ManualClock
+from openorchestrion.playback.outputs import MidiOutputRouter, VirtualMidiOutput
+
+
+@pytest.mark.asyncio
+async def test_capture_excludes_real_router_startup_and_cleanup_messages() -> None:
+    clock = ManualClock()
+    output = VirtualMidiOutput("A", clock)
+    router = MidiOutputRouter([output])
+    await router.reset_channels()
+    await output.send(Message("note_on", channel=0, note=60))
+    await clock.advance(0.25)
+    await output.send(Message("note_off", channel=0, note=60))
+    await router.panic()
+    expected = [ExpectedSend(0, "note_on", 0, 60), ExpectedSend(0.25, "note_off", 0, 60)]
+    captured = _capture(expected, output)
+    assert [item.actual_seconds for item in captured] == [0, 0.25]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fault", ["missing", "extra", "wrong_note"])
+async def test_capture_rejects_corrupted_note_sequence(fault: str) -> None:
+    output = VirtualMidiOutput("A", ManualClock())
+    if fault != "missing":
+        await output.send(Message("note_on", note=61 if fault == "wrong_note" else 60))
+    if fault == "extra":
+        await output.send(Message("note_on", note=60))
+    with pytest.raises(RuntimeError, match="captured|does not match"):
+        _capture([ExpectedSend(0, "note_on", 0, 60)], output)
+
+
+@pytest.mark.asyncio
+async def test_benchmark_captures_notes_from_full_engine_lifecycle(tmp_path) -> None:
+    midi = MidiFile()
+    midi.tracks.append(MidiTrack([
+        Message("program_change", program=11),
+        Message("note_on", note=60),
+        Message("note_off", note=60, time=240),
+    ]))
+    path = tmp_path / "short.mid"
+    midi.save(path)
+    result = await _run_case(
+        name="capture-regression", midi_path=path, output_names=("A",), plan=None,
+        history_db=tmp_path / "history.db", targets=TimingTargets(),
+    )
+    summary = result.output_summaries["A"]
+    assert summary.count == 2
+    assert summary.scheduled_span_seconds == pytest.approx(0.25)
+    # This tests capture identity, not CI-host timing performance: real sends
+    # span the musical duration rather than adjacent startup resets.
+    assert summary.drift_ms > -125
 
 
 def test_exact_schedule_has_zero_jitter_and_drift() -> None:

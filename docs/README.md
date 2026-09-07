@@ -4,6 +4,10 @@ This directory contains the living design and implementation specification.
 
 ## Start here
 
+- [Current developer handoff](developer-handoff.md) — published integration branch, deployment parity, verification commands and outstanding evidence.
+
+- [Pi implementation review and fixes](implementation-review.md) — reproduced defects, fixes, validation, and explicit remaining limits.
+
 - [Project origin](project-origin.md) — how “I want a player piano” evolved into OpenOrchestrion.
 - [Architecture](architecture.md) — major components and boundaries.
 - [Requirements](requirements.md) — stable FR/NFR IDs and acceptance tests.
@@ -28,6 +32,7 @@ This directory contains the living design and implementation specification.
 ## MIDI and library
 
 - [MIDI library](midi-library.md)
+- [Autonomous listening-library admission](library-curation.md) — quality screening, reversible archiving, future-import gating, and recovery.
 - [MIDI analysis and ingestion](midi-ingestion.md)
 - [Rebuildable SQLite catalog](catalog.md)
 - [Curating descriptive metadata](metadata-curation.md) — editable fields, atomic writes, optimistic concurrency and catalog reconciliation.
@@ -71,3 +76,5 @@ The Markdown documentation is authoritative and continues to evolve beyond the h
 ## Documentation rule
 
 When implementation changes one of the architectural boundaries or stable requirements, update the corresponding document/ADR in the same pull request. The goal is to keep the repository reproducible without requiring access to the original design conversation.
+
+- [Listening room redesign](web-listening-room.md): navigation, search, MIDI performance details, deferred AI integration, and release verification.

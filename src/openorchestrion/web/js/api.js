@@ -102,6 +102,9 @@ export const api = {
     }),
 
   search: (params) => request(`/api/library/search${query(params)}`),
+  browse: (params, signal) => request(`/api/library/browse${query(params)}`, { signal }),
+  browseFacets: () => request('/api/library/browse/facets'),
+  performance: (id) => request(`/api/library/assets/${encodeURIComponent(id)}/performance`),
   libraryStats: () => request('/api/library/stats'),
   facets: () => request('/api/library/facets'),
   asset: (assetId) => request(`/api/library/assets/${encodeURIComponent(assetId)}`),
@@ -115,6 +118,7 @@ export const api = {
   history: ({ limit = 50 } = {}) => request(`/api/history/recent${query({ limit })}`),
 
   queue: () => request('/api/queue'),
+  clearQueue: (id = commandId()) => request('/api/queue/clear', { method: 'POST', body: { command_id: id } }),
   replaceQueue: ({
     intent,
     assetIds = [],

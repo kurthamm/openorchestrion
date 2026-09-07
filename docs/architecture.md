@@ -33,11 +33,19 @@ User intent
 
 ### Web application
 
-A responsive UI is served locally and used by both the attached Pi touchscreen and remote household browsers. Planned controls include Now Playing, queue, search, composer, genre, mood, theme, stations, random play, favorites, play history, and a natural-language Music Concierge prompt.
+A responsive UI is served locally to the Pi touchscreen and household browsers.
+Implemented controls include Now Playing, queue, search, genre/mood/theme filters,
+stations, favorites, history, and the Music Concierge prompt. Broader administrative
+and browse requirements are tracked separately in the requirements status table.
 
 ### API / application service
 
-FastAPI is the current direction. It exposes playback/library endpoints and WebSocket state updates.
+FastAPI exposes playback/library endpoints and WebSocket state updates. CPU-heavy
+station selection and queue preparation run in one separate worker process; blocking
+catalog reads run in threads. The worker receives settings/intent and returns data,
+never MIDI devices or playback state. One event loop remains the sole playback owner.
+Loaded physical timing validation is still required; process isolation is not a
+real-time operating-system guarantee.
 
 ### AI Music Concierge
 
@@ -118,6 +126,6 @@ For instruments in separate rooms, OpenOrchestrion should pre-stage the full MID
 
 - Loss of AI provider: continue with ordinary controls and existing queue.
 - Loss of Internet: local playback continues.
-- MIDI device disappears: stop/reroute affected parts and send panic/all-notes-off where possible.
+- MIDI link disappears: pause and clean up; reconnect can resume a monitor-induced pause. Dispatch errors stop/fail playback. No automatic rerouting is performed.
 - Web client disappears: playback continues server-side.
 - Pi restart: services auto-start and return to a known safe state.

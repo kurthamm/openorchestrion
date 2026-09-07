@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -62,11 +62,17 @@ jobs:
 
       - name: Install project and test dependencies
         run: |
+          # python-rtmidi may build from source on newer Python versions.
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
 
       - name: Test
         run: pytest -q
+
+      - name: Test browser state behavior (no build or npm dependencies)
+        run: node .github/scripts/test-web.mjs
 
   repository-contracts:
     name: repository-contracts

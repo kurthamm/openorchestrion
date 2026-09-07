@@ -78,3 +78,15 @@ def test_percussion_channel_is_never_overridden() -> None:
 def test_correct_programs_produce_no_override() -> None:
     parts = {0: 73, 1: 68, 2: 71, 3: 70, 4: 60, 5: 56, 6: 47, 7: 48, 8: 48}
     assert suggest_program_overrides(_analysis(parts)) == ()
+
+
+def test_auto_preserves_program_changes_and_nonzero_banks() -> None:
+    analysis = _analysis(BEETHOVEN_7)
+    analysis["program_uses"].append({"tick": 480, "channel": 9, "program_zero_based": 45})
+    for use in analysis["program_uses"]:
+        if use["channel"] == 11:
+            use["bank_msb"] = 1
+    overrides = dict(suggest_program_overrides(analysis))
+    assert 8 not in overrides
+    assert 10 not in overrides
+    assert overrides[11] == 48

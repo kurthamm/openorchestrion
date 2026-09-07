@@ -235,7 +235,9 @@ A runtime MIDI-output failure:
 
 ## Hot-plug outputs
 
-Physical outputs are enumerated at startup, but a USB keyboard can be unplugged
+Physical outputs are enumerated at startup and on discovery polls, even after a boot
+with no hardware. Newly attached outputs are registered for future tracks without
+changing the active dispatch plan. A USB keyboard can be unplugged
 at any time. ALSA then silently drops this process's subscription to the port;
 messages sent afterwards go nowhere and no error is raised, even after the
 device is plugged back in and re-enumerated.

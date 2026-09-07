@@ -102,7 +102,8 @@ openorchestrion-history var/history.db queue \
   --duration 240
 ```
 
-The command returns a `play_id`. A future playback state machine will call the same Python API directly rather than shelling out.
+The command returns a `play_id`. The playback state machine calls the same Python
+API through its asynchronous history adapter rather than shelling out.
 
 Lifecycle examples:
 
@@ -181,9 +182,11 @@ The backup plan therefore treats the history database as application data alongs
 
 `history.db` records an explicit schema version. A runtime that encounters an unsupported version fails visibly instead of silently interpreting old history incorrectly. Future schema changes should use explicit migrations.
 
-## Future integration
+## Runtime integration
 
-The playback state machine will emit history lifecycle calls automatically. Smart Stations will use the history service for:
+The playback state machine emits lifecycle calls automatically. Smart Stations use
+history for no-repeat windows. The history module also exposes summaries and staleness
+helpers; broader discovery/statistics interfaces remain future product work:
 
 - no-repeat windows
 - last-played weighting

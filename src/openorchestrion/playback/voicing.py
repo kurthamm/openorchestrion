@@ -112,6 +112,14 @@ def suggest_program_overrides(analysis: Mapping[str, Any]) -> tuple[tuple[int, i
     for channel in sorted(_midi_channel(c) for c in analysis.get("melodic_channels", ())):
         if channel == PERCUSSION_CHANNEL:
             continue
+        # Auto must not flatten instrument changes or erase a device-specific
+        # bank. Explicit user overrides remain available through the renderer.
+        uses = [u for u in analysis.get("program_uses", ())
+                if _midi_channel(u["channel"]) == channel]
+        states = {(int(u.get("bank_msb", 0)), int(u.get("bank_lsb", 0)),
+                   int(u["program_zero_based"])) for u in uses}
+        if len(states) > 1 or any(msb or lsb for msb, lsb, _ in states):
+            continue
         program = programs.get(channel, PIANO)
         part_names = names.get(channel, [])
         if program in SOLO_STRINGS:
