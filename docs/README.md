@@ -52,6 +52,7 @@ This directory contains the living design and implementation specification.
 
 - [Multi-device playback](multi-device.md)
 - [Routing engine](routing-engine.md) — track/channel routing, device affinity, polyphony balancing, latency compensation and safe failure behavior.
+- [Two-engine MIDI orchestra](two-engine-orchestration.md) — planned: CT-X700 as foreground engine and WK-220 as support engine, engine profiles with affinity scores, planning limits, song-specific plans, manual overrides and a visible orchestration plan.
 - [Backup and recovery](backup-recovery.md)
 - [Integrations and future extensions](integrations-and-future.md)
 
