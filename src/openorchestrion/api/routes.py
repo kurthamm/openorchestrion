@@ -5,10 +5,15 @@ from __future__ import annotations
 import asyncio
 import json
 import multiprocessing
+import shutil
 import sqlite3
+import subprocess
+import time
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
+from dataclasses import replace
 from functools import partial
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
@@ -56,6 +61,7 @@ from .listening_models import (
 from .models import (
     TRANSPORT_ACTIONS,
     AiState,
+    BackupHealth,
     CollectionCreateRequest,
     CollectionRenameRequest,
     CollectionsResponse,
@@ -76,6 +82,7 @@ from .models import (
     LibraryEnvelope,
     LibraryFacets,
     LibrarySearchResponse,
+    OperationsStatus,
     OutputsState,
     PlaybackEnvelope,
     PlaybackModesRequest,
@@ -87,13 +94,17 @@ from .models import (
     QueueReplaceRequest,
     QueueState,
     SavedCollectionModel,
+    ScheduleStartRequest,
     SeekRequest,
     SleepTimerRequest,
     SnapshotEnvelope,
     SnapshotPayload,
+    SongPreference,
+    SongPreferenceRequest,
     StationPreviewRequest,
     StationQueueModel,
     SystemStatus,
+    TestNoteRequest,
     TransportCommand,
     VolumeCommand,
 )
@@ -101,6 +112,7 @@ from .sessions import ConciergeSessions
 from .settings import Settings
 
 router = APIRouter(prefix="/api")
+_STARTED_AT = time.monotonic()
 Connection = Request | WebSocket
 
 
@@ -345,6 +357,20 @@ def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[Queue
         if payload.rendering is not None:
             return rendering_policy
         return _default_rendering_policy(settings, record)
+
+    def with_preference(spec: QueueItemSpec) -> QueueItemSpec:
+        if settings.player_state_db is None:
+            return spec
+        preference = PlayerStateStore(settings.player_state_db).get_song_preference(spec.asset_id)
+        if preference is None:
+            return spec
+        saved_rendering = preference.get("rendering")
+        policy = spec.rendering_policy
+        if payload.rendering is None and saved_rendering:
+            from .models import RenderingRequest
+            policy = RenderingRequest.model_validate(saved_rendering).to_policy()
+        return replace(spec, tempo_percent=preference["tempo_percent"],
+                       volume_percent=preference["volume_percent"], rendering_policy=policy)
     if payload.intent is not None:
         station = build_station(
             catalog_db,
@@ -373,12 +399,12 @@ def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[Queue
                     detail={"asset_id": item.asset_id},
                 )
             specs.append(
-                _asset_spec(
+                with_preference(_asset_spec(
                     record,
                     settings,
                     intent=payload.intent,
                     rendering_policy=policy_for(record),
-                )
+                ))
             )
         return specs
 
@@ -392,7 +418,7 @@ def _queue_specs(payload: QueueReplaceRequest, settings: Settings) -> list[Queue
                 status_code=404,
                 detail={"asset_id": asset_id},
             )
-        specs.append(_asset_spec(record, settings, rendering_policy=policy_for(record)))
+        specs.append(with_preference(_asset_spec(record, settings, rendering_policy=policy_for(record))))
     return specs
 
 
@@ -409,6 +435,52 @@ async def status(request: Request) -> SystemStatus:
 @router.get("/devices", response_model=DevicesResponse)
 async def devices(request: Request) -> DevicesResponse:
     return DevicesResponse(outputs=_outputs_state(request))
+
+
+@router.post("/devices/test-note", status_code=204)
+async def test_note(request: Request, payload: TestNoteRequest) -> None:
+    try:
+        await _playback(request).test_note(note=payload.note, velocity=payload.velocity,
+                                           duration_seconds=payload.duration_seconds)
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+
+
+@router.get("/operations", response_model=OperationsStatus)
+async def operations(request: Request) -> OperationsStatus:
+    settings = _settings(request)
+    usage = shutil.disk_usage(settings.library_root)
+    playback, queue = await _playback(request).snapshots()
+    backup = None
+    backup_path = settings.history_db.parent / "backup-status.json"
+    if backup_path.is_file():
+        try:
+            backup = BackupHealth.model_validate(json.loads(backup_path.read_text(encoding="utf-8")))
+        except (OSError, ValueError, json.JSONDecodeError):
+            backup = BackupHealth(status="unreadable")
+    try:
+        installed_version = version("openorchestrion")
+    except PackageNotFoundError:
+        installed_version = "development"
+    system = await _system_status(request)
+    if shutil.which("cloudflared"):
+        try:
+            result = await asyncio.to_thread(
+                subprocess.run, ["systemctl", "is-active", "cloudflared.service"],
+                capture_output=True, text=True, timeout=2, check=False,
+            )
+            tunnel_status = "active" if result.returncode == 0 else "inactive"
+        except (OSError, subprocess.SubprocessError):
+            tunnel_status = "unknown"
+    else:
+        tunnel_status = "not_configured"
+    return OperationsStatus(
+        service_version=installed_version, uptime_seconds=round(time.monotonic() - _STARTED_AT),
+        disk_free_bytes=usage.free, disk_total_bytes=usage.total, queue_length=len(queue.items),
+        playback_state=playback.state, outputs=_outputs_state(request), backup=backup,
+        library_indexed=system.library.indexed, library_assets=system.library.assets,
+        tunnel_status=tunnel_status, recent_playback_failures=list(_playback(request).recent_failures),
+    )
 
 
 async def _interpret(request: Request, payload: ConciergeAskRequest) -> ConciergeResult:
@@ -690,6 +762,14 @@ async def queue_play_next(request: Request, payload: QueueRemoveRequest) -> Queu
         raise _translate_playback_error(exc) from exc
 
 
+@router.post("/queue/undo", response_model=QueueState)
+async def undo_queue(request: Request) -> QueueState:
+    try:
+        return _queue_state_model(await _playback(request).undo_queue())
+    except PlaybackConflict as exc:
+        raise _translate_playback_error(exc) from exc
+
+
 @router.post("/playback/modes", response_model=QueueState)
 async def playback_modes(request: Request, payload: PlaybackModesRequest) -> QueueState:
     return _queue_state_model(await _playback(request).set_modes(
@@ -710,6 +790,14 @@ async def playback_sleep_timer(request: Request, payload: SleepTimerRequest) -> 
     return _playback_state_model(await _playback(request).set_sleep_timer(
         payload.seconds, after_current=payload.after_current,
     ))
+
+
+@router.post("/playback/schedule-start", response_model=PlaybackState)
+async def schedule_start(request: Request, payload: ScheduleStartRequest) -> PlaybackState:
+    try:
+        return _playback_state_model(await _playback(request).schedule_start(payload.seconds))
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
 
 
 def _collection_model(value: Any) -> SavedCollectionModel:
@@ -767,6 +855,30 @@ async def rename_collection(request: Request, collection_id: str, payload: Colle
 async def delete_collection(request: Request, collection_id: str) -> None:
     if not await asyncio.to_thread(_player_store(request).delete_collection, collection_id):
         raise ApiError("asset_not_found", "Saved collection was not found.", status_code=404)
+
+
+@router.get("/library/assets/{asset_id}/preference", response_model=SongPreference | None)
+async def song_preference(request: Request, asset_id: str) -> SongPreference | None:
+    value = await asyncio.to_thread(_player_store(request).get_song_preference, asset_id)
+    return SongPreference.model_validate(value) if value else None
+
+
+@router.put("/library/assets/{asset_id}/preference", response_model=SongPreference)
+async def save_song_preference(request: Request, asset_id: str,
+                               payload: SongPreferenceRequest) -> SongPreference:
+    if get_asset(_require_catalog(_settings(request)), asset_id) is None:
+        raise ApiError("asset_not_found", "Performance was not found.", status_code=404)
+    value = await asyncio.to_thread(
+        _player_store(request).save_song_preference, asset_id,
+        tempo_percent=payload.tempo_percent, volume_percent=payload.volume_percent,
+        rendering=payload.rendering.model_dump(mode="json") if payload.rendering else None,
+    )
+    return SongPreference.model_validate(value)
+
+
+@router.delete("/library/assets/{asset_id}/preference", status_code=204)
+async def delete_song_preference(request: Request, asset_id: str) -> None:
+    await asyncio.to_thread(_player_store(request).delete_song_preference, asset_id)
 
 
 @router.post("/volume", response_model=PlaybackState)

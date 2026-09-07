@@ -78,6 +78,8 @@ export function commandId() {
 export const api = {
   status: () => request('/api/status'),
   devices: () => request('/api/devices'),
+  testNote: () => request('/api/devices/test-note', { method: 'POST', body: {} }),
+  operations: () => request('/api/operations'),
   renderingOptions: () => request('/api/rendering/options'),
   setup: () => request('/api/setup'),
   completeSetup: () => request('/api/setup/complete', { method: 'POST' }),
@@ -162,11 +164,16 @@ export const api = {
     }),
   removeManyFromQueue: (assetIds) => request('/api/queue/remove-many', { method: 'POST', body: { asset_ids: assetIds } }),
   playNext: (assetId) => request('/api/queue/play-next', { method: 'POST', body: { asset_id: assetId } }),
+  undoQueue: () => request('/api/queue/undo', { method: 'POST' }),
   setPlaybackModes: ({ repeatMode = 'off', shuffle = false, continuous = false }) =>
     request('/api/playback/modes', { method: 'POST', body: { repeat_mode: repeatMode, shuffle, continuous } }),
   seek: (positionSeconds) => request('/api/playback/seek', { method: 'POST', body: { position_seconds: positionSeconds } }),
   sleepTimer: ({ seconds = null, afterCurrent = false } = {}) =>
     request('/api/playback/sleep-timer', { method: 'POST', body: { seconds, after_current: afterCurrent } }),
+  scheduleStart: (seconds = null) => request('/api/playback/schedule-start', { method: 'POST', body: { seconds } }),
+  songPreference: (assetId) => request(`/api/library/assets/${encodeURIComponent(assetId)}/preference`),
+  saveSongPreference: (assetId, body) => request(`/api/library/assets/${encodeURIComponent(assetId)}/preference`, { method: 'PUT', body }),
+  deleteSongPreference: (assetId) => request(`/api/library/assets/${encodeURIComponent(assetId)}/preference`, { method: 'DELETE' }),
   collections: () => request('/api/collections'),
   saveCollection: (body) => request('/api/collections', { method: 'POST', body }),
   loadCollection: (id) => request(`/api/collections/${encodeURIComponent(id)}/load`, { method: 'POST' }),

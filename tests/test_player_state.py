@@ -34,3 +34,13 @@ def test_collection_names_are_unique(tmp_path: Path) -> None:
     store.save_collection(name="Evening", kind="playlist", asset_ids=["a"])
     with pytest.raises(sqlite3.IntegrityError):
         store.save_collection(name="evening", kind="playlist", asset_ids=["b"])
+
+
+def test_song_playback_preference_is_durable(tmp_path: Path) -> None:
+    store = PlayerStateStore(tmp_path / "player-state.db")
+    store.save_song_preference("asset", tempo_percent=85, volume_percent=110,
+                               rendering={"mode": "PIANO_ONLY", "piano_program": 0, "program_overrides": []})
+    value = PlayerStateStore(store.path).get_song_preference("asset")
+    assert value["tempo_percent"] == 85
+    assert value["volume_percent"] == 110
+    assert value["rendering"]["mode"] == "PIANO_ONLY"

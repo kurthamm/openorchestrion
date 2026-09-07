@@ -22,6 +22,8 @@ class QueueItemSpec:
     device_preferences: tuple[str, ...] = ()
     routing_preferences: Mapping[str, str] = field(default_factory=dict)
     rendering_policy: RenderingPolicy | None = None
+    tempo_percent: int = 100
+    volume_percent: int = 100
 
 
 @dataclass(slots=True)
@@ -38,6 +40,8 @@ class QueueEntrySnapshot:
     composer: str | None
     duration_seconds: float
     index: int
+    tempo_percent: int = 100
+    volume_percent: int = 100
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +53,7 @@ class QueueSnapshot:
     repeat_mode: str = "off"
     shuffle: bool = False
     continuous: bool = False
+    can_undo: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -83,6 +88,7 @@ class PlaybackSnapshot:
     volume: int = 100
     sleep_timer_remaining_seconds: int | None = None
     stop_after_current: bool = False
+    scheduled_start_remaining_seconds: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

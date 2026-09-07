@@ -93,6 +93,10 @@ class PlaybackEngine:
         self._stop_after_current = False
         self._sleep_deadline: float | None = None
         self._sleep_task: asyncio.Task[None] | None = None
+        self._scheduled_start_deadline: float | None = None
+        self._scheduled_start_task: asyncio.Task[None] | None = None
+        self._undo_stack: list[tuple[list[QueueItemSpec], int | None]] = []
+        self._recent_failures: list[dict[str, str]] = []
         self._restore_state()
 
     @staticmethod
@@ -105,6 +109,7 @@ class PlaybackEngine:
             "performance_type": spec.performance_type,
             "device_preferences": list(spec.device_preferences),
             "routing_preferences": dict(spec.routing_preferences),
+            "tempo_percent": spec.tempo_percent, "volume_percent": spec.volume_percent,
             "rendering_policy": None if policy is None else {
                 "mode": policy.mode.value, "piano_program": policy.piano_program,
                 "program_overrides": [[entry.channel, entry.program] for entry in policy.program_overrides],
@@ -137,6 +142,10 @@ class PlaybackEngine:
             self._repeat_mode = saved.get("repeat_mode", "off") if saved.get("repeat_mode") in {"off", "track", "queue"} else "off"
             self._shuffle = bool(saved.get("shuffle", False))
             self._continuous = bool(saved.get("continuous", False))
+            self._undo_stack = [
+                ([self._spec_from_dict(dict(spec)) for spec in entry.get("queue", [])], entry.get("current_index"))
+                for entry in saved.get("undo", [])[-10:]
+            ]
             self._state = "stopped" if self._queue else "idle"
         except (KeyError, OSError, RuntimeError, TypeError, ValueError):
             # Corrupt optional session state must never prevent appliance boot.
@@ -152,6 +161,10 @@ class PlaybackEngine:
             "position_seconds": self._position_now_locked(),
             "volume": self._volume, "repeat_mode": self._repeat_mode,
             "shuffle": self._shuffle, "continuous": self._continuous,
+            "undo": [
+                {"queue": [self._spec_to_dict(spec) for spec in specs], "current_index": index}
+                for specs, index in self._undo_stack
+            ],
         })
 
     def _load_source(self, path: Path) -> MidiTimeline:
@@ -188,7 +201,9 @@ class PlaybackEngine:
         return self._volume
 
     def _scaled_cc7(self, base: int) -> int:
-        return max(0, min(127, round(base * self._volume / 100)))
+        current = self._current_item_locked()
+        song_volume = current.spec.volume_percent if current else 100
+        return max(0, min(127, round(base * self._volume * song_volume / 10000)))
 
     def _outgoing(self, routed: RoutedMessage) -> Message:
         """The message actually sent: Channel Volume is scaled by the master volume."""
@@ -228,6 +243,16 @@ class PlaybackEngine:
     @property
     def disconnected_outputs(self) -> tuple[str, ...]:
         return tuple(sorted(self._disconnected))
+
+    @property
+    def recent_failures(self) -> tuple[dict[str, str], ...]:
+        return tuple(self._recent_failures)
+
+    def _record_failure(self, asset_id: str, error: str) -> None:
+        self._recent_failures.append({
+            "asset_id": asset_id, "error": error, "occurred_at": self.clock.utcnow().isoformat()
+        })
+        del self._recent_failures[:-10]
 
     def outputs_state(self) -> dict[str, Any]:
         """The ``OutputsState`` payload shared by the status API and ``state.devices``."""
@@ -325,7 +350,9 @@ class PlaybackEngine:
     def _position_now_locked(self) -> float:
         position = self._position_seconds
         if self._state == "playing" and self._run_anchor_clock is not None:
-            position += max(0.0, self.clock.now() - self._run_anchor_clock)
+            current = self._current_item_locked()
+            rate = (current.spec.tempo_percent / 100) if current else 1.0
+            position += max(0.0, self.clock.now() - self._run_anchor_clock) * rate
         duration = self._active_duration_seconds
         if duration is None:
             current = self._current_item_locked()
@@ -343,6 +370,8 @@ class PlaybackEngine:
                 composer=item.spec.composer,
                 duration_seconds=item.spec.duration_seconds,
                 index=index,
+                tempo_percent=item.spec.tempo_percent,
+                volume_percent=item.spec.volume_percent,
             )
             for index, item in enumerate(self._queue)
         )
@@ -354,6 +383,7 @@ class PlaybackEngine:
             repeat_mode=self._repeat_mode,
             shuffle=self._shuffle,
             continuous=self._continuous,
+            can_undo=bool(self._undo_stack),
         )
 
     def _playback_snapshot_locked(self, command_id: str | None = None) -> PlaybackSnapshot:
@@ -369,7 +399,7 @@ class PlaybackEngine:
                 duration_seconds=current.spec.duration_seconds,
                 queue_index=self._current_index,
             )
-            rate = 1.0 if self._state == "playing" else 0.0
+            rate = current.spec.tempo_percent / 100 if self._state == "playing" else 0.0
             duration = self._active_duration_seconds or current.spec.duration_seconds
             position = PositionSnapshot(
                 position_ms=round(self._position_now_locked() * 1000),
@@ -388,7 +418,78 @@ class PlaybackEngine:
                 if self._sleep_deadline is not None else None
             ),
             stop_after_current=self._stop_after_current,
+            scheduled_start_remaining_seconds=(
+                max(0, round(self._scheduled_start_deadline - self.clock.now()))
+                if self._scheduled_start_deadline is not None else None
+            ),
         )
+
+    def _push_undo_locked(self) -> None:
+        self._undo_stack.append(([item.spec for item in self._queue], self._current_index))
+        del self._undo_stack[:-10]
+
+    async def undo_queue(self) -> QueueSnapshot:
+        async with self._lock:
+            if not self._undo_stack:
+                raise PlaybackConflict("there is no queue change to undo")
+            await self._interrupt_locked(mark_skipped=True, reset_position=True)
+            specs, index = self._undo_stack.pop()
+            self._queue = [RuntimeQueueItem(spec) for spec in specs]
+            self._current_index = index if index is not None and index < len(self._queue) else (0 if self._queue else None)
+            self._state = "stopped" if self._queue else "idle"
+            self._persist_locked()
+            snapshot = self._queue_snapshot_locked()
+            self.events.publish("state.queue", snapshot.to_dict())
+            self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
+            return snapshot
+
+    async def schedule_start(self, seconds: int | None) -> PlaybackSnapshot:
+        if seconds is not None and not 1 <= seconds <= 86400:
+            raise ValueError("seconds must be between 1 and 86400")
+        async with self._lock:
+            if self._scheduled_start_task is not None:
+                self._scheduled_start_task.cancel()
+            self._scheduled_start_task = None
+            self._scheduled_start_deadline = None
+            if seconds is not None:
+                if not self._queue:
+                    raise PlaybackConflict("the queue is empty")
+                if self._state == "playing":
+                    raise PlaybackConflict("playback is already running")
+                self._scheduled_start_deadline = self.clock.now() + seconds
+                self._scheduled_start_task = asyncio.create_task(self._start_later(seconds))
+            snapshot = self._playback_snapshot_locked()
+            self.events.publish("state.playback", snapshot.to_dict())
+            return snapshot
+
+    async def test_note(self, *, note: int = 60, velocity: int = 64,
+                        duration_seconds: float = 0.35) -> None:
+        if not 0 <= note <= 127 or not 1 <= velocity <= 127 or not 0.05 <= duration_seconds <= 2:
+            raise ValueError("invalid test note")
+        async with self._lock:
+            self._require_outputs_locked()
+            if self._state == "playing":
+                raise PlaybackConflict("test note is unavailable during playback")
+            async with self._send_lock:
+                for output in self.router.outputs.values():
+                    await output.send(Message("note_on", channel=0, note=note, velocity=velocity))
+        try:
+            await asyncio.sleep(duration_seconds)
+        finally:
+            async with self._lock, self._send_lock:
+                for output in self.router.outputs.values():
+                    await output.send(Message("note_off", channel=0, note=note, velocity=0))
+
+    async def _start_later(self, seconds: int) -> None:
+        try:
+            await asyncio.sleep(seconds)
+            async with self._lock:
+                self._scheduled_start_task = None
+                self._scheduled_start_deadline = None
+                await self._play_locked()
+                self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
+        except asyncio.CancelledError:
+            return
 
     async def set_modes(self, *, repeat_mode: str, shuffle: bool, continuous: bool) -> QueueSnapshot:
         if repeat_mode not in {"off", "track", "queue"}:
@@ -486,6 +587,7 @@ class PlaybackEngine:
                     raise PlaybackConflict(
                         f"queue already contains asset(s): {', '.join(sorted(duplicates))}"
                     )
+            self._push_undo_locked()
             if mode == "replace":
                 await self._interrupt_locked(mark_skipped=True, reset_position=True)
             runtime: list[RuntimeQueueItem] = []
@@ -522,6 +624,7 @@ class PlaybackEngine:
             operation = "queue:clear"
             if not self._check_command(command_id, operation):
                 return self._queue_snapshot_locked(command_id)
+            self._push_undo_locked()
             await self._interrupt_locked(mark_skipped=True, reset_position=True)
             self._queue = []
             self._current_index = None
@@ -554,6 +657,7 @@ class PlaybackEngine:
             )
             if source_index is None:
                 raise PlaybackConflict(f"asset is not in the queue: {asset_id}")
+            self._push_undo_locked()
             current = self._current_item_locked()
             item = self._queue.pop(source_index)
             self._queue.insert(to_index, item)
@@ -580,6 +684,7 @@ class PlaybackEngine:
             )
             if index is None:
                 raise PlaybackConflict(f"asset is not in the queue: {asset_id}")
+            self._push_undo_locked()
             active = index == self._current_index
             was_active = self._state in {"playing", "paused"}
             if active and was_active:
@@ -612,6 +717,7 @@ class PlaybackEngine:
             missing = wanted - existing
             if missing:
                 raise PlaybackConflict(f"asset is not in the queue: {min(missing)}")
+            self._push_undo_locked()
             current = self._current_item_locked()
             remove_current = current is not None and current.spec.asset_id in wanted
             was_active = self._state in {"playing", "paused"}
@@ -638,6 +744,7 @@ class PlaybackEngine:
             index = next((i for i, item in enumerate(self._queue) if item.spec.asset_id == asset_id), None)
             if index is None:
                 raise PlaybackConflict(f"asset is not in the queue: {asset_id}")
+            self._push_undo_locked()
             target = min((self._current_index or 0) + 1, len(self._queue) - 1)
             current = self._current_item_locked()
             item = self._queue.pop(index)
@@ -697,7 +804,23 @@ class PlaybackEngine:
             if self._state in {"paused", "stopped"} and self._position_seconds > 0
             else 0.0
         )
-        await self._begin_current_locked(start_position=start_position)
+        while True:
+            try:
+                await self._begin_current_locked(start_position=start_position)
+                return
+            except PlaybackError:
+                if self._current_index is None or self._current_index + 1 >= len(self._queue):
+                    raise
+                failed = self._current_item_locked()
+                self.events.publish("error", {
+                    "code": "playback_item_failed",
+                    "message": "A performance could not be opened; continuing with the next item.",
+                    "detail": {"asset_id": failed.spec.asset_id if failed else None},
+                })
+                self._current_index += 1
+                self._position_seconds = 0.0
+                start_position = 0.0
+                self.events.publish("state.queue", self._queue_snapshot_locked().to_dict())
 
     async def _pause_locked(self) -> None:
         if self._state != "playing":
@@ -795,6 +918,7 @@ class PlaybackEngine:
             dispatches = self._build_dispatches(timeline, current.spec.routing_plan)
         except Exception as exc:
             error = f"{type(exc).__name__}: {exc}"
+            self._record_failure(current.spec.asset_id, error)
             await self.history.failed(current.play_id, start_position, error)
             current.play_id = None
             self._state = "stopped"
@@ -892,9 +1016,9 @@ class PlaybackEngine:
                 )
                 next_threshold = threshold if threshold_pending else float("inf")
                 target = min(next_dispatch, next_threshold)
-                await self.clock.sleep_until(
-                    anchor_clock + max(0.0, target - start_position)
-                )
+                await self.clock.sleep_until(anchor_clock + max(
+                    0.0, (target - start_position) / (item.spec.tempo_percent / 100)
+                ))
                 if generation != self._generation:
                     return
                 if threshold_pending and next_threshold <= target + 1e-9:
@@ -909,9 +1033,9 @@ class PlaybackEngine:
                         await dispatch.routed.output.send(self._outgoing(dispatch.routed))
                     index += 1
 
-            await self.clock.sleep_until(
-                anchor_clock + max(0.0, completion_at - start_position)
-            )
+            await self.clock.sleep_until(anchor_clock + max(
+                0.0, (completion_at - start_position) / (item.spec.tempo_percent / 100)
+            ))
             if generation != self._generation:
                 return
             await self._complete_from_worker(generation, item, timeline.duration_seconds)
@@ -985,6 +1109,7 @@ class PlaybackEngine:
             self._run_anchor_clock = None
             self._state = "stopped"
             error = f"{type(exc).__name__}: {exc}"
+            self._record_failure(item.spec.asset_id, error)
             if item.play_id is not None:
                 await self.history.failed(item.play_id, position, error)
                 item.play_id = None
@@ -993,11 +1118,21 @@ class PlaybackEngine:
             self.events.publish(
                 "error",
                 {
-                    "code": "internal_error",
-                    "message": "Playback stopped because a MIDI output or asset failed.",
-                    "detail": {"asset_id": item.spec.asset_id},
+                    "code": "playback_item_failed",
+                    "message": "A performance failed; OpenOrchestrion will continue when another queued item is available.",
+                    "detail": {"asset_id": item.spec.asset_id, "error": error},
                 },
             )
+            if self.outputs_ready and self._current_index is not None and self._current_index + 1 < len(self._queue):
+                self._current_index += 1
+                self._position_seconds = 0.0
+                self._active_duration_seconds = None
+                self.events.publish("state.queue", self._queue_snapshot_locked().to_dict())
+                try:
+                    await self._play_locked()
+                except PlaybackError:
+                    pass
+            self._persist_locked()
             self.events.publish(
                 "state.playback", self._playback_snapshot_locked().to_dict()
             )
@@ -1021,6 +1156,9 @@ class PlaybackEngine:
             if self._sleep_task is not None:
                 self._sleep_task.cancel()
                 self._sleep_task = None
+            if self._scheduled_start_task is not None:
+                self._scheduled_start_task.cancel()
+                self._scheduled_start_task = None
             self._persist_locked()
             with suppress(Exception):
                 await self._panic_locked()

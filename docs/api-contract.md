@@ -493,3 +493,9 @@ Queue editing adds `POST /api/queue/remove-many` (`asset_ids`) and
 `POST /api/playback/sleep-timer`, with nullable `seconds` and `after_current`.
 Queue responses include all three playback modes; playback responses include
 `sleep_timer_remaining_seconds` and `stop_after_current`.
+
+Operations additions include `POST /api/queue/undo`,
+`POST /api/playback/schedule-start`, `POST /api/devices/test-note`, and
+`GET /api/operations`. Durable per-song playback settings are read, replaced,
+or deleted at `/api/library/assets/{asset_id}/preference`; they contain tempo,
+relative volume, and an optional rendering policy.

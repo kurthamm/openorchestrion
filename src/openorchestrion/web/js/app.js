@@ -6,7 +6,7 @@ import { playbackNotes } from './playback-notes.js';
 import { h, render } from './dom.js';
 import { anchor, createTicker, positionAt, progressAt, formatClock, formatSeconds } from './position.js';
 import { StateSocket } from './socket.js';
-import { loadRenderingPreference } from './rendering.js';
+import { loadRenderingPreference, renderingPayload } from './rendering.js';
 import { mountRenderingControls } from './views/rendering.js';
 
 const $ = (id) => document.getElementById(id);
@@ -63,7 +63,7 @@ function route() {
     void loadLibrary();
   } else if (view === 'queue') { drawQueue(); void refreshQueue(); }
   else if (view === 'recent') void loadHistory();
-  else if (view === 'settings') { drawDevices(); mountRenderingControls($('rendering-panel')); }
+  else if (view === 'settings') { drawDevices(); mountRenderingControls($('rendering-panel')); void loadOperations(); }
   window.scrollTo({ top: 0 });
 }
 function favoriteButton(item) {
@@ -184,6 +184,21 @@ async function playNow(item) {
     return queue;
   });
 }
+async function editSongPreference(item) {
+  try {
+    const saved = await api.songPreference(item.asset_id);
+    const tempo = Number(prompt('Tempo percent (50–200):', String(saved?.tempo_percent || 100)));
+    if (!tempo) return;
+    const volume = Number(prompt('Song volume percent (0–150):', String(saved?.volume_percent ?? 100)));
+    if (!Number.isFinite(volume)) return;
+    await api.saveSongPreference(item.asset_id, { tempo_percent: tempo, volume_percent: volume, rendering: renderingPayload(loadRenderingPreference()) });
+    toast(`Saved playback settings for “${item.title}”.`);
+  } catch (error) { toast(error.message, true); }
+}
+async function resetSongPreference(item) {
+  try { await api.deleteSongPreference(item.asset_id); toast(`Reset playback settings for “${item.title}”.`); }
+  catch (error) { toast(error.message, true); }
+}
 function drawQueue() {
   $('queue-count').textContent = number(state.queue.items.length);
   $('queue-summary').textContent = `${number(state.queue.items.length)} performance${state.queue.items.length === 1 ? '' : 's'} · ${formatSeconds(state.queue.total_duration_seconds)} total`;
@@ -191,6 +206,7 @@ function drawQueue() {
   $('clear-queue').disabled = !state.queue.items.length;
   $('save-queue').disabled = !state.queue.items.length;
   $('remove-selected').disabled = !selectedQueueItems.size;
+  if ($('undo-queue')) $('undo-queue').disabled = !state.queue.can_undo;
   $('repeat-mode').value = state.queue.repeat_mode || 'off';
   $('shuffle-mode').checked = Boolean(state.queue.shuffle);
   $('continuous-mode').checked = Boolean(state.queue.continuous);
@@ -249,7 +265,7 @@ async function openDetail(id) {
     const factList = (pairs) => h('dl', { class: 'facts' }, pairs.flatMap(([label, value]) => [h('dt', { text: label }), h('dd', { text: value === null || value === undefined || value === '' ? 'Not documented' : String(value) })]));
     const tags = [...new Set([...(item.genres || []), ...(item.moods || []), ...(item.instrumentation || [])])];
     render($('detail-content'), h('p', { class: 'eyebrow', text: 'PERFORMANCE NOTES' }), h('h1', { id: 'detail-title', class: 'detail-title', text: item.title }), h('p', { class: 'detail-sub', text: item.composer || item.artist || 'Creator not documented' }),
-      h('div', { class: 'detail-actions' }, button('▶ Play now', () => playNow(item), { class: 'btn btn-primary', disabled: !ready(), 'data-needs-output': 'true', title: ready() ? 'Replace the queue and play this performance' : 'Connect a MIDI instrument to play' }), button('+ Add to queue', () => add(item)), favoriteButton(item)),
+      h('div', { class: 'detail-actions' }, button('▶ Play now', () => playNow(item), { class: 'btn btn-primary', disabled: !ready(), 'data-needs-output': 'true', title: ready() ? 'Replace the queue and play this performance' : 'Connect a MIDI instrument to play' }), button('+ Add to queue', () => add(item)), button('Playback settings', () => editSongPreference(item)), button('Reset playback settings', () => resetSongPreference(item)), favoriteButton(item)),
       h('div', { class: 'detail-stats' }, stat(formatSeconds(item.duration_seconds), 'Duration'), stat(number(item.track_count), 'MIDI tracks'), stat(number(facts.channels.length), 'Channels'), stat(number(item.note_count), 'Notes')),
       h('div', { class: 'tags' }, tags.map(tag => h('span', { class: 'tag', text: readable(tag) }))),
       h('section', { class: 'detail-section' }, h('h2', { text: 'How this will play' }), h('p', { text: `Next addition: ${soundLabels[loadRenderingPreference().mode]}. ${ready() ? 'A MIDI output is connected.' : 'Connect a MIDI instrument to hear this performance.'}` }), h('a', { class: 'text-btn', href: '#settings', onClick: () => $('detail').close(), text: 'Change sound & device settings →' }), h('p', { class: 'technical-note', text: 'Encoded instruments below describe the MIDI file. Automatic voicing or your chosen overrides can change the programs sent to the keyboard. Banks, drum kits and available sounds depend on the device. SysEx messages are not sent to hardware.' })),
@@ -289,7 +305,8 @@ function updatePlayer() {
   for (const id of ['volume', 'settings-volume']) if (document.activeElement !== $(id)) $(id).value = state.playback.volume ?? 100;
   $('volume').setAttribute('aria-valuetext', `${state.playback.volume ?? 100} percent`);
   const remaining = state.playback.sleep_timer_remaining_seconds;
-  $('timer-status').textContent = state.playback.stop_after_current ? 'Playback will stop after the current performance.' : remaining == null ? 'No sleep timer is active.' : `Playback stops in ${formatSeconds(remaining)}.`;
+  const scheduled = state.playback.scheduled_start_remaining_seconds;
+  $('timer-status').textContent = state.playback.stop_after_current ? 'Playback will stop after the current performance.' : remaining != null ? `Playback stops in ${formatSeconds(remaining)}.` : scheduled != null ? `Queue starts in ${formatSeconds(scheduled)}.` : 'No timer is active.';
   updateProgress(); if (playing) ticker.start(); else ticker.stop();
 }
 function applyPlayback(value) { if (value.command_id === pendingCommandId) pendingCommandId = null; state.playback = value; positionAnchor = anchor(value.position); updatePlayer(); }
@@ -301,6 +318,14 @@ async function transport(action) {
   finally { if (pendingCommandId === id) pendingCommandId = null; }
 }
 async function refreshStatus() { try { state.status = await api.status(); drawDevices(); updatePlayer(); drawQueue(); } catch (error) { toast(error.message, true); } }
+async function loadOperations() {
+  const node = $('operations-status'); if (!node) return;
+  try {
+    const value = await api.operations();
+    const gigabytes = bytes => `${(bytes / 1073741824).toFixed(1)} GB`;
+    render(node, h('p', { text: `Version ${value.service_version} · Up ${formatSeconds(value.uptime_seconds)}` }), h('p', { text: `${gigabytes(value.disk_free_bytes)} free of ${gigabytes(value.disk_total_bytes)} · ${value.library_assets.toLocaleString()} library items · ${value.queue_length} queued` }), h('p', { text: `Cloudflare tunnel: ${readable(value.tunnel_status)} · MIDI: ${value.outputs.ready ? 'Ready' : readable(value.outputs.reason)}` }), h('p', { text: value.backup ? `Backup: ${readable(value.backup.status)}${value.backup.finished_at ? ` · ${new Date(value.backup.finished_at).toLocaleString()}` : ''}` : 'Backup status not recorded yet.' }), value.recent_playback_failures.length ? h('details', {}, h('summary', { text: `${value.recent_playback_failures.length} recent playback failure(s)` }), value.recent_playback_failures.map(failure => h('p', { text: `${failure.asset_id}: ${failure.error}` }))) : h('p', { text: 'No playback failures since service start.' }));
+  } catch (error) { render(node, h('p', { text: error.message })); }
+}
 const socket = new StateSocket({ onConnectionChange: connection => { state.connection = connection; drawDevices(); updatePlayer(); drawQueue(); }, onMessage: envelope => {
   const p = envelope.payload;
   if (envelope.type === 'state.snapshot') { state.status = p.status; state.queue = p.queue; applyPlayback(p.playback); drawDevices(); drawQueue(); }
@@ -317,7 +342,11 @@ $('save-station').onclick = saveStation;
 $('close-detail').onclick = () => $('detail').close();
 $('detail').addEventListener('close', () => { detailVersion++; });
 $('refresh-status').onclick = refreshStatus;
+$('refresh-status').after(button('Play test note', async () => { try { await api.testNote(); toast('Test note sent to connected outputs.'); } catch (error) { toast(error.message, true); } }));
 $('start-queue').onclick = () => transport('play');
+$('start-queue').after(button('Undo', () => mutateQueue(() => api.undoQueue(), 'Queue change undone.'), { id: 'undo-queue', disabled: true }));
+const startDelay = h('select', { id: 'start-delay', 'aria-label': 'Delayed start' }, h('option', { value: '', text: 'Start timer…' }), [5, 15, 30, 60].map(value => h('option', { value: value * 60, text: `${value} minutes` })));
+$('start-queue').parentElement.append(startDelay, button('Schedule start', async () => { try { const seconds = Number(startDelay.value) || null; applyPlayback(await api.scheduleStart(seconds)); toast(seconds ? 'Queue start scheduled.' : 'Scheduled start cleared.'); } catch (error) { toast(error.message, true); } }));
 $('clear-queue').onclick = async () => { if (await confirmAction('Clear your queue?', 'This ends the current listening session and removes every queued performance.', 'Clear queue')) await mutateQueue(() => api.clearQueue()); };
 $('save-queue').onclick = savePlaylist;
 $('load-collection').onclick = async () => { const id = $('saved-collections').value; if (id) await mutateQueue(() => api.loadCollection(id), 'Loaded saved collection.'); };
@@ -334,6 +363,7 @@ $('volume').onchange = $('settings-volume').onchange = async e => { try { applyP
 window.addEventListener('hashchange', route);
 document.querySelector('.skip').addEventListener('click', event => { event.preventDefault(); $('main').focus(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void refreshStatus(); });
+document.querySelector('.settings-grid').append(h('article', { class: 'settings-card' }, h('h2', { text: 'System health' }), h('div', { id: 'operations-status' }), button('Refresh system health', loadOperations)));
 // Device settings remain reachable on narrow screens even when no warning is shown.
 $('search-form').after(h('a', { href: '#settings', class: 'icon-btn settings-shortcut', 'aria-label': 'Playback and devices', text: '⚙' }));
 route(); void loadDiscover(); void refreshStatus(); void refreshCollections(); socket.connect();

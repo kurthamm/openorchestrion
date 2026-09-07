@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -131,6 +132,79 @@ async def test_seek_while_paused_remains_resumable(tmp_path: Path) -> None:
     sought = await engine.seek(1.0)
     assert sought.state == "paused"
     assert (await engine.transport("play")).position.position_ms == 1000
+
+
+@pytest.mark.asyncio
+async def test_bad_item_is_skipped_and_next_item_plays(tmp_path: Path) -> None:
+    good = tmp_path / "good.mid"
+    duration = _write_midi(good, beats=2)
+    engine, _, history, _, _ = await _engine()
+    await engine.set_queue([
+        QueueItemSpec("bad", "Bad", duration, str(tmp_path / "missing.mid")),
+        QueueItemSpec("good", "Good", duration, str(good)),
+    ])
+    snapshot = await engine.transport("play")
+    assert snapshot.state == "playing"
+    assert snapshot.now_playing.asset_id == "good"
+    assert any(event[0] == "failed" for event in history.events)
+
+
+@pytest.mark.asyncio
+async def test_tempo_changes_scheduler_rate(tmp_path: Path) -> None:
+    midi = tmp_path / "fast.mid"
+    duration = _write_midi(midi, beats=4)
+    engine, clock, _, _, _ = await _engine()
+    await engine.set_queue([QueueItemSpec("fast", "Fast", duration, str(midi), tempo_percent=200)])
+    started = await engine.transport("play")
+    assert started.position.rate == 2
+    await clock.advance(0.5)
+    assert (await engine.playback_snapshot()).position.position_ms == 1000
+    await clock.advance(duration)
+    assert (await engine.playback_snapshot()).state == "stopped"
+
+
+@pytest.mark.asyncio
+async def test_queue_change_can_be_undone(tmp_path: Path) -> None:
+    midi = tmp_path / "song.mid"
+    duration = _write_midi(midi)
+    engine, _, _, _, _ = await _engine()
+    await engine.set_queue([QueueItemSpec("one", "One", duration, str(midi))])
+    await engine.clear_queue()
+    assert (await engine.queue_snapshot()).can_undo
+    restored = await engine.undo_queue()
+    assert [item.asset_id for item in restored.items] == ["one"]
+
+
+@pytest.mark.asyncio
+async def test_queue_undo_history_survives_restart(tmp_path: Path) -> None:
+    midi = tmp_path / "song.mid"
+    duration = _write_midi(midi)
+    store = PlayerStateStore(tmp_path / "player-state.db")
+    engine, _, _, _, _ = await _engine(state_store=store)
+    await engine.set_queue([QueueItemSpec("one", "One", duration, str(midi))])
+    await engine.clear_queue()
+    await engine.close()
+    reopened, _, _, _, _ = await _engine(state_store=PlayerStateStore(store.path))
+    assert [item.asset_id for item in (await reopened.undo_queue()).items] == ["one"]
+
+
+@pytest.mark.asyncio
+async def test_test_note_sends_balanced_note_pair(tmp_path: Path) -> None:
+    engine, _, _, output, _ = await _engine()
+    await engine.test_note(duration_seconds=0.05)
+    assert [event.message.type for event in output.sent[-2:]] == ["note_on", "note_off"]
+
+
+@pytest.mark.asyncio
+async def test_scheduled_start_fires_without_a_browser_connection(tmp_path: Path) -> None:
+    midi = tmp_path / "scheduled.mid"
+    duration = _write_midi(midi)
+    engine, _, _, _, _ = await _engine()
+    await engine.set_queue([QueueItemSpec("scheduled", "Scheduled", duration, str(midi))])
+    scheduled = await engine.schedule_start(1)
+    assert scheduled.scheduled_start_remaining_seconds == 1
+    await asyncio.sleep(1.05)
+    assert (await engine.playback_snapshot()).state == "playing"
 
 
 @pytest.mark.asyncio
