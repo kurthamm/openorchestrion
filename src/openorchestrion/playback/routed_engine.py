@@ -55,7 +55,7 @@ class PlaybackEngine(BasePlaybackEngine):
             self.last_routing_decision = None
 
         try:
-            source_timeline = MidiTimeline.from_file(Path(current.spec.midi_path))
+            source_timeline = self._load_source(Path(current.spec.midi_path))
             timeline = render_timeline(source_timeline, current.spec.rendering_policy)
 
             if current.spec.routing_plan is None and len(self.router.output_names) > 1:

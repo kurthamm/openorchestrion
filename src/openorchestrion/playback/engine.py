@@ -80,6 +80,23 @@ class PlaybackEngine:
         # file's own balance between parts is preserved at any level.
         self._volume = 100
         self._cc7_base: dict[tuple[str, int], int] = {}
+        self._source_cache: tuple[tuple, MidiTimeline] | None = None
+
+    def _load_source(self, path: Path) -> MidiTimeline:
+        """Reuse the current source on resume/replay; never cache output routes.
+
+        One entry, capped at 100k events, bounds retention independently of the
+        library size. Stat identity includes replacement and in-place edits.
+        Rendering and dispatch must continue to leave source messages untouched.
+        """
+        stat = path.stat()
+        key = (str(path.resolve()), stat.st_dev, stat.st_ino, stat.st_size,
+               stat.st_mtime_ns, stat.st_ctime_ns)
+        if self._source_cache is not None and self._source_cache[0] == key:
+            return self._source_cache[1]
+        timeline = MidiTimeline.from_file(path)
+        self._source_cache = (key, timeline) if len(timeline.events) <= 100000 else None
+        return timeline
 
     @property
     def output_names(self) -> tuple[str, ...]:
@@ -572,7 +589,7 @@ class PlaybackEngine:
                 duration_seconds=current.spec.duration_seconds,
             )
         try:
-            timeline = MidiTimeline.from_file(Path(current.spec.midi_path))
+            timeline = self._load_source(Path(current.spec.midi_path))
             dispatches = self._build_dispatches(timeline, current.spec.routing_plan)
         except Exception as exc:
             error = f"{type(exc).__name__}: {exc}"

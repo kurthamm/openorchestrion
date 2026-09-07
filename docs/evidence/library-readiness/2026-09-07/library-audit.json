@@ -1,0 +1,25 @@
+{
+  "at": "2026-09-07T21:37:20.053452+00:00",
+  "version": 1,
+  "admitted": 20549,
+  "indexed": 20549,
+  "missing": 0,
+  "source_counts": {
+    "parts": 127504,
+    "wk220_over_24": 2212,
+    "sysex_blocked": 7217,
+    "default_program": 3884,
+    "sparse_arrangement": 4343,
+    "unverified_sound_mapping": 4436,
+    "wk220_over_48": 120
+  },
+  "examples": {
+    "wk220_over_24": "sha256:0006ab7bb24d66320e8ed8c76e1784d090b628d0fd33bc8b4766f77dbd7ed97e",
+    "sysex_blocked": "sha256:0006ab7bb24d66320e8ed8c76e1784d090b628d0fd33bc8b4766f77dbd7ed97e",
+    "default_program": "sha256:0006ab7bb24d66320e8ed8c76e1784d090b628d0fd33bc8b4766f77dbd7ed97e",
+    "sparse_arrangement": "sha256:0006b7e40086c796bb177d89038118cb896bdbd1b3ef7c7cb32de04fc6ef84f5",
+    "unverified_sound_mapping": "sha256:000e3a92c4de6aff5fffffe7a5e1444730086a99081bd97dca835e21833ac81e",
+    "wk220_over_48": "sha256:034a0f9804e9d9ef25549b41f482d178e7402a984b03c0c9e9029e051373d0c3"
+  },
+  "catalog_mismatches": []
+}

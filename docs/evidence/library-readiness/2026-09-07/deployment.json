@@ -1,0 +1,9 @@
+{
+  "started_at": "2026-09-07T21:35:53.897983+00:00",
+  "completed_at": "2026-09-07T21:35:57.415180+00:00",
+  "wheel_sha256": "1eeb9c2a2c7d3335ea476326dd384892ced2438eb5abd8671bff1eebec96061f",
+  "queue_restored": true,
+  "restored_rendering": "AUTO (owner delegated choice)",
+  "volume": 33,
+  "state": "stopped"
+}

@@ -5,7 +5,9 @@ from pathlib import Path
 from typing import Any
 
 import mido
-from mido import Message, MidiFile
+from mido import Message
+
+from ..midi.loading import load_midi
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,7 +28,7 @@ class MidiTimeline:
         source = Path(path)
         if not source.is_file():
             raise FileNotFoundError(source)
-        midi = MidiFile(source)
+        midi = load_midi(source)
         if midi.type == 2:
             raise ValueError("SMF type 2 contains asynchronous tracks and has no single master timeline")
 
@@ -54,7 +56,10 @@ class MidiTimeline:
             events.append(
                 MidiTimelineEvent(
                     current_seconds,
-                    message.copy(time=0),
+                    # MidiFile already validated these values. Only time changes
+                    # to a known valid constant; rechecking every field dominates
+                    # cold startup on the Pi for dense performances.
+                    message.copy(time=0, skip_checks=True),
                     track_index=track_index,
                 )
             )

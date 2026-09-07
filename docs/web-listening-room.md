@@ -17,6 +17,15 @@ The player remains available while browsing. Its buttons and volume input keep t
 
 No connected instrument is required to browse, save favorites, inspect metadata, or prepare a queue. Starting music requires a live connection and a ready output. Sound comes from the MIDI instrument, not browser speakers. Disconnection produces a quiet status notice and never forces a setup page.
 
+## Current instrument preview
+
+The [playback-readiness follow-up](library-playback-readiness.md) adds **What will
+play** part cards using the same sound policy as queue creation. Original encoded
+programs remain in a separate disclosure. Details include sustain, velocity, note
+demand, default sounds, percussion suppression, and explicit reference warnings.
+Opening details never changes transport. See the follow-up for current validation
+and wheel identity; the original redesign evidence below remains historical.
+
 ## MIDI information and its limits
 
 The performance panel reads the existing deterministic catalog analysis:

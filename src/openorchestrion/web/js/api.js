@@ -105,6 +105,9 @@ export const api = {
   browse: (params, signal) => request(`/api/library/browse${query(params)}`, { signal }),
   browseFacets: () => request('/api/library/browse/facets'),
   performance: (id) => request(`/api/library/assets/${encodeURIComponent(id)}/performance`),
+  performancePreview: (id) => request(`/api/library/assets/${encodeURIComponent(id)}/performance/preview`, {
+    method: 'POST', body: { rendering: renderingPayload(loadRenderingPreference()) },
+  }),
   libraryStats: () => request('/api/library/stats'),
   facets: () => request('/api/library/facets'),
   asset: (assetId) => request(`/api/library/assets/${encodeURIComponent(assetId)}`),

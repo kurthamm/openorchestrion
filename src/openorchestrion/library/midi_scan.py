@@ -1,7 +1,7 @@
 """Read SMF events without allocating a Mido message object for every event.
 
-Used only by offline curation. Playback continues to use the established loader.
-Events preserve track/sequence tie order and include meta events for timing.
+Used by curation/readiness and the validated Mido loader's unknown-meta timing
+repair. Events preserve track/sequence tie order and include meta timing.
 """
 from __future__ import annotations
 

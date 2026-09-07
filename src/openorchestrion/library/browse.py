@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import unicodedata
+from copy import deepcopy
+from functools import lru_cache
+from threading import Lock
 from contextlib import closing
 from pathlib import Path
 from typing import Any
@@ -10,6 +13,7 @@ from typing import Any
 from .catalog import _connect
 
 
+@lru_cache(maxsize=32768)
 def _fold(value: str | None) -> str:
     return "".join(
         c
@@ -86,8 +90,40 @@ def browse(
     }
 
 
+_facet_lock = Lock()
+_facet_cache: dict[Path, tuple[tuple, dict]] = {}
+
+
+def _catalog_signature(db: Path) -> tuple:
+    result = []
+    # WAL writes and atomic catalog replacement must both invalidate the cache.
+    for path in (db, Path(str(db) + "-wal")):
+        try:
+            s = path.stat()
+            result.append((s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns))
+        except FileNotFoundError:
+            result.append(None)
+    return tuple(result)
+
+
 def browse_facets(db: Path) -> dict[str, Any]:
+    db = db.resolve()
+    with _facet_lock:
+        signature = _catalog_signature(db)
+        cached = _facet_cache.get(db)
+        if cached is not None and cached[0] == signature:
+            return deepcopy(cached[1])
+        result = _read_facets(db)
+        if signature == _catalog_signature(db):
+            if len(_facet_cache) >= 4:
+                _facet_cache.clear()
+            _facet_cache[db] = (signature, result)
+        return deepcopy(result)
+
+
+def _read_facets(db: Path) -> dict[str, Any]:
     with closing(_connect(db)) as conn:
+        conn.execute("BEGIN")
         result = {}
         for key, column in [
             ("eras", "era"),

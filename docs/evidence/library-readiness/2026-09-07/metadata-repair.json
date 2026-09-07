@@ -1,0 +1,51 @@
+[
+  {
+    "asset_id": "sha256:0fcf27aa5b967df98c2bba2e017ef3caface80dec3280ed9bf9292d7f0b5a992",
+    "old_duration": 208.982524,
+    "new_duration": 209.173755,
+    "original_sidecar_sha256": "122f96e2c6926cf38af7f88fc206c7520ac97abde6e48e9fb2bdc1f6e82726be",
+    "descriptive_metadata_and_provenance_unchanged": true
+  },
+  {
+    "asset_id": "sha256:4c7249b24c19194da0cbfa6b846cdd00279ce3a16dc8e5f4df47206215cbee1a",
+    "old_duration": 157.14551,
+    "new_duration": 157.178404,
+    "original_sidecar_sha256": "3e6bb99415998ad60a4447742ae184915e3de303e3b453d6a3da934640bc2d4d",
+    "descriptive_metadata_and_provenance_unchanged": true
+  },
+  {
+    "asset_id": "sha256:7705b115a1c2e4fa1d011b3a722b6ba258097aa5f947a1ec77359de3f1d2f314",
+    "old_duration": 182.68709,
+    "new_duration": 182.717138,
+    "original_sidecar_sha256": "3a397de99c333d231a1675fa6e4c73dc156e00716664420cd9683f1d6226f4fc",
+    "descriptive_metadata_and_provenance_unchanged": true
+  },
+  {
+    "asset_id": "sha256:9a52962c1b534e9c63fd15eed44460b8ec466bf01c51c9a65afe76278f9cec82",
+    "old_duration": 110.498906,
+    "new_duration": 111.571226,
+    "original_sidecar_sha256": "08eead1b77d0c18b44f8b6c349c0af7186adc4ee6f018959398d84b91601cbd1",
+    "descriptive_metadata_and_provenance_unchanged": true
+  },
+  {
+    "asset_id": "sha256:a21c65206604a04ce9cda06e2e29ed981d56f56452889905bf042f2b81eae87d",
+    "old_duration": 195.057339,
+    "new_duration": 195.116301,
+    "original_sidecar_sha256": "232c3d6df04a5ac354d9e9525c8702f5eca092100137b667f21452ae273831e3",
+    "descriptive_metadata_and_provenance_unchanged": true
+  },
+  {
+    "asset_id": "sha256:db6efe8d1f31996d50dc41a5d8ad32fa556b9a3249d3a614b40d52da3ee20c8c",
+    "old_duration": 186.326709,
+    "new_duration": 186.440586,
+    "original_sidecar_sha256": "4d21aa1ce5a32191bbece29338bf7330d17ddb3714218720cb54742f8330d260",
+    "descriptive_metadata_and_provenance_unchanged": true
+  },
+  {
+    "asset_id": "sha256:eca28e67c98dd2ce276bec589f7b6e6effc0732e530b913c024d911ea3e120bd",
+    "old_duration": 171.722597,
+    "new_duration": 171.732212,
+    "original_sidecar_sha256": "09c2b25c040fcc1edc587e64e58fa0298acc41ee6e3fef85d80e0e18a53cb3df",
+    "descriptive_metadata_and_provenance_unchanged": true
+  }
+]

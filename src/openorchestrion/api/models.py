@@ -29,6 +29,7 @@ ErrorCode = Literal[
     "concierge_unavailable",
     "library_empty",
     "asset_not_found",
+    "analysis_unavailable",
     "no_midi_output",
     "transport_conflict",
     "not_implemented",

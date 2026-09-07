@@ -1424,6 +1424,15 @@ body[aria-busy=true] .queue-toolbar button,body[aria-busy=true] .track-actions b
     overflow-wrap:anywhere;
   }
 }
+.readiness-summary { font-weight: 600; }
+.readiness-flags { padding-left: 22px; }
+.readiness-flags li { margin: 12px 0; line-height: 1.6; }
+.sounding-parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; margin: 24px 0; }
+.sounding-part { border: 1px solid var(--line); border-radius: 12px; padding: 20px; min-width: 0; overflow-wrap: anywhere; }
+.sounding-part h3 { margin: 8px 0 16px; }
+.sounding-part p { margin: 10px 0; }
+.sounding-part summary, .detail-section > summary { cursor: pointer; padding: 10px 0; font-weight: 600; }
+.sounding-part details { font-size: .875rem; line-height: 1.6; }
 @media(max-height:800px) and (min-width:601px) {
   .sidebar-note {
     display:none;

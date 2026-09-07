@@ -14,6 +14,12 @@ The major remaining engineering evidence is physical rather than architectural: 
 
 The [developer handoff](docs/developer-handoff.md) identifies the shared `main` baseline, exact deployed source, validation evidence and remaining limits. [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the reliability, curated library and listening-room changes on September 7. The [single-keyboard release record](docs/single-keyboard-release-2026-09.md) tracks its CI, installed wheel and Pi timing evidence.
 
+The [library-readiness follow-up](docs/library-playback-readiness.md) is deployed:
+20,549 indexed performances, 127,504 sounding channels, policy-aware instrument
+previews, bounded responsiveness caches, and seven corrected unknown-meta timing
+records. It passed 676 tests and a short loaded live check. The hardware reference
+limits and structural warnings are not musical-quality certification.
+
 ## Implemented product stack
 
 The [September 2026 Pi implementation review](docs/implementation-review.md) records
