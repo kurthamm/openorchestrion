@@ -19,6 +19,7 @@ Implemented today:
 - robust MIDI import and deterministic analysis;
 - SHA-256 content-addressed assets with durable JSON sidecars;
 - curated metadata, favorites, bulk tagging, and re-analysis;
+- [automated listening-library admission](docs/library-curation.md), reversible quality archives, and admission gating for new imports;
 - rebuildable SQLite catalog plus durable listening history;
 - evidence-backed rights/provenance and verified-open starter repertoire;
 - deterministic Smart Stations with no-repeat, diversity, compatibility, and relaxation diagnostics;

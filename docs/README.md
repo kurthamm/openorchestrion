@@ -30,6 +30,7 @@ This directory contains the living design and implementation specification.
 ## MIDI and library
 
 - [MIDI library](midi-library.md)
+- [Autonomous listening-library admission](library-curation.md) — quality screening, reversible archiving, future-import gating, and recovery.
 - [MIDI analysis and ingestion](midi-ingestion.md)
 - [Rebuildable SQLite catalog](catalog.md)
 - [Curating descriptive metadata](metadata-curation.md) — editable fields, atomic writes, optimistic concurrency and catalog reconciliation.
