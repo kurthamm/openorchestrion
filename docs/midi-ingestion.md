@@ -248,7 +248,7 @@ Machine-readable contracts:
 - `schemas/midi-analysis.schema.json`
 - `schemas/midi-asset.schema.json`
 
-These will be validated in CI as the ingestion model evolves.
+These are validated by the repository contract job in CI.
 
 ## SQLite catalog layer
 
@@ -272,4 +272,7 @@ See [catalog.md](catalog.md) for the schema, query examples, rebuild invariants,
 
 ## Next layer
 
-The next library milestone is the **Smart Station engine**: take a structured request such as “recognizable dinner music, mostly piano,” query the catalog, score candidates, choose among alternate performances of the same composition, apply diversity/no-repeat policies, and return an explainable queue.
+The implemented **Smart Station engine** takes a structured request such as
+“recognizable dinner music, mostly piano,” queries the catalog, scores candidates,
+chooses among performances, applies diversity/no-repeat policies, and returns an
+explainable queue. API selection and catalog reads run outside the MIDI event loop.

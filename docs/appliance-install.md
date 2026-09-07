@@ -220,8 +220,11 @@ systemctl status openorchestrion-discovery.service
 Post-install smoke check:
 
 ```bash
-/opt/openorchestrion/venv/bin/openorchestrion-smoke
+sudo -u openorchestrion /opt/openorchestrion/venv/bin/openorchestrion-smoke
 ```
+
+Use the service account because `/var/lib/openorchestrion` is intentionally protected
+from ordinary login users. The smoke command reports inaccessible paths as diagnostics.
 
 It verifies:
 

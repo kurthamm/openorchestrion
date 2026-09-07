@@ -305,6 +305,7 @@ def replace_from_backup(
     moved_old = False
     service_stopped = False
     new_tree_live = False
+    original_existed = target.is_dir()
 
     try:
         if manage_service:
@@ -352,6 +353,12 @@ def replace_from_backup(
                     f"restore failed ({exc}); state-tree rollback also failed ({rollback_exc}); "
                     f"rollback archive={rollback_path}"
                 ) from exc
+
+        elif service_stopped and original_existed and target.is_dir() and not previous.exists():
+            # _swap_in either never moved the original tree, or restored it
+            # itself after the candidate rename failed. It still needs service
+            # recovery even though the replacement was never published.
+            original_restored = True
 
         if manage_service and original_restored:
             try:

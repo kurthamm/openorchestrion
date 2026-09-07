@@ -12,6 +12,11 @@ The major remaining engineering evidence is physical rather than architectural: 
 
 ## Implemented product stack
 
+The [September 2026 Pi implementation review](docs/implementation-review.md) records
+fixes for event-loop blocking, MIDI discovery after startup, favorite state, restore
+failure recovery, and smoke-check diagnostics. Deployment/profile binding and physical
+validation limits are listed there separately from completed software work.
+
 ### Library, analysis, and curation
 
 - SHA-256 content-addressed MIDI assets with authoritative JSON sidecars.
@@ -101,6 +106,7 @@ Stable CI contexts are:
 - `lint`
 - `test-py3.11`
 - `test-py3.12`
+- `test-py3.13`
 - `repository-contracts`
 
 Ruff version and selected rule set are explicit. Repository contracts validate schemas, device profiles, generated MIDI, import/catalog/station flows, rights policy, and a non-editable wheel installation.

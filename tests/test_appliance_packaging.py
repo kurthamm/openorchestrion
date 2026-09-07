@@ -10,6 +10,20 @@ from openorchestrion import appliance
 from openorchestrion.api.settings import Settings
 
 
+def test_smoke_reports_inaccessible_state_without_traceback(tmp_path, monkeypatch):
+    settings = Settings(tmp_path / "library", tmp_path / "catalog.db", tmp_path / "history.db")
+    original = Path.is_dir
+
+    def denied(path):
+        if path == settings.library_root:
+            raise PermissionError("denied")
+        return original(path)
+
+    monkeypatch.setattr(Path, "is_dir", denied)
+    errors = appliance.validate_durable_paths(settings)
+    assert any("sudo -u openorchestrion" in error for error in errors)
+
+
 def test_server_options_are_environment_driven_and_single_process_safe() -> None:
     options = appliance.server_options(
         {

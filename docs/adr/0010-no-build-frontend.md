@@ -54,7 +54,8 @@ reference kiosk does not require transpilation.
 
 - `git clone` plus `pip install -e .` produces a running appliance, with no
   second toolchain and no frontend build artifact to keep in sync.
-- CI can remain Python-only; no Node job is required for this surface.
+- CI runs dependency-free JavaScript behavior tests with Node in addition to Python.
+  This is a development test runner, not a frontend build or appliance runtime dependency.
 - The UI is inspectable in the browser exactly as it exists in the repository,
   which suits a hobbyist project meant to be read and modified.
 - No JSX, no TypeScript, and no npm ecosystem. Component composition and client

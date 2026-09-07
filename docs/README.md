@@ -4,6 +4,8 @@ This directory contains the living design and implementation specification.
 
 ## Start here
 
+- [Pi implementation review and fixes](implementation-review.md) — reproduced defects, fixes, validation, and explicit remaining limits.
+
 - [Project origin](project-origin.md) — how “I want a player piano” evolved into OpenOrchestrion.
 - [Architecture](architecture.md) — major components and boundaries.
 - [Requirements](requirements.md) — stable FR/NFR IDs and acceptance tests.

@@ -215,11 +215,15 @@ Then open the local service in a browser. Virtual MIDI uses the same playback ab
 pytest -q
 ruff check --select E4,E7,E9,F .
 python .github/scripts/validate_repo.py
+node .github/scripts/test-web.mjs
 ```
 
 CI also builds a real wheel, installs it non-editably outside the checkout, boots the appliance with no physical MIDI output, verifies health and packaged web assets, and requires graceful shutdown.
 
 ## Publication
+
+The [Pi implementation review](docs/implementation-review.md) records the September 2026
+reliability fixes, regression checks, and remaining hardware/deployment validation.
 
 - [OpenOrchestrion v2 white paper](docs/whitepaper/OpenOrchestrion_White_Paper_v2.md)
 - [Project site source](site/)

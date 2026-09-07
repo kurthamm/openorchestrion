@@ -205,7 +205,9 @@ The rebuildable catalog deliberately does **not** become the master copy of cura
 
 Future user actions such as metadata editing, accepted AI suggestions, favorites, and station definitions must have a durable representation outside a single disposable database file.
 
-Likewise, play history needs a durable strategy before it becomes essential station-selection state. A future implementation may use an append-only event journal or another recoverable state store and then project that state into SQLite.
+Play history is implemented in a separate durable `history.db`, with lifecycle events
+and attempt summaries. It is included in application-data backups and remains intact
+when the catalog is rebuilt. See [Durable play history](play-history.md).
 
 The architectural rule remains:
 
@@ -224,4 +226,6 @@ Which use two piano parts?
 Which exceed 48 simultaneous MIDI notes?
 ```
 
-The **Smart Station engine** is the next layer. It will take a structured request, query this catalog, score candidates, apply diversity/no-repeat rules, choose among multiple performances of the same composition, and build a queue.
+The implemented **Smart Station engine** takes a structured request, queries this
+catalog, scores candidates, applies diversity/no-repeat rules, chooses among
+performances of the same composition, and builds an explainable queue.

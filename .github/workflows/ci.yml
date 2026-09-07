@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.11", "3.12"]
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -67,6 +67,9 @@ jobs:
 
       - name: Test
         run: pytest -q
+
+      - name: Test browser state behavior (no build or npm dependencies)
+        run: node .github/scripts/test-web.mjs
 
   repository-contracts:
     name: repository-contracts

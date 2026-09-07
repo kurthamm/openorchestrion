@@ -8,6 +8,7 @@
 
 import { api, ApiError, commandId } from './api.js';
 import { h } from './dom.js';
+import { toggleFavorite } from './favorites.js';
 import { anchor, createTicker } from './position.js';
 import { StateSocket } from './socket.js';
 import { ensureSessionId, getState, setState, subscribe } from './store.js';
@@ -191,23 +192,15 @@ const handlers = {
   },
 
   async toggleFavorite(assetId) {
-    const previous = new Set(getState().localFavorites);
-    const favorites = new Set(previous);
-    const next = !favorites.has(assetId);
-    if (next) favorites.add(assetId);
-    else favorites.delete(assetId);
-    setState({ localFavorites: favorites });
-
     try {
-      await api.setFavorite(assetId, next);
-      toast(next ? 'Added to favorites.' : 'Removed from favorites.');
+      const next = await toggleFavorite(assetId, { getState, setState, save: api.setFavorite });
+      if (next !== null) toast(next ? 'Added to favorites.' : 'Removed from favorites.');
     } catch (error) {
       if (error instanceof ApiError && error.pending) {
         setState({ favoritesPersist: false });
         toast('Kept in this browser session only — favorites are not persistent yet.', 'warn');
         return;
       }
-      setState({ localFavorites: previous });
       toast(error.message, 'bad');
     }
   },

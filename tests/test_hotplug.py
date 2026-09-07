@@ -320,6 +320,65 @@ THROUGH = "Midi Through:Midi Through Port-0 14:0"
 
 
 @pytest.mark.asyncio
+async def test_discovery_runs_after_empty_boot_and_adds_first_and_second_outputs(tmp_path):
+    from openorchestrion.api.settings import Settings
+    from openorchestrion.playback.factory import create_default_playback
+    from unittest.mock import patch
+
+    ports = [THROUGH]
+    settings = Settings(tmp_path, tmp_path / "catalog.db", tmp_path / "history.db")
+    with patch("openorchestrion.playback.factory.list_output_ports", lambda: list(ports)):
+        engine = create_default_playback(settings)
+    probe = AlsaOutputLinkProbe(list_ports=lambda: list(ports), read_table=lambda: None)
+    monitor = OutputLinkMonitor(engine, probe, discover_ports=lambda: list(ports))
+    await monitor.start()
+    assert monitor._task is not None
+    await monitor.stop()
+    assert not engine.outputs_ready
+
+    ports.append(CASIO)
+    await monitor.check_once()
+    assert engine.outputs_ready
+    assert engine.output_names == (CASIO,)
+    assert engine.router.default_device == CASIO
+
+    second = "Yamaha:Port 28:0"
+    ports.append(second)
+    await monitor.check_once()
+    assert engine.output_names == (CASIO, second)
+    assert all(output.port_name is None for output in engine.router.outputs.values())
+
+    ports.remove(CASIO)
+    await monitor.check_once()
+    assert not engine.outputs_ready
+    ports.append("CASIO USB-MIDI:CASIO USB-MIDI MIDI 1 32:0")
+    await monitor.check_once()
+    assert engine.outputs_ready
+    assert engine.output_names == (CASIO, second), "reconnection must not add a duplicate"
+    await engine.close()
+
+
+@pytest.mark.asyncio
+async def test_failed_link_transition_is_retried():
+    keyboard = MidoMidiOutput(CASIO)
+    engine = _RecordingEngine([keyboard])
+    probe = _FakeProbe()
+    probe.connected[CASIO] = False
+    monitor = OutputLinkMonitor(engine, probe)
+    original = engine.output_link_changed
+
+    async def fail_once(name, *, connected):
+        engine.output_link_changed = original
+        raise RuntimeError("temporary failure")
+
+    engine.output_link_changed = fail_once
+    with pytest.raises(RuntimeError):
+        await monitor.check_once()
+    await monitor.check_once()
+    assert engine.calls == [(CASIO, False)]
+
+
+@pytest.mark.asyncio
 async def test_monitor_ignores_the_kernel_loopback_port() -> None:
     through = MidoMidiOutput(THROUGH, client_name="openorchestrion-0")
     keyboard = MidoMidiOutput(CASIO, client_name="openorchestrion-1")

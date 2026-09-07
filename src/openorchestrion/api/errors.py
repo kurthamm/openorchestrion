@@ -33,6 +33,11 @@ class ApiError(Exception):
         self.status_code = status_code
         self.detail = detail
 
+    def __reduce__(self):
+        # Selection workers return the same HTTP error contract across the
+        # process boundary, including the status and structured detail.
+        return type(self), (self.code, self.message), self.__dict__
+
 
 def _envelope(code: ErrorCode, message: str, detail: dict[str, Any] | None = None) -> dict[str, Any]:
     return ErrorResponse(error=ErrorBody(code=code, message=message, detail=detail)).model_dump()

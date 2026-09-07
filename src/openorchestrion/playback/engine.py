@@ -153,6 +153,16 @@ class PlaybackEngine:
             names = ", ".join(self.disconnected_outputs)
             raise PlaybackOutputError(f"MIDI output disconnected: {names}")
 
+    async def add_output(self, output) -> None:
+        """Register a newly discovered destination without changing an active plan."""
+        async with self._lock:
+            if output.name in self.router.outputs:
+                return
+            self.router.outputs[output.name] = output
+            if self.router.default_device is None:
+                self.router.default_device = output.name
+            self.events.publish("state.devices", self.outputs_state())
+
     async def output_link_changed(self, name: str, *, connected: bool) -> None:
         """React to a physical output appearing or disappearing.
 

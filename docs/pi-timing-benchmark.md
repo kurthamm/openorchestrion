@@ -53,7 +53,7 @@ then confirm:
 
 ```bash
 systemctl status openorchestrion.service
-/opt/openorchestrion/venv/bin/openorchestrion-smoke
+sudo -u openorchestrion /opt/openorchestrion/venv/bin/openorchestrion-smoke
 ```
 
 The installed wheel exposes:
