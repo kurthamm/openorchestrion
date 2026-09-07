@@ -9,6 +9,7 @@ import {
 } from '../rendering.js';
 
 const MODE_LABELS = {
+  AUTO: 'Automatic voicing',
   ORIGINAL: 'Original arrangement',
   PIANO_ONLY: 'Piano only',
   OVERRIDE: 'Instrument overrides',
@@ -23,7 +24,7 @@ export function mountRenderingControls(node) {
   let options = {
     loading: true,
     error: null,
-    modes: ['ORIGINAL'],
+    modes: ['AUTO', 'ORIGINAL'],
     piano_programs: [],
     programs: [],
     percussion_channel: 9,
@@ -76,14 +77,14 @@ export function mountRenderingControls(node) {
     (loaded) => {
       options = { ...loaded, loading: false, error: null };
       if (!options.modes.includes(preference.mode)) {
-        preference = saveRenderingPreference({ ...preference, mode: 'ORIGINAL' });
+        preference = saveRenderingPreference({ ...preference, mode: 'AUTO' });
       }
       rerender();
     },
     (error) => {
       // A backend without the rendering-options endpoint is treated as the old
       // compatibility path. Do not keep sending a stale non-original policy.
-      preference = saveRenderingPreference({ ...preference, mode: 'ORIGINAL' });
+      preference = saveRenderingPreference({ ...preference, mode: 'AUTO' });
       options = { ...options, loading: false, error };
       rerender();
     },
@@ -92,7 +93,8 @@ export function mountRenderingControls(node) {
 
 function renderRenderingControls(node, preference, options, handlers) {
   preference = normalizeRenderingPreference(preference);
-  const modes = options?.modes || ['ORIGINAL'];
+  // AUTO is a browser choice (omit the field); the server publishes the explicit modes.
+  const modes = ['AUTO', ...(options?.modes || ['ORIGINAL'])];
 
   const blocks = [
     h(
@@ -121,7 +123,7 @@ function renderRenderingControls(node, preference, options, handlers) {
     ),
     h('p', {
       class: 'rendering-help',
-      text: 'Applies to the next queue you create. The stored MIDI file is never changed.',
+      text: 'Applies to the next queue you create. Automatic voicing corrects orchestral score exports; the stored MIDI file is never changed.',
     }),
   ];
 
@@ -139,7 +141,7 @@ function renderRenderingControls(node, preference, options, handlers) {
     node,
     h(
       'details',
-      { class: 'rendering-card', open: preference.mode !== 'ORIGINAL' },
+      { class: 'rendering-card', open: preference.mode !== 'AUTO' },
       h('summary', { text: `Sound for next queue: ${summary(preference, options)}` }),
       h('div', { class: 'rendering-body' }, blocks),
     ),
@@ -276,5 +278,6 @@ function summary(preference, options) {
     const count = preference.overrides.length;
     return `${count} instrument override${count === 1 ? '' : 's'}`;
   }
-  return 'Original arrangement';
+  if (preference.mode === 'ORIGINAL') return 'Original arrangement';
+  return 'Automatic voicing';
 }

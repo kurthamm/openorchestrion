@@ -212,11 +212,20 @@ An empty source or a request that supplies both `intent` and `asset_ids` is
 
 ### Playback rendering policy
 
-`rendering` is optional and ephemeral. When omitted, queue items carry no
-rendering policy and playback preserves the source arrangement exactly. When
-present, one validated policy is attached to every item created by that queue
-request. It never changes the stored MIDI bytes, SHA-256 identity, deterministic
-analysis, sidecar, or catalog metadata.
+`rendering` is optional and ephemeral. When present, one validated policy is
+attached to every item created by that queue request. It never changes the
+stored MIDI bytes, SHA-256 identity, deterministic analysis, sidecar, or catalog
+metadata.
+
+When `rendering` is omitted, the server applies **automatic voicing**: for each
+asset whose stored analysis looks like an orchestral score export (six or more
+pitched parts including winds, brass or timpani) it derives per-channel program
+corrections — solo string patches on section parts become String Ensemble, horn
+parts mistakenly exported as English Horn become French Horn, and parts with no
+Program Change are voiced from their track names. Solo, duet and chamber files
+produce no correction and play exactly as written. Send
+`{"rendering": {"mode": "ORIGINAL"}}` to disable the correction and hear the
+file's own program choices.
 
 Supported modes are:
 
