@@ -69,6 +69,7 @@ openorchestrion = [
   "web/js/*.js",
   "web/js/views/*.js",
   "deployment/*.service",
+  "deployment/*.timer",
   "deployment/*.env",
   "deployment/*.desktop",
   "deployment/*.sh",
