@@ -1,5 +1,7 @@
 # First-run setup and local configuration
 
+> Current browser behavior: see the [listening-room redesign](web-listening-room.md) and [developer handoff](developer-handoff.md). Prompt-first navigation and forced setup redirects described in older sections are superseded; backend contracts remain compatible.
+
 OpenOrchestrion is a household LAN appliance, not an Internet account service. The first-run
 Setup screen therefore tells the operator what is ready and what still needs attention, but it
 **does not accept system settings or provider secrets from a browser**.

@@ -4,6 +4,8 @@ This directory contains the living design and implementation specification.
 
 ## Start here
 
+- [Current developer handoff](developer-handoff.md) — published integration branch, deployment parity, verification commands and outstanding evidence.
+
 - [Pi implementation review and fixes](implementation-review.md) — reproduced defects, fixes, validation, and explicit remaining limits.
 
 - [Project origin](project-origin.md) — how “I want a player piano” evolved into OpenOrchestrion.

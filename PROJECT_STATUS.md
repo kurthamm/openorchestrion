@@ -10,6 +10,10 @@ The software can be installed from a wheel or checkout, boot under systemd with 
 
 The major remaining engineering evidence is physical rather than architectural: Raspberry Pi timing under realistic appliance load, end-to-end MIDI/audio validation on the selected sound engines, relative MIDI-to-audio latency for two-engine synchronization, and the reference enclosure/BOM.
 
+## Current deployed handoff
+
+The [developer handoff](docs/developer-handoff.md) identifies the published integration branch, exact deployed source, validation evidence and remaining limits. The September listening-room redesign is deployed on the Pi and published on `codex/listening-room-redesign`; it is not yet represented as merged into `main`.
+
 ## Implemented product stack
 
 The [September 2026 Pi implementation review](docs/implementation-review.md) records
@@ -27,6 +31,7 @@ validation limits are listed there separately from completed software work.
 - `openorchestrion-reanalyze` for repairing deterministic analysis without re-importing immutable MIDI objects.
 - Rebuildable `catalog.db` with composition/performance separation and per-asset reconciliation.
 - Durable favorites and curated metadata that survive catalog deletion/rebuild.
+- Automated reversible admission: 20,549 active performances and 5,344 archived exclusions on the current Pi; rebuild and single-asset reindex enforce the admission list.
 
 ### Rights and starter repertoire
 
@@ -75,7 +80,8 @@ validation limits are listed there separately from completed software work.
 ### Responsive household UI
 
 - One no-build HTML/CSS/ES-module application for 800×480 kiosk, phones, tablets, and desktop browsers.
-- Concierge, station shortcuts, Browse/search, favorites, Queue, History, Now Playing, transport, health/degraded states, live progress, reconnect/resync, setup, and rendering controls.
+- Music-first Discover, paginated library search with combined filters, dedicated Favorites, Queue and Recently Played, MIDI performance details, persistent transport, live progress, reconnect/resync, and explicit Playback & devices settings.
+- AI is deliberately absent from the current browser. The existing Concierge backend remains available for a future optional interface.
 - Browser rendering preference is explicitly local preference for the next queue, not authoritative server playback state.
 - No Node build, CDN, webfont, or external runtime resource dependency.
 
@@ -85,7 +91,7 @@ validation limits are listed there separately from completed software work.
 - systemd service with graceful shutdown and journald logging.
 - Durable state under `/var/lib/openorchestrion`; software environment under `/opt/openorchestrion/venv`.
 - Headless and health-gated Chromium kiosk modes.
-- First-run Setup view for readiness and next actions.
+- Explicit Playback & devices view for readiness and sound settings; no forced first-run redirect. Legacy setup APIs remain compatible.
 - Privileged `openorchestrion-configure` for settings/secrets that must not be writable from an unauthenticated household browser.
 - Optional Avahi/mDNS discovery and explicit `openorchestrion.local` hostname path.
 - `openorchestrion-smoke` verifies the installed appliance without requiring physical MIDI hardware.
