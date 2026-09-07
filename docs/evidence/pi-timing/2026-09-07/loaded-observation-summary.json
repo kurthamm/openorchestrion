@@ -1,0 +1,96 @@
+{
+  "observations_sha256": "fbce71db1ed8abe149e46392f18609e9afb70902df9bfc3252fe1161da649073",
+  "method": "Derived from complete JSONL; linearly interpolated percentiles; HTTP includes transport/replay and cleanup requests. Environmental samples are periodic, not continuous hardware probes.",
+  "environment_samples": 239,
+  "temperatures_c": [
+    47.2,
+    53.2
+  ],
+  "throttled_values": [
+    "throttled=0xe0000"
+  ],
+  "current_throttle_flag_samples": 0,
+  "service_states": [
+    "MainPID=45816\nNRestarts=0\nActiveState=active"
+  ],
+  "http": {
+    "count": 859,
+    "median_ms": 24.129,
+    "p95_ms": 256.332,
+    "p99_ms": 874.086,
+    "max_ms": 2334.39
+  },
+  "http_by_path": {
+    "history/recent?limit=25": {
+      "count": 119,
+      "median_ms": 4.099,
+      "p95_ms": 4.2,
+      "p99_ms": 4.31,
+      "max_ms": 14.905
+    },
+    "library/browse/facets": {
+      "count": 119,
+      "median_ms": 122.181,
+      "p95_ms": 275.846,
+      "p99_ms": 975.265,
+      "max_ms": 992.476
+    },
+    "library/browse?limit=40": {
+      "count": 120,
+      "median_ms": 4.603,
+      "p95_ms": 4.743,
+      "p99_ms": 5.378,
+      "max_ms": 5.986
+    },
+    "library/browse?text=Beethoven&limit=40": {
+      "count": 119,
+      "median_ms": 253.589,
+      "p95_ms": 257.971,
+      "p99_ms": 275.074,
+      "max_ms": 286.273
+    },
+    "library/facets": {
+      "count": 119,
+      "median_ms": 49.622,
+      "p95_ms": 50.064,
+      "p99_ms": 50.253,
+      "max_ms": 51.336
+    },
+    "queue": {
+      "count": 1,
+      "median_ms": 1.538,
+      "p95_ms": 1.538,
+      "p99_ms": 1.538,
+      "max_ms": 1.538
+    },
+    "status": {
+      "count": 239,
+      "median_ms": 23.966,
+      "p95_ms": 24.485,
+      "p99_ms": 25.009,
+      "max_ms": 26.491
+    },
+    "transport/play": {
+      "count": 22,
+      "median_ms": 603.061,
+      "p95_ms": 2291.922,
+      "p99_ms": 2332.596,
+      "max_ms": 2334.39
+    },
+    "transport/stop": {
+      "count": 1,
+      "median_ms": 23.015,
+      "p95_ms": 23.015,
+      "p99_ms": 23.015,
+      "max_ms": 23.015
+    }
+  },
+  "natural_track_transition_gaps": {
+    "count": 21,
+    "median_ms": 1002.844,
+    "p95_ms": 4094.711,
+    "p99_ms": 4150.07,
+    "max_ms": 4163.91
+  },
+  "note": "Replay gaps belong to the external test runner; no continuous-acoustic or gapless-playback claim. Final stop has no subsequent replay."
+}

@@ -1,0 +1,61 @@
+{
+  "cases": [
+    {
+      "failures": [],
+      "fixture": "sync-click.mid",
+      "logical_duration_seconds": 7.5625,
+      "name": "sync-click-two-output",
+      "output_summaries": {
+        "A": {
+          "count": 32,
+          "drift_ms": -1.054365,
+          "max_abs_interval_jitter_ms": 2.345332,
+          "max_abs_relative_error_ms": 2.872518,
+          "mean_interval_error_ms": -0.034012,
+          "p95_abs_interval_jitter_ms": 1.052946,
+          "p95_abs_relative_error_ms": 2.837265,
+          "p99_abs_interval_jitter_ms": 1.965253,
+          "scheduled_span_seconds": 7.5625
+        },
+        "B": {
+          "count": 32,
+          "drift_ms": -1.035457,
+          "max_abs_interval_jitter_ms": 2.340258,
+          "max_abs_relative_error_ms": 2.873203,
+          "mean_interval_error_ms": -0.033402,
+          "p95_abs_interval_jitter_ms": 1.056715,
+          "p95_abs_relative_error_ms": 2.834193,
+          "p99_abs_interval_jitter_ms": 1.960707,
+          "scheduled_span_seconds": 7.5625
+        }
+      },
+      "passed": true,
+      "two_output_skew": {
+        "max_abs_skew_ms": 0.051704,
+        "mean_signed_skew_ms": -0.029417,
+        "p95_abs_skew_ms": 0.048593,
+        "pair_count": 16
+      },
+      "wall_duration_seconds": 7.577386
+    }
+  ],
+  "environment": {
+    "cpu_count": 4,
+    "event_loop": "_UnixSelectorEventLoop",
+    "implementation": "CPython",
+    "machine": "aarch64",
+    "platform": "Linux-6.18.34+rpt-rpi-2712-aarch64-with-glibc2.41",
+    "processor": "",
+    "python": "3.13.5"
+  },
+  "generated_at": "2026-09-07T17:41:12.816032+00:00",
+  "passed": true,
+  "targets": {
+    "max_drift_ms": 5.0,
+    "max_interval_jitter_ms": 10.0,
+    "max_two_output_skew_ms": 3.0,
+    "p95_interval_jitter_ms": 2.0,
+    "p95_two_output_skew_ms": 1.0,
+    "p99_interval_jitter_ms": 5.0
+  }
+}

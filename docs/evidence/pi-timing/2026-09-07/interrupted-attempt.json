@@ -1,0 +1,53 @@
+{
+  "phase": "failed",
+  "results": [
+    {
+      "name": "corrected-headless-idle-sync-1",
+      "exit_code": 0
+    },
+    {
+      "name": "corrected-headless-idle-sync-2",
+      "exit_code": 0
+    },
+    {
+      "name": "corrected-headless-idle-sync-3",
+      "exit_code": 0
+    },
+    {
+      "name": "headless-active-one-output-sync-1",
+      "exit_code": 0
+    }
+  ],
+  "replays": 1,
+  "requests": 4,
+  "ws_messages": 20,
+  "started_at": "2026-09-07T17:41:04.929529+00:00",
+  "playback": {
+    "state": "playing",
+    "now_playing": {
+      "asset_id": "sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834",
+      "composition_id": "derived:2d06070e1a7cbcd153f63b54d2da5932dcd0b1eb",
+      "title": "(The-Blues-Is)-The-Healer-1",
+      "composer": null,
+      "duration_seconds": 329.99824,
+      "queue_index": 0
+    },
+    "position": {
+      "position_ms": 47618,
+      "duration_ms": 329998,
+      "rate": 1.0,
+      "server_time": "2026-09-07T17:41:47.221110+00:00"
+    },
+    "command_id": null,
+    "volume": 84
+  },
+  "error": "External transport command; relinquishing playback",
+  "finished_at": "2026-09-07T17:41:52.339179+00:00",
+  "final_environment": {
+    "throttled": "throttled=0xe0000",
+    "temperature": "temp=53.2'C",
+    "service": "MainPID=45816\nNRestarts=0\nActiveState=active",
+    "load": "0.10 0.11 0.04 1/197 47611"
+  },
+  "queue_preserved": true
+}

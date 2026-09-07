@@ -1,0 +1,83 @@
+{
+  "cases": [
+    {
+      "failures": [],
+      "fixture": "sync-click.mid",
+      "logical_duration_seconds": 7.5625,
+      "name": "sync-click-two-output",
+      "output_summaries": {
+        "A": {
+          "count": 32,
+          "drift_ms": -0.837407,
+          "max_abs_interval_jitter_ms": 2.342687,
+          "max_abs_relative_error_ms": 2.852006,
+          "mean_interval_error_ms": -0.027013,
+          "p95_abs_interval_jitter_ms": 1.086289,
+          "p95_abs_relative_error_ms": 2.792225,
+          "p99_abs_interval_jitter_ms": 1.979786,
+          "scheduled_span_seconds": 7.5625
+        },
+        "B": {
+          "count": 32,
+          "drift_ms": -0.804277,
+          "max_abs_interval_jitter_ms": 2.335094,
+          "max_abs_relative_error_ms": 2.843709,
+          "mean_interval_error_ms": -0.025944,
+          "p95_abs_interval_jitter_ms": 1.099474,
+          "p95_abs_relative_error_ms": 2.788275,
+          "p99_abs_interval_jitter_ms": 1.978182,
+          "scheduled_span_seconds": 7.5625
+        }
+      },
+      "passed": true,
+      "two_output_skew": {
+        "max_abs_skew_ms": 0.050241,
+        "mean_signed_skew_ms": -0.03095,
+        "p95_abs_skew_ms": 0.042602,
+        "pair_count": 16
+      },
+      "wall_duration_seconds": 7.577891
+    },
+    {
+      "failures": [],
+      "fixture": "long-run.mid",
+      "logical_duration_seconds": 7199.75,
+      "name": "long-run-120m-one-output",
+      "output_summaries": {
+        "A": {
+          "count": 28800,
+          "drift_ms": -3.815232,
+          "max_abs_interval_jitter_ms": 3.652899,
+          "max_abs_relative_error_ms": 4.302803,
+          "mean_interval_error_ms": -0.000132,
+          "p95_abs_interval_jitter_ms": 0.674368,
+          "p95_abs_relative_error_ms": 4.096382,
+          "p99_abs_interval_jitter_ms": 0.692955,
+          "scheduled_span_seconds": 7199.75
+        }
+      },
+      "passed": true,
+      "two_output_skew": null,
+      "wall_duration_seconds": 7200.703642
+    }
+  ],
+  "environment": {
+    "cpu_count": 4,
+    "event_loop": "_UnixSelectorEventLoop",
+    "implementation": "CPython",
+    "machine": "aarch64",
+    "platform": "Linux-6.18.34+rpt-rpi-2712-aarch64-with-glibc2.41",
+    "processor": "",
+    "python": "3.13.5"
+  },
+  "generated_at": "2026-09-07T19:56:23.127798+00:00",
+  "passed": true,
+  "targets": {
+    "max_drift_ms": 5.0,
+    "max_interval_jitter_ms": 10.0,
+    "max_two_output_skew_ms": 3.0,
+    "p95_interval_jitter_ms": 2.0,
+    "p95_two_output_skew_ms": 1.0,
+    "p99_interval_jitter_ms": 5.0
+  }
+}

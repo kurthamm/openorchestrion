@@ -1,0 +1,15 @@
+{
+  "environment": {
+    "throttled": "throttled=0xe0000",
+    "temperature": "temp=53.2'C",
+    "service": "MainPID=45816\nNRestarts=0\nActiveState=active",
+    "load": "0.17 0.11 0.06 1/199 48123"
+  },
+  "wheel_sha256": "fad8f6271da241ac715fb1b790cb1d57ac24d007dc0648e464d94b54a10df901",
+  "source_tree": "49c336212733d6f4e82b5be01e9728fd6eae7714",
+  "profile": "headless-active-one-output",
+  "client": "loopback HTTP reads and persistent WebSocket",
+  "background": "existing WK-220 queued track replayed without queue replacement",
+  "kiosk": false,
+  "minutes": 120
+}

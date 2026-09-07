@@ -11,7 +11,7 @@ This protocol freezes the conditions and evidence for that measurement.
 `openorchestrion-benchmark` exercises the real `SystemClock` playback scheduler in
 real wall time with in-memory virtual MIDI outputs. It measures **software scheduling**:
 
-- interval jitter at p95, p99, and maximum;
+- Note On/Off interval jitter at p95, p99, and maximum;
 - accumulated relative timing error;
 - end-to-end long-run scheduler drift after the first send;
 - software A/B send skew for simultaneous events routed to two outputs.
@@ -23,6 +23,8 @@ It therefore does **not** measure:
 - a keyboard's MIDI-to-audio latency;
 - acoustic propagation through the room;
 - queue/API command latency.
+
+Startup channel resets/program initialization and final Panic controller messages are excluded from note captures. Every captured note must match the expected type, channel and pitch in order; missing or extra notes invalidate capture. This was corrected in PR #85 after the original prefix-slice collector mistook startup resets for musical events. Reports from that defective collector are invalid measurement evidence, not scheduler target failures.
 
 Those hardware measurements use `sync-click.mid` and recorded audio separately. Do not
 interpret the virtual-output A/B skew as proof that two physical keyboards sound at the
@@ -161,6 +163,10 @@ This quantifies the cost of the appliance UI.
 
 Mute or reduce the keyboard's speaker/amplifier if a two-hour audible test is impractical;
 the MIDI engine should still be receiving/processing events.
+
+### Headless single-output variant
+
+For a headless deployment without local Chromium, report **`headless-active-one-output`**: one physical MIDI destination active through the normal server, persistent WebSocket state traffic, and ordinary library/history requests. Record whether requests originate on loopback or a LAN client. This validates that headless workload only; it does not substitute for Chromium kiosk load or physical two-output acceptance. The [September release record](single-keyboard-release-2026-09.md) retains the first such attempt and its limits.
 
 ### D. `kiosk-active-two-output`
 
