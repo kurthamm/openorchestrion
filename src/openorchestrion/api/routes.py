@@ -86,11 +86,7 @@ def _playback(connection: Connection) -> PlaybackEngine:
 
 
 def _outputs_state(connection: Connection) -> OutputsState:
-    playback = _playback(connection)
-    devices = list(playback.output_names)
-    if not playback.outputs_ready:
-        return OutputsState(ready=False, devices=[], reason="no_midi_output")
-    return OutputsState(ready=True, devices=devices, reason=None)
+    return OutputsState.model_validate(_playback(connection).outputs_state())
 
 
 def _library_counts(catalog_db: Path) -> LibraryCounts:

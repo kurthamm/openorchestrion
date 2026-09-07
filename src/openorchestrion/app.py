@@ -23,6 +23,7 @@ from .api.setup_routes import router as setup_router
 from .api.web import install_web_app
 from .playback import PlaybackEngine
 from .playback.factory import create_default_playback
+from .playback.hotplug import AlsaOutputLinkProbe, OutputLinkMonitor
 
 
 @asynccontextmanager
@@ -36,9 +37,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.concierge_sessions = ConciergeSessions(app.state.concierge)
     if not hasattr(app.state, "playback"):
         app.state.playback = create_default_playback(app.state.settings)
+    # Physical outputs can vanish and return at any time; the monitor pauses
+    # and resumes playback around that instead of playing into a dead port.
+    monitor = OutputLinkMonitor(app.state.playback, AlsaOutputLinkProbe())
+    await monitor.start()
     try:
         yield
     finally:
+        await monitor.stop()
         # A service restart is a real playback interruption. Finish the durable
         # history attempt before closing ports so it cannot remain "started"
         # forever after an orderly shutdown.

@@ -111,6 +111,12 @@ For example:
 }
 ```
 
+`outputs.reason` is `no_midi_output` when no output exists at all, and
+`output_disconnected` when a known physical output has been unplugged. In the
+second case `devices` still lists the configured outputs, `ready` is `false`,
+playback is paused by the server, and a `state.devices` event announces both
+the loss and the return of the device.
+
 When the hosted Concierge provider fails and the deterministic fallback answers,
 `fallback_used` and `primary_error` make that degradation visible to the UI.
 

@@ -38,7 +38,9 @@ export function renderHealth(node, state) {
           'No sound engine',
           outputs.reason === 'no_midi_output'
             ? 'No MIDI output device is connected.'
-            : outputs.reason || 'No MIDI output available.',
+            : outputs.reason === 'output_disconnected'
+              ? 'A MIDI output was unplugged. Playback is paused until it is reconnected.'
+              : outputs.reason || 'No MIDI output available.',
         ),
       );
     }

@@ -233,6 +233,28 @@ A runtime MIDI-output failure:
 - attempts panic cleanup on every output;
 - emits an error event and a stopped playback state.
 
+## Hot-plug outputs
+
+Physical outputs are enumerated at startup, but a USB keyboard can be unplugged
+at any time. ALSA then silently drops this process's subscription to the port;
+messages sent afterwards go nowhere and no error is raised, even after the
+device is plugged back in and re-enumerated.
+
+A monitor polls once per second. It checks that the device is still listed by
+the MIDI backend and, on Linux, that the sequencer table still shows this
+process's own subscription to it. Only transitions reach the engine:
+
+- **Disconnected while playing**: playback pauses at the current position, the
+  output is marked disconnected, `outputs.ready` becomes `false` with reason
+  `output_disconnected`, and `state.devices` plus `state.playback` events are
+  published. `play` is refused with `no_midi_output` until the device returns.
+- **Reconnected**: the stale port handle is closed so the next send reopens the
+  device by its stable name, following any new ALSA `client:port` address.
+  A pause the engine itself caused resumes from the paused position; a pause the
+  user requested stays paused.
+
+The kernel `Midi Through` port and virtual outputs are never monitored.
+
 ## Test strategy
 
 Hardware-free tests cover:
