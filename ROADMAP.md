@@ -71,6 +71,8 @@
 
 ## Phase 5: Two sound engines
 
+Requirements and acceptance criteria: [docs/two-engine-orchestration.md](docs/two-engine-orchestration.md).
+
 - Multiple simultaneous MIDI output ports.
 - Track/channel routing rules.
 - Per-device latency offsets.

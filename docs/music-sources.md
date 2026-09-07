@@ -81,3 +81,22 @@ one. The stored `license` and `license_url` remain the source of truth for
 license-specific obligations.
 
 The public project should favor a smaller, high-quality, legally clean starter catalog over an enormous mystery archive. See [../music/starter-catalog.md](../music/starter-catalog.md) for the curation worklist and procedure.
+
+## Bulk acquisition scripts
+
+`tools/acquire/` holds the scripts used to build the reference appliance's
+library in September 2026. Each writes a staging directory containing the MIDI
+files, an importer manifest (`catalog.csv`, one rights row per file) and a
+`tags.csv` for `openorchestrion-tag --from-csv`:
+
+| Script | Source | Rights recorded |
+| --- | --- | --- |
+| `mutopia_crawl.py` | Mutopia Project website directory index + per-piece RDF | `verified-open` where the licence is established and the composer died before 1956; otherwise `personal` |
+| `maestro_manifest.py` | MAESTRO v3 MIDI zip + CSV | `personal` (CC BY-NC-SA 4.0) |
+| `commons_crawl.py` | Wikimedia Commons `Category:MIDI files` | `personal`, per-file licence recorded |
+| `bitmidi_crawl.py` | BitMidi API, ordered by plays | `personal`, licence unknown |
+| `curate_tags.py` | catalog analysis export | rebuilds era, genres, moods, themes, instrumentation, energy, familiarity |
+| `curate_bitmidi.py` | BitMidi names and play counts | popular-music genres and themes |
+
+They are personal-library tooling, not part of the package, and they respect the
+rate limits of each archive (Commons refuses bursts with HTTP 429).
