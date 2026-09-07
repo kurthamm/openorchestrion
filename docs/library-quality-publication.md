@@ -14,8 +14,9 @@ See [decision summary](evidence/quality-final/summary.json) and the complete
 [compressed per-file decisions](evidence/quality-final/decisions.json.gz).
 The [deployment record](evidence/quality-final/deployment.json) verifies the live
 5,832-file catalog, all original hashes and preserved saved collections. The
-installed wheel SHA-256 is `a616f1471d137e8e3250d0d917eb05d8551ffb0f550e4b80374abfa693e6a9d5`;
-98 runtime files match the reviewed source. All 704 tests, contracts, Ruff, browser
+current integrated wheel SHA-256 is `6520c3c57fc6d3246611c2fdcf32feface334ccb3e61e6c88c33e9b32c6292ef`;
+101 runtime files match the reviewed source. The [integration record](evidence/quality-final/integration.json)
+preserves PR #91 off-site backup support and supersedes the initial 98-file wheel. All 704 tests, contracts, Ruff, browser
 state checks and the isolated installed-wheel smoke passed. The preceding 1,672-file publisher-only candidate was never published.
 
 ## What admission means
@@ -144,3 +145,8 @@ The owner explicitly requested removal of the queued Mercury blues rendition.
 It was removed before the restart; its completeness evidence was unresolved. The
 queue is empty, playback stopped, and repeat/shuffle/continuous settings and saved
 collections were preserved. Both application and discovery services are active.
+
+Full scan inputs and publisher evidence are retained in
+`/var/tmp/openorchestrion-quality-release/library-quality-v2-evidence.zip` on the Pi
+and in the Windows task outputs. The Windows outputs also contain the complete
+pre-publication original-library snapshot and SHA-256 checksums.

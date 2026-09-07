@@ -14,11 +14,14 @@ The major remaining engineering evidence is physical rather than architectural: 
 
 The [developer handoff](docs/developer-handoff.md) identifies the shared `main` baseline, exact deployed source, validation evidence and remaining limits. [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the reliability, curated library and listening-room changes on September 7. The [single-keyboard release record](docs/single-keyboard-release-2026-09.md) tracks its CI, installed wheel and Pi timing evidence.
 
-The [library-readiness follow-up](docs/library-playback-readiness.md) is deployed:
-20,549 indexed performances, 127,504 sounding channels, policy-aware instrument
-previews, bounded responsiveness caches, and seven corrected unknown-meta timing
-records. It passed 676 tests and a short loaded live check. The hardware reference
-limits and structural warnings are not musical-quality certification.
+The [complete-listening v2 release](docs/library-quality-publication.md) is deployed:
+**5,832 performances available from 25,893 originals assessed**. All other originals
+remain in the recovery archive. Publisher verification and independent arrangement
+assessment are labeled separately, with per-file decisions and playback details.
+The integrated release preserves the durable player workflows and PR #91 off-site
+backup support. It passes 704 tests; 101 deployed runtime files match the source.
+The earlier [readiness release](docs/library-playback-readiness.md) remains historical
+timing and compatibility evidence. Source admission does not certify acoustic fidelity.
 
 ## Implemented product stack
 
@@ -37,7 +40,7 @@ validation limits are listed there separately from completed software work.
 - `openorchestrion-reanalyze` for repairing deterministic analysis without re-importing immutable MIDI objects.
 - Rebuildable `catalog.db` with composition/performance separation and per-asset reconciliation.
 - Durable favorites and curated metadata that survive catalog deletion/rebuild.
-- Automated reversible admission: 20,549 active performances and 5,344 archived exclusions on the current Pi; rebuild and single-asset reindex enforce the admission list.
+- Automated reversible admission: 5,832 active performances and 20,061 archived originals on the current Pi; rebuild and single-asset reindex enforce the v2 admission list. Complete original-library publication and restoration were rehearsed with all hashes verified.
 
 ### Rights and starter repertoire
 

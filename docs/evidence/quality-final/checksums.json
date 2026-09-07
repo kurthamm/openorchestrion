@@ -1,6 +1,7 @@
 {
   "decisions.json.gz": "c895c8022fc9c77731fb26ce06698eeb8ad02c72e9180ae1d6da3a3c0b1ebaab",
   "deployment.json": "97508d15cdcde93033231c8b5b325d61f557453074329d77c1bac90bdf17ff97",
+  "integration.json": "85e91c250410e08f6aeb304a421e93b98e4560b4aa19e3493904957419cce310",
   "live-verification.json": "6839b49958929f7e75eab1a7fff2b527cd32c2c1ba38f7e7fc5bb2d65d31f095",
   "same-title-versions.json": "36a42c5b7d7a6261d50728be95df0fcc1ba2fc5d77c4a1cd331c1b07ebd327c1",
   "summary.json": "8b0e6bdbac810eaa98e3ec9b226b2ef2903dcae953184ff6e665379b052f8ba0"

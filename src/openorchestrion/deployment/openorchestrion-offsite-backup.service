@@ -1,0 +1,15 @@
+[Unit]
+Description=Create and upload a verified OpenOrchestrion backup
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/openorchestrion/openorchestrion.env
+ExecStart=/opt/openorchestrion/bin/openorchestrion-offsite-backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true
