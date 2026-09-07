@@ -20,6 +20,7 @@ from .analysis_models import (
     VelocityStats,
 )
 from .gm import CONTROLLER_NAMES, GM_PROGRAM_NAMES
+from .loading import load_midi
 
 DEFAULT_TEMPO_US_PER_BEAT = 500_000
 
@@ -389,7 +390,7 @@ def analyze_midifile(
 
 def analyze_midi(path: str | Path) -> MidiAnalysis:
     source_path = Path(path)
-    midi = MidiFile(source_path)
+    midi = load_midi(source_path)
     return analyze_midifile(
         midi,
         source=str(source_path),

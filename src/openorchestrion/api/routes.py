@@ -17,6 +17,7 @@ from ..ai import ConciergeResult, MusicConcierge
 from ..history import apply_no_repeat_window
 from ..library.catalog import catalog_facets, catalog_stats, get_asset, reindex_asset, search_catalog
 from ..library.browse import browse, browse_facets, performance_detail
+from ..library.readiness import readiness, source_facts
 from ..library.metadata import (
     AssetNotFoundError,
     MetadataConflictError,
@@ -37,7 +38,7 @@ from ..playback import (
 from ..playback.voicing import suggest_program_overrides
 from ..stations import StationConstraints, build_station
 from .errors import ApiError
-from .listening_models import BrowseFacets, BrowsePage, PerformanceDetail
+from .listening_models import BrowseFacets, BrowsePage, PerformanceDetail, PerformancePreview, PerformancePreviewRequest
 from .models import (
     TRANSPORT_ACTIONS,
     AiState,
@@ -107,6 +108,22 @@ async def listening_performance(request: Request, asset_id: str) -> dict[str, An
     if result is None:
         raise ApiError('asset_not_found', 'This performance is no longer in the listening library.', status_code=404)
     return result
+
+
+def _performance_preview(settings: Settings, asset_id: str, payload: PerformancePreviewRequest) -> dict:
+    # The same resolver used by queue creation includes automatic voicing.
+    spec = _queue_specs(QueueReplaceRequest(asset_ids=[asset_id], rendering=payload.rendering), settings)[0]
+    try:
+        facts = source_facts(settings.catalog_db, asset_id, str(spec.midi_path))
+    except (OSError, ValueError) as exc:
+        raise ApiError("analysis_unavailable", "Playback facts could not be verified for this file.", status_code=409) from exc
+    return {"rendering_mode": payload.rendering.mode.value if payload.rendering else "AUTO",
+            "readiness": readiness(facts, spec.performance_type, spec.rendering_policy)}
+
+
+@router.post('/library/assets/{asset_id}/performance/preview', response_model=PerformancePreview)
+async def listening_preview(request: Request, asset_id: str, payload: PerformancePreviewRequest) -> dict:
+    return await _selection(request, _performance_preview, _settings(request), asset_id, payload)
 
 
 def _settings(connection: Connection) -> Settings:

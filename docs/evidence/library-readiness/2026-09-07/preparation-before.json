@@ -1,0 +1,61 @@
+{
+  "kind": "virtual preparation, no hardware sends",
+  "facets_ms": [
+    78.663,
+    78.687,
+    78.744,
+    79.905,
+    81.469
+  ],
+  "search_ms": [
+    167.021,
+    166.329,
+    167.899,
+    166.862,
+    167.784
+  ],
+  "assets": [
+    {
+      "asset_id": "sha256:ab310676911f7763787b8a9f2544af28157fc90c80c730521babbb6df6448d8e",
+      "notes": 3236,
+      "cold_prepare_ms": [
+        222.925,
+        220.397,
+        245.224
+      ],
+      "repeat_prepare_ms": [
+        220.621,
+        221.198,
+        239.51
+      ]
+    },
+    {
+      "asset_id": "sha256:15f8271583c0dbc54a26d5eebb649ea2cff4d9b7018c62c08281c3ba5a9ac7f2",
+      "notes": 8341,
+      "cold_prepare_ms": [
+        575.346,
+        591.424,
+        600.888
+      ],
+      "repeat_prepare_ms": [
+        610.478,
+        574.894,
+        596.623
+      ]
+    },
+    {
+      "asset_id": "sha256:dadd0d066594db12000061bb75291afdf26279b96a417d2a5ac5f9d353bdfe21",
+      "notes": 16116,
+      "cold_prepare_ms": [
+        1146.892,
+        1098.727,
+        1147.754
+      ],
+      "repeat_prepare_ms": [
+        1147.488,
+        1103.354,
+        1105.23
+      ]
+    }
+  ]
+}

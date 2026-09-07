@@ -1,6 +1,19 @@
 # Developer handoff — 7 September 2026
 
-## Start from the published implementation
+## Current library-readiness release
+
+The [playback-readiness release](library-playback-readiness.md) adds policy-aware
+What will play previews, all-library part facts, faster filters/repeat preparation,
+and unknown-meta timing repair. Its wheel is installed with **91 matching runtime
+files**. It supersedes the prior wheel identities below. The seven affected
+analysis blocks were repaired without changing descriptive metadata or MIDI bytes;
+the final 20,549-file audit has zero count/peak/duration mismatches. Validation:
+676 tests, contracts, Ruff, browser checks, installed-wheel smoke, and the short
+loaded live check retained in the release evidence. The existing two-hour result
+belongs to its earlier build. The prepared song was restored using AUTO at the
+owner's discretion; volume 33 and stopped state were verified.
+
+## Published integration baseline
 
 Start from **`main`**. [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the Pi reliability fixes, library admission curation, listening-room redesign, and benchmark repair as `cff40bf5693078133dc7ed5453d00978a5baaaa5`. Main's independent acquisition tools and future orchestration plan were preserved. The primary Pi checkout was fast-forwarded to this shared baseline; the earlier branches remain available.
 
@@ -11,11 +24,11 @@ The UI relies on the browse, facets, performance-details and atomic queue-clear 
 - [Earlier implementation review and fixes](implementation-review.md)
 - [Current project status](../PROJECT_STATUS.md)
 
-The deployed runtime source was committed on the Pi as `c02a050a061bfefb99e3668ca6c54685f522ae84`. The equivalent published GitHub commit is `bdf4ace22a1ca5325ab3c83a218eb70ded6d5075`. Their commit IDs differ because their parent histories differ; both have the exact tree `59426a5e6799e5b99fef418b0f5b632d9e6f489f`. Those are historical redesign identities. PR #85 additionally fixes the separate benchmark CLI; all playback-server and browser modules remain byte-identical to that deployed redesign. The current wheel is recorded in the single-keyboard release document.
+The deployed runtime source was committed on the Pi as `c02a050a061bfefb99e3668ca6c54685f522ae84`. The equivalent published GitHub commit is `bdf4ace22a1ca5325ab3c83a218eb70ded6d5075`. Their commit IDs differ because their parent histories differ; both have the exact tree `59426a5e6799e5b99fef418b0f5b632d9e6f489f`. Those are historical redesign identities. PR #85 additionally fixes the separate benchmark CLI; all playback-server and browser modules remain byte-identical to that deployed redesign. That earlier wheel is recorded in the single-keyboard release document.
 
 ## Deployment and data boundaries
 
-The Pi checkout is `/home/kurt/openorchestrion`; production runs the installed wheel under `/opt/openorchestrion/venv`, not an editable checkout. A Git commit alone does not deploy changes. Both application and discovery services were verified active after release. The current wheel hash is recorded in the single-keyboard release document; the listening-room document retains the earlier release and rollback history.
+The Pi checkout is `/home/kurt/openorchestrion`; production runs the installed wheel under `/opt/openorchestrion/venv`, not an editable checkout. A Git commit alone does not deploy changes. Both application and discovery services were verified active after release. The current wheel hash is recorded in the playback-readiness release document; the listening-room document retains the earlier release and rollback history.
 
 The admitted library has **20,549 performances**. The **5,344 excluded files remain archived**, not deleted. Admission is enforced during full rebuild and individual reindex. Do not bypass `listening-admission.json`, reimport archived copies into the active catalog, or regenerate descriptive metadata as a side effect of UI development. Favorites belong in the sidecars, and the catalog remains rebuildable.
 
@@ -30,7 +43,7 @@ python3 scripts/verify-deployed-source.py \
   --installed /opt/openorchestrion/venv/lib/python3.13/site-packages/openorchestrion
 ```
 
-The September release has **88 matching runtime files**, with no missing or differing source files. The script exits nonzero for an empty source directory, missing files or mismatched bytes. Documentation and this verification script are not runtime package files and do not require a service restart.
+The earlier endurance release had **88 matching runtime files**; the readiness release has **91**, with no missing or differing source files. The script exits nonzero for an empty source directory, missing files or mismatched bytes. Documentation and this verification script are not runtime package files and do not require a service restart.
 
 Run the repository's Python tests, Ruff correctness checks, `.github/scripts/validate_repo.py`, and `.github/scripts/test-web.mjs` for relevant implementation changes. The deployed redesign passed **660 Python tests**, repository contracts and an installed-wheel smoke test. Browser evidence covers search/filter/page flows, favorites, MIDI details, virtual playback and phone/tablet/desktop layouts. These are recorded results, not claims that future commits automatically pass.
 

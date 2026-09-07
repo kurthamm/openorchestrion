@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel, ConfigDict
 
+from .models import RenderingRequest
+
 
 class ListeningModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -56,6 +58,61 @@ class EncodedInstrument(ListeningModel):
 class EncodedChannel(ListeningModel):
     channel: int
     is_percussion: bool
+
+
+class PlaybackSound(ListeningModel):
+    program: int
+    name: str
+    bank_msb: int
+    bank_lsb: int
+    implicit: bool
+    note_count: int
+
+
+class SourceTrack(ListeningModel):
+    index: int
+    name: str | None
+
+
+class SoundingPart(ListeningModel):
+    channel: int
+    percussion: bool
+    tracks: list[SourceTrack]
+    sounds: list[PlaybackSound]
+    note_count: int
+    note_min: int
+    note_max: int
+    velocity_min: int
+    velocity_max: int
+    sustain: bool
+    pitch_bend: bool
+    peak_notes: int
+    changed: bool
+
+
+class ReadinessFlag(ListeningModel):
+    code: str
+    severity: str
+    message: str
+
+
+class PlaybackReadiness(ListeningModel):
+    version: int
+    status: str
+    parts: list[SoundingPart]
+    peak_notes: int
+    flags: list[ReadinessFlag]
+    limitation: str
+    reference_device: str
+
+
+class PerformancePreviewRequest(ListeningModel):
+    rendering: RenderingRequest | None = None
+
+
+class PerformancePreview(ListeningModel):
+    rendering_mode: str
+    readiness: PlaybackReadiness
 
 
 class PerformanceDetail(ListeningModel):

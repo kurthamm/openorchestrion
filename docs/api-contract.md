@@ -452,3 +452,30 @@ and failure semantics.
 ## Listening-room additions (September 2026)
 
 The [listening-room contract](web-listening-room.md#new-api-surface) adds paginated, composable `/api/library/browse`, complete `/api/library/browse/facets`, deterministic `/api/library/assets/{id}/performance`, and idempotent `/api/queue/clear`. Their strict response models are in `api/listening_models.py`; OpenAPI includes every field. Existing search, detail, station, rendering and Concierge contracts remain compatible. The current browser does not expose or call the Concierge.
+
+
+## Playback-readiness preview (September 2026)
+
+`POST /api/library/assets/{asset_id}/performance/preview` is read-only. Its body
+is `{ "rendering": null }` (or `{}`) for automatic voicing, or the same validated
+`RenderingRequest` used by queue creation. This endpoint resolves that exact queue
+policy in the selection worker; it never queues a song or sends MIDI.
+
+The response has `rendering_mode` (`AUTO`, `ORIGINAL`, `PIANO_ONLY`, `OVERRIDE`)
+and `readiness`: `version`, `status` (`structurally_playable` or `caution`),
+`reference_device`, `peak_notes`, `limitation`, `parts`, and `flags`.
+Each sounding part includes its 1-based channel, percussion/changed booleans,
+source tracks (0-based index and nullable name), sounds actually requested
+(1-based program, GM name, MSB/LSB, implicit-default flag and note count), note
+and velocity ranges, sustain/pitch-bend use and estimated peak notes. Input
+override channels/programs retain the existing **0-based** rendering contract.
+Flags carry `code`, `severity` (`info` or `warning`) and an explanatory message.
+Strict models in `api/listening_models.py` define the complete OpenAPI shape.
+
+Missing admitted assets return 404 `asset_not_found`; invalid rendering returns
+422 `request_invalid`; unverifiable MIDI bytes return 409 `analysis_unavailable`.
+The browser keeps ordinary source details visible if the preview fails.
+
+These are source/policy facts with WK-220 reference limits, not device-profile
+binding, an acoustic quality score or the policy of an existing queue item.
+See [analysis semantics, cache maintenance and release evidence](library-playback-readiness.md).

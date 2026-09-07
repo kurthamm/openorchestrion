@@ -1,7 +1,8 @@
 /** Listening-room shell. Navigation, catalog and player update independently.
  * Future capabilities belong in separate routes/modules; no concierge is mounted.
  */
-import { api, commandId } from './api.js?v=listening-room-2';
+import { api, commandId } from './api.js?v=playback-readiness-1';
+import { playbackNotes } from './playback-notes.js';
 import { h, render } from './dom.js';
 import { anchor, createTicker, positionAt, progressAt, formatClock, formatSeconds } from './position.js';
 import { StateSocket } from './socket.js';
@@ -215,7 +216,8 @@ async function openDetail(id) {
   render($('detail-content'), h('h1', { id: 'detail-title', class: 'detail-title', text: 'Opening performance…' }));
   if (!$('detail').open) $('detail').showModal();
   try {
-    const [item, facts] = await Promise.all([api.asset(id), api.performance(id)]);
+    const [item, facts, preview] = await Promise.all([api.asset(id), api.performance(id),
+      Promise.resolve().then(() => api.performancePreview(id)).catch(error => ({ error: error.message }))]);
     if (version !== detailVersion || !$('detail').open) return;
     assets.set(id, item);
     const stat = (value, label) => h('div', {}, h('strong', { text: value }), h('span', { text: label }));
@@ -226,8 +228,9 @@ async function openDetail(id) {
       h('div', { class: 'detail-stats' }, stat(formatSeconds(item.duration_seconds), 'Duration'), stat(number(item.track_count), 'MIDI tracks'), stat(number(facts.channels.length), 'Channels'), stat(number(item.note_count), 'Notes')),
       h('div', { class: 'tags' }, tags.map(tag => h('span', { class: 'tag', text: readable(tag) }))),
       h('section', { class: 'detail-section' }, h('h2', { text: 'How this will play' }), h('p', { text: `Next addition: ${soundLabels[loadRenderingPreference().mode]}. ${ready() ? 'A MIDI output is connected.' : 'Connect a MIDI instrument to hear this performance.'}` }), h('a', { class: 'text-btn', href: '#settings', onClick: () => $('detail').close(), text: 'Change sound & device settings →' }), h('p', { class: 'technical-note', text: 'Encoded instruments below describe the MIDI file. Automatic voicing or your chosen overrides can change the programs sent to the keyboard. Banks, drum kits and available sounds depend on the device. SysEx messages are not sent to hardware.' })),
-      h('section', { class: 'detail-section' }, h('h2', { text: 'Encoded instruments' }), h('p', { text: 'Channels and General MIDI programs use human-readable numbering (1–16 and 1–128). Multiple entries on a channel mean the file changes sounds or banks.' }),
-        facts.instruments.length ? h('div', { class: 'table-scroll' }, h('table', { class: 'instrument-table' }, h('thead', {}, h('tr', {}, ['Channel', 'Instrument', 'Program', 'Bank MSB / LSB'].map(text => h('th', { scope: 'col', text })))), h('tbody', {}, facts.instruments.map(p => h('tr', {}, h('td', { text: p.channel }), h('td', { text: p.gm_name }), h('td', { text: p.gm_program_number }), h('td', { text: `${p.bank_msb} / ${p.bank_lsb}` })))))) : h('p', { text: 'No program changes are encoded. The connected device’s initial sounds, or the selected playback policy, determine the instruments.' }),
+      playbackNotes(preview),
+      h('details', { class: 'detail-section' }, h('summary', { text: 'Original file: encoded instrument changes' }), h('p', { text: 'Channels and General MIDI programs use human-readable numbering (1–16 and 1–128). These source changes may be replaced by the sound setting previewed above. Percussion program numbers select drum kits, not pitched instruments.' }),
+        facts.instruments.length ? h('div', { class: 'table-scroll' }, h('table', { class: 'instrument-table' }, h('thead', {}, h('tr', {}, ['Channel', 'Instrument', 'Program', 'Bank MSB / LSB'].map(text => h('th', { scope: 'col', text })))), h('tbody', {}, facts.instruments.map(p => h('tr', {}, h('td', { text: p.channel }), h('td', { text: p.channel === 10 ? 'Drum kit selection' : p.gm_name }), h('td', { text: p.gm_program_number }), h('td', { text: `${p.bank_msb} / ${p.bank_lsb}` })))))) : h('p', { text: 'No program changes are encoded. Before applying your sound setting, the player resets pitched channels to Acoustic Grand Piano and channel 10 to its default drum kit.' }),
         h('p', { text: `Active channels: ${facts.channels.map(c => `${c.channel}${c.is_percussion ? ' (percussion)' : ''}`).join(', ') || 'None'}.` })),
       h('section', { class: 'detail-section' }, h('h2', { text: 'Performance & expression' }), factList([['Catalog arrangement', readable(item.performance_type)], ['Sustain pedal', facts.sustain_used ? 'Encoded' : 'Not encoded'], ['Pitch bend', facts.pitch_bend_used ? 'Encoded' : 'Not encoded'], ['Velocity range', `${facts.velocity_min ?? '—'}–${facts.velocity_max ?? '—'}`], ['Peak notes at once', facts.peak_simultaneous_notes], ['MIDI note range', `${facts.note_min ?? '—'}–${facts.note_max ?? '—'}`], ['General MIDI assessment', readable(facts.gm_assessment)], ['SysEx messages', `${facts.sysex_count} in the file; blocked during playback`]])),
       h('section', { class: 'detail-section' }, h('h2', { text: 'About this version' }), factList([['Collection / source', facts.source_label], ['Source reference', facts.source_reference], ['Composer', item.composer], ['Artist / context', item.artist], ['Era', readable(item.era)], ['Original filename', item.original_filename], ['Rights status', readable(facts.rights_status)], ['License', facts.license], ['Attribution', facts.attribution]])));

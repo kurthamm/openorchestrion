@@ -1,0 +1,410 @@
+{
+  "started_at": "2026-09-07T21:38:45.328677+00:00",
+  "requests": [
+    {
+      "path": "transport/play",
+      "ms": 488.281
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 244.667
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 161.082
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.974
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 3.452
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.505
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.709
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 6.098
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 49.906
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 4.641
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 4.962
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 48.629
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 4.649
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 6.134
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 50.95
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 4.873
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 5.282
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 54.061
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.782
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 6.36
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.661
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.691
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 3.569
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.09
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 4.862
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 6.535
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 52.089
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.691
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 3.574
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.704
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.734
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 4.605
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.504
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.669
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 5.188
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 48.929
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.671
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 4.752
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 38.007
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.668
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 3.592
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 36.963
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.676
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 6.894
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 51.01
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 4.444
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 4.901
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 51.307
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 4.885
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 4.732
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 38.293
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.916
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 3.649
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.059
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.827
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 6.834
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 50.626
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.842
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 3.671
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 36.829
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.789
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 4.727
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.584
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.82
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 5.297
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 54.325
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 5.405
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 4.732
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.715
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.858
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 3.688
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.307
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.82
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 6.706
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 50.055
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 4.626
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 5.184
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 48.648
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.798
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 4.669
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.377
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.783
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 3.628
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.125
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.765
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 6.629
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 50.724
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 4.341
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 5.179
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 53.31
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.801
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 938.775
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 37.337
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 3.787
+    },
+    {
+      "path": "library/browse/facets",
+      "ms": 5.25
+    },
+    {
+      "path": "library/browse?text=bach&limit=2",
+      "ms": 54.953
+    },
+    {
+      "path": "library/assets/sha256:fd26c05472e1743c85676059a5aae70e37eff1ffa914f7579713b0259b073834/performance/preview",
+      "ms": 5.152
+    },
+    {
+      "path": "transport/stop",
+      "ms": 98.821
+    },
+    {
+      "path": "transport/play",
+      "ms": 1909.972
+    },
+    {
+      "path": "transport/stop",
+      "ms": 10.384
+    }
+  ],
+  "benchmark_exit_code": 0,
+  "completed_at": "2026-09-07T21:39:57.600133+00:00",
+  "queue_preserved": true,
+  "final_state": "stopped",
+  "volume": 33
+}
