@@ -158,4 +158,10 @@ export const api = {
       method: 'POST',
       body: { command_id: id },
     }),
+
+  setVolume: (level, id = commandId()) =>
+    request('/api/volume', {
+      method: 'POST',
+      body: { level, command_id: id },
+    }),
 };

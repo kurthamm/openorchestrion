@@ -313,6 +313,12 @@ class PlaybackState(BaseModel):
         description="Echoes the command that produced this state, so the "
         "originating client can clear its optimistic pending flag.",
     )
+    volume: int = Field(
+        default=100,
+        ge=0,
+        le=100,
+        description="Master volume 0..100 applied to every output; 100 preserves the file's balance.",
+    )
 
 
 class QueueEntry(BaseModel):
@@ -345,6 +351,15 @@ class TransportCommand(BaseModel):
         description="Client-generated. Commands are idempotent by this value, "
         "so a retry after a dropped connection does not double-skip a track.",
     )
+
+
+class VolumeCommand(BaseModel):
+    """Master volume for every output, applied immediately and to later tracks."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    level: int = Field(ge=0, le=100, strict=True, description="0 is silent, 100 is the file's own balance.")
+    command_id: UUID | None = None
 
 
 ProgramSelector = StrictInt | Annotated[str, Field(min_length=1, max_length=100)]

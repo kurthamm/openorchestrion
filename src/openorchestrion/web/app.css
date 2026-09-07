@@ -433,6 +433,9 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 
 .np-transport { display: flex; gap: 8px; align-items: center; }
+.np-volume { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+.np-volume-slider { flex: 1; min-height: var(--tap); accent-color: var(--accent); }
+.np-volume-value { min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
 
 .tbtn {
   appearance: none;

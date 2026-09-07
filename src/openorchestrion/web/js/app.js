@@ -155,6 +155,23 @@ const handlers = {
     }
   },
 
+  async setVolume(level) {
+    // Optimistic: the slider shows the requested level at once; the server's
+    // PlaybackState (REST reply or WebSocket delta) is authoritative afterwards.
+    const previous = getState().playback;
+    if (previous) setState({ playback: { ...previous, volume: level } });
+    try {
+      const playback = await api.setVolume(level);
+      positionAnchor = anchor(playback.position);
+      setState({ playback, playbackAvailable: true });
+      syncTicker();
+    } catch (error) {
+      if (previous) setState({ playback: previous });
+      if (handlePlaybackCall(error, 'Volume')) return;
+      toast(error.message, 'bad');
+    }
+  },
+
   async search(text, facet) {
     setState({ search: { ...getState().search, loading: true, error: null, query: text, facet } });
     const params = { text: text || undefined, limit: 100 };

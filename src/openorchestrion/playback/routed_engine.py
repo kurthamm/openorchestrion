@@ -159,7 +159,7 @@ class PlaybackEngine(BasePlaybackEngine):
                         async with self._send_lock:
                             if generation != self._generation:
                                 return
-                            await routed.output.send(routed.message)
+                            await routed.output.send(self._outgoing(routed))
 
             threshold = (
                 min(
@@ -198,7 +198,7 @@ class PlaybackEngine(BasePlaybackEngine):
                     async with self._send_lock:
                         if generation != self._generation:
                             return
-                        await dispatch.routed.output.send(dispatch.routed.message)
+                        await dispatch.routed.output.send(self._outgoing(dispatch.routed))
                     index += 1
 
             await self.clock.sleep_until(

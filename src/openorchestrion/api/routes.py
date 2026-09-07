@@ -65,6 +65,7 @@ from .models import (
     StationQueueModel,
     SystemStatus,
     TransportCommand,
+    VolumeCommand,
 )
 from .sessions import ConciergeSessions
 from .settings import Settings
@@ -533,6 +534,18 @@ async def remove_from_queue(request: Request, payload: QueueRemoveRequest) -> Qu
     except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
         raise _translate_playback_error(exc) from exc
     return _queue_state_model(snapshot)
+
+
+@router.post("/volume", response_model=PlaybackState)
+async def volume(request: Request, payload: VolumeCommand) -> PlaybackState:
+    try:
+        snapshot = await _playback(request).set_volume(
+            payload.level,
+            command_id=str(payload.command_id) if payload.command_id else None,
+        )
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+    return _playback_state_model(snapshot)
 
 
 @router.post("/transport/{action}", response_model=PlaybackState)
