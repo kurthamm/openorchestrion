@@ -185,6 +185,28 @@ class MidiOutputRouter:
         routed = self.route_messages(message, plan=plan)
         return routed[0] if routed else None
 
+    async def reset_channels(self) -> None:
+        """Establish General MIDI default state on every channel of every output.
+
+        Hardware keeps the last bank, program and controller values per channel
+        indefinitely.  Without this, a file that never sends Program Change (most
+        piano files) inherits whatever the previous track or a rendering override
+        selected.  Sent before each track so the file's own messages then apply
+        on top of a known baseline.
+        """
+        failures: list[str] = []
+        for output in self.outputs.values():
+            try:
+                for channel in range(16):
+                    await output.send(Message("control_change", channel=channel, control=121, value=0))
+                    await output.send(Message("control_change", channel=channel, control=0, value=0))
+                    await output.send(Message("control_change", channel=channel, control=32, value=0))
+                    await output.send(Message("program_change", channel=channel, program=0))
+            except Exception as exc:
+                failures.append(f"{output.name}: {type(exc).__name__}: {exc}")
+        if failures:
+            raise PlaybackOutputError("; ".join(failures))
+
     async def panic(self) -> None:
         """Release sustain and silence every channel on every configured output."""
         failures: list[str] = []

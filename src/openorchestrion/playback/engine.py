@@ -469,6 +469,21 @@ class PlaybackEngine:
         )
         self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
 
+    async def _reset_channels_for_track(self, generation: int) -> bool:
+        """Establish General MIDI defaults before a track's first message.
+
+        Hardware keeps bank/program/controller state per channel, so a file that
+        never sends Program Change would otherwise inherit the instruments left
+        by the previous track or a rendering override.  Priming for a resume
+        then re-applies the file's own state on top.  Returns False when the
+        track was superseded before the reset could be sent.
+        """
+        async with self._send_lock:
+            if generation != self._generation:
+                return False
+            await self.router.reset_channels()
+        return True
+
     async def _run_track(
         self,
         generation: int,
@@ -479,6 +494,9 @@ class PlaybackEngine:
         anchor_clock: float,
     ) -> None:
         try:
+            if not await self._reset_channels_for_track(generation):
+                return
+
             if start_position > 0:
                 for message in timeline.priming_messages(start_position):
                     routed = self.router.route_message(message, plan=item.spec.routing_plan)
