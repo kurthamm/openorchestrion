@@ -10,10 +10,15 @@ Reviewed the seven open GitHub issues, the roadmap, current deployed source, and
 
 1. **Integrate the already-deployed work.** The reliability, library-admission and listening-room changes are published on `codex/listening-room-redesign`, but not merged into `main`. Reconcile against current main, retain independent planning work such as `docs/two-engine-orchestration.md`, run CI on the integration result, then establish one shared development baseline. This review does not merge branches or close issues.
 2. **Complete the loaded Pi timing evidence — [#6](https://github.com/kurthamm/openorchestrion/issues/6).** The 14 synthetic fixtures and benchmark harness are implemented. Follow `pi-timing-benchmark.md`: named load profiles, short repeatability passes, 120-minute endurance runs, temperature/undervoltage evidence and retained JSON results. Software scheduler jitter is distinct from physical MIDI-to-audio latency.
-3. **Implement deterministic two-engine orchestration — [#84](https://github.com/kurthamm/openorchestrion/issues/84).** The [current plan](https://github.com/kurthamm/openorchestrion/blob/main/docs/two-engine-orchestration.md) targets CT-X700 foreground and WK-220 support. Start with configurable profiles and reliable physical-device binding, per-engine planning limits, whole-performance solo-piano routing, support-engine drums, explainable part assignments, manual overrides and single-engine fallback. Build/test policy with virtual destinations; validate dual-device behavior when both keyboards are available. Existing routing and one shared scheduler are the foundation, not work to replace.
-4. **Validate the CT-X700 — [#1](https://github.com/kurthamm/openorchestrion/issues/1).** Repeat the device-specific checklist when it arrives and measure relative timing before claiming two-engine acoustic synchronization. Do not repeat the WK-220 investigation from zero or transfer its sound evidence to a different model.
+3. **Consolidate the current single-keyboard experience.** Address reproducible defects and documentation gaps in the existing WK-220 setup; preserve the curated library and current playback behavior.
 
-The orchestration UI should extend the new performance detail/settings surfaces with a visible parts-to-engines plan and estimated load, using existing queue/player controls. It is deterministic and does not require enabling AI. Actual timbre-affinity ratings should follow listening evidence; initial configured scores remain provisional.
+## Deferred until the new keyboard is available
+
+The owner confirmed on September 7 that the CT-X700 is not available and this work is for later. **Do not start #84 orchestration implementation, a MIDI Orchestra UI, CT-X700 validation under #1, or physical two-engine tests now.** Keep the [two-engine plan](https://github.com/kurthamm/openorchestrion/blob/main/docs/two-engine-orchestration.md) as future design context. Virtual destinations may still be used by existing regression tests, but they do not advance this deferred feature into the current work queue.
+
+For #6, run only load profiles supported by the current Pi/WK-220 setup. Record any unavailable kiosk or physical two-output profile as pending; do not claim completion of the full hardware benchmark from a software-only result.
+
+When this deferred work resumes, the orchestration UI should extend the new performance detail/settings surfaces with a visible parts-to-engines plan and estimated load, using existing queue/player controls. It is deterministic and does not require enabling AI. Actual timbre-affinity ratings should follow listening evidence; initial configured scores remain provisional.
 
 ## Remaining open lanes
 
