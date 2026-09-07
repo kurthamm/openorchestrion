@@ -342,6 +342,7 @@ class PlaybackState(BaseModel):
     )
     sleep_timer_remaining_seconds: int | None = Field(default=None, ge=0)
     stop_after_current: bool = False
+    scheduled_start_remaining_seconds: int | None = Field(default=None, ge=0)
 
 
 class QueueEntry(BaseModel):
@@ -353,6 +354,8 @@ class QueueEntry(BaseModel):
     composer: str | None = None
     duration_seconds: float
     index: int = Field(ge=0)
+    tempo_percent: int = Field(default=100, ge=50, le=200)
+    volume_percent: int = Field(default=100, ge=0, le=150)
 
 
 class QueueState(BaseModel):
@@ -367,6 +370,7 @@ class QueueState(BaseModel):
     repeat_mode: Literal["off", "track", "queue"] = "off"
     shuffle: bool = False
     continuous: bool = False
+    can_undo: bool = False
 
 
 class TransportCommand(BaseModel):
@@ -404,6 +408,11 @@ class SleepTimerRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     seconds: int | None = Field(default=None, ge=1, le=86400)
     after_current: bool = False
+
+
+class ScheduleStartRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    seconds: int | None = Field(default=None, ge=1, le=86400)
 
 
 ProgramSelector = StrictInt | Annotated[str, Field(min_length=1, max_length=100)]
@@ -449,6 +458,47 @@ class RenderingRequest(BaseModel):
     def validate_rendering_policy(self) -> RenderingRequest:
         self.to_policy()
         return self
+
+
+class SongPreferenceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    tempo_percent: int = Field(default=100, ge=50, le=200)
+    volume_percent: int = Field(default=100, ge=0, le=150)
+    rendering: RenderingRequest | None = None
+
+
+class SongPreference(SongPreferenceRequest):
+    asset_id: str
+    updated_at: str
+
+
+class TestNoteRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note: int = Field(default=60, ge=0, le=127)
+    velocity: int = Field(default=64, ge=1, le=127)
+    duration_seconds: float = Field(default=0.35, ge=0.05, le=2)
+
+
+class BackupHealth(BaseModel):
+    status: str
+    finished_at: str | None = None
+    filename: str | None = None
+    bytes: int | None = None
+
+
+class OperationsStatus(BaseModel):
+    service_version: str
+    uptime_seconds: int
+    disk_free_bytes: int
+    disk_total_bytes: int
+    queue_length: int
+    playback_state: str
+    outputs: OutputsState
+    backup: BackupHealth | None = None
+    library_indexed: bool
+    library_assets: int
+    tunnel_status: Literal["active", "inactive", "not_configured", "unknown"]
+    recent_playback_failures: list[dict[str, str]] = Field(default_factory=list)
 
 
 class QueueReplaceRequest(BaseModel):

@@ -17,3 +17,11 @@ Repeat can target the current track or the queue. Shuffle chooses the next queue
 ## Recovery and backup
 
 Queue, position, volume, and repeat/shuffle/continuous settings are written after every mutation. Sleep timers are intentionally not restored after a service restart because their wall-clock intent is ambiguous after downtime. `player-state.db` is captured with SQLite's online backup API and validated during application-data restore.
+
+## Operations controls
+
+Queue mutations retain ten in-memory undo points. A delayed start is owned by the server, so the browser may disconnect after scheduling it. If a MIDI asset cannot be opened or fails during playback, its history attempt is marked failed, all notes are silenced, an error event identifies the asset, and playback advances to the next usable queue item. Output disconnection remains different: playback pauses for hot-plug recovery rather than skipping music.
+
+Each asset may have a durable preferred tempo (50–200%), relative volume (0–150%), and rendering policy. These preferences are applied when a new queue item is built; an explicit rendering choice in the queue request takes precedence. Tempo scales scheduler timing without transposing notes.
+
+The device panel exposes a short middle-C test note while playback is stopped. The operation sends balanced note-on/note-off messages to every configured output and rejects tests during active playback. The system-health card reads `/api/operations` to show installed version, uptime, disk capacity, player/output state, queue length, and the latest off-site backup result.

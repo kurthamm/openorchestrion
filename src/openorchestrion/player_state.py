@@ -43,6 +43,13 @@ def _connect(path: Path) -> sqlite3.Connection:
             state_json TEXT NOT NULL,
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS song_preferences (
+            asset_id TEXT PRIMARY KEY,
+            tempo_percent INTEGER NOT NULL DEFAULT 100 CHECK (tempo_percent BETWEEN 50 AND 200),
+            volume_percent INTEGER NOT NULL DEFAULT 100 CHECK (volume_percent BETWEEN 0 AND 150),
+            rendering_json TEXT,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
         """
     )
     row = connection.execute("SELECT version FROM schema_info").fetchone()
@@ -173,3 +180,38 @@ class PlayerStateStore:
         with _connect(self.path) as connection:
             row = connection.execute("SELECT state_json FROM player_session WHERE singleton=1").fetchone()
             return json.loads(row["state_json"]) if row else None
+
+    def get_song_preference(self, asset_id: str) -> dict[str, Any] | None:
+        with _connect(self.path) as connection:
+            row = connection.execute(
+                "SELECT tempo_percent,volume_percent,rendering_json,updated_at FROM song_preferences WHERE asset_id=?",
+                (asset_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            return {
+                "asset_id": asset_id, "tempo_percent": row["tempo_percent"],
+                "volume_percent": row["volume_percent"],
+                "rendering": json.loads(row["rendering_json"]) if row["rendering_json"] else None,
+                "updated_at": row["updated_at"],
+            }
+
+    def save_song_preference(self, asset_id: str, *, tempo_percent: int = 100,
+                             volume_percent: int = 100, rendering: dict[str, Any] | None = None) -> dict[str, Any]:
+        if not 50 <= tempo_percent <= 200 or not 0 <= volume_percent <= 150:
+            raise ValueError("song preference is outside its supported range")
+        with _connect(self.path) as connection:
+            connection.execute(
+                """INSERT INTO song_preferences(asset_id,tempo_percent,volume_percent,rendering_json)
+                VALUES (?,?,?,?) ON CONFLICT(asset_id) DO UPDATE SET
+                tempo_percent=excluded.tempo_percent, volume_percent=excluded.volume_percent,
+                rendering_json=excluded.rendering_json, updated_at=CURRENT_TIMESTAMP""",
+                (asset_id, tempo_percent, volume_percent, json.dumps(rendering) if rendering else None),
+            )
+        result = self.get_song_preference(asset_id)
+        assert result is not None
+        return result
+
+    def delete_song_preference(self, asset_id: str) -> bool:
+        with _connect(self.path) as connection:
+            return bool(connection.execute("DELETE FROM song_preferences WHERE asset_id=?", (asset_id,)).rowcount)

@@ -293,6 +293,27 @@ def test_saved_collections_queue_editing_modes_seek_and_timer(stocked_client: Te
     assert stocked_client.delete(f"/api/collections/{collection_id}").status_code == 204
 
 
+def test_song_preferences_diagnostics_schedule_undo_and_operations(stocked_client: TestClient) -> None:
+    asset = stocked_client.get("/api/library/search", params={"limit": 1}).json()["items"][0]
+    asset_id = asset["asset_id"]
+    saved = stocked_client.put(
+        f"/api/library/assets/{asset_id}/preference",
+        json={"tempo_percent": 90, "volume_percent": 115},
+    )
+    assert saved.status_code == 200
+    assert stocked_client.get(f"/api/library/assets/{asset_id}/preference").json()["tempo_percent"] == 90
+    queued = stocked_client.post("/api/queue", json={"asset_ids": [asset_id]}).json()
+    assert queued["items"][0]["tempo_percent"] == 90
+    assert stocked_client.post("/api/queue/clear", json={}).json()["can_undo"] is True
+    assert stocked_client.post("/api/queue/undo").status_code == 200
+    assert stocked_client.post("/api/playback/schedule-start", json={"seconds": 60}).status_code == 200
+    assert stocked_client.post("/api/playback/schedule-start", json={"seconds": None}).status_code == 200
+    assert stocked_client.post("/api/devices/test-note", json={"duration_seconds": 0.05}).status_code == 204
+    operations = stocked_client.get("/api/operations")
+    assert operations.status_code == 200
+    assert operations.json()["disk_free_bytes"] > 0
+
+
 def test_playback_routes_publish_real_success_models() -> None:
     with TestClient(create_app()) as client:
         paths = client.get("/openapi.json").json()["paths"]
