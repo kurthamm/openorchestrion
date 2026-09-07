@@ -256,3 +256,123 @@ async def test_command_ids_are_idempotent(tmp_path: Path) -> None:
 
     assert first.state == second.state == "stopped"
     assert sum(1 for event in history.events if event[0] == "skipped") == 1
+
+
+def _write_midi_without_programs(path: Path, *, channels=(0, 1), beats: int = 2) -> float:
+    """A General MIDI file that never sends Program Change (like many piano files)."""
+    midi = MidiFile(type=1, ticks_per_beat=480)
+    meta = MidiTrack()
+    meta.append(MetaMessage("set_tempo", tempo=mido.bpm2tempo(120), time=0))
+    midi.tracks.append(meta)
+    for channel in channels:
+        track = MidiTrack()
+        for index in range(beats):
+            note = 60 + channel * 12 + index
+            track.append(Message("note_on", channel=channel, note=note, velocity=90, time=0))
+            track.append(Message("note_off", channel=channel, note=note, velocity=0, time=480))
+        midi.tracks.append(track)
+    midi.save(path)
+    return MidiFile(path).length
+
+
+def _write_midi_with_program(path: Path, *, channel: int, program: int, beats: int = 2) -> float:
+    midi = MidiFile(type=1, ticks_per_beat=480)
+    meta = MidiTrack()
+    meta.append(MetaMessage("set_tempo", tempo=mido.bpm2tempo(120), time=0))
+    midi.tracks.append(meta)
+    track = MidiTrack()
+    track.append(Message("program_change", channel=channel, program=program, time=0))
+    for index in range(beats):
+        track.append(Message("note_on", channel=channel, note=60 + index, velocity=90, time=0))
+        track.append(Message("note_off", channel=channel, note=60 + index, velocity=0, time=480))
+    midi.tracks.append(track)
+    midi.save(path)
+    return MidiFile(path).length
+
+
+@pytest.mark.asyncio
+async def test_track_start_resets_channel_state_left_by_previous_track(tmp_path: Path) -> None:
+    """A file with no Program Change must not inherit the previous track's instrument.
+
+    Hardware keeps the last program/bank/controller state per channel.  After a
+    track (or a rendering override) selects Violin on channel 1, a following
+    General MIDI piano file that never sends Program Change would otherwise play
+    that channel on Violin.  The engine must establish General MIDI defaults on
+    every channel before the first note of each track.
+    """
+    strings = tmp_path / "strings.mid"
+    strings_duration = _write_midi_with_program(strings, channel=1, program=40)
+    piano = tmp_path / "piano.mid"
+    piano_duration = _write_midi_without_programs(piano, channels=(0, 1))
+
+    engine, clock, _, output, _ = await _engine()
+    await engine.set_queue(
+        [
+            QueueItemSpec("strings", "Strings", strings_duration, str(strings)),
+            QueueItemSpec("piano", "Piano", piano_duration, str(piano)),
+        ]
+    )
+    await engine.transport("play")
+    await clock.advance(strings_duration + 0.01)
+    assert (await engine.playback_snapshot()).now_playing.asset_id == "piano"
+    await clock.advance(piano_duration + 0.01)
+    assert (await engine.playback_snapshot()).state == "stopped"
+
+    messages = [event.message for event in output.sent]
+    violin_selected = next(
+        index
+        for index, message in enumerate(messages)
+        if message.type == "program_change" and message.channel == 1 and message.program == 40
+    )
+    # The strings track never plays channel 0, so its first note marks the piano track.
+    piano_first_note = next(
+        index
+        for index, message in enumerate(messages)
+        if message.type == "note_on" and message.channel == 0
+    )
+    assert violin_selected < piano_first_note
+    between = messages[violin_selected + 1 : piano_first_note]
+
+    for channel in (0, 1):
+        programs = [
+            message
+            for message in between
+            if message.type == "program_change" and message.channel == channel
+        ]
+        assert programs, f"no program reset on channel {channel} before the piano track"
+        assert programs[-1].program == 0
+        assert any(
+            message.type == "control_change"
+            and message.channel == channel
+            and message.control == 121
+            for message in between
+        ), f"no Reset All Controllers on channel {channel}"
+        for control in (0, 32):
+            assert any(
+                message.type == "control_change"
+                and message.channel == channel
+                and message.control == control
+                and message.value == 0
+                for message in between
+            ), f"bank select {control} not reset on channel {channel}"
+
+
+@pytest.mark.asyncio
+async def test_file_program_change_wins_over_track_start_reset(tmp_path: Path) -> None:
+    """The reset establishes defaults; a file's own Program Change must still apply after it."""
+    strings = tmp_path / "strings.mid"
+    duration = _write_midi_with_program(strings, channel=1, program=40)
+    engine, clock, _, output, _ = await _engine()
+    await engine.set_queue([QueueItemSpec("strings", "Strings", duration, str(strings))])
+    await engine.transport("play")
+    await clock.advance(duration + 0.01)
+
+    messages = [event.message for event in output.sent]
+    first_note = next(index for index, message in enumerate(messages) if message.type == "note_on")
+    programs_ch1 = [
+        message.program
+        for message in messages[:first_note]
+        if message.type == "program_change" and message.channel == 1
+    ]
+    assert programs_ch1, "expected program changes before the first note"
+    assert programs_ch1[-1] == 40

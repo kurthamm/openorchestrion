@@ -132,6 +132,11 @@ async def _single_output_engine():
 
 
 def _programs(output: VirtualMidiOutput, channel: int) -> list[int]:
+    """Program changes heard on one channel, in order.
+
+    Every track begins with the engine's General MIDI reset, so the first entry
+    is always 0; what follows is the source or rendered arrangement.
+    """
     return [
         int(event.message.program)
         for event in output.sent
@@ -149,8 +154,8 @@ async def test_default_runtime_preserves_original_arrangement(tmp_path: Path) ->
     await engine.transport("play")
     await clock.advance(duration + 0.01)
 
-    assert _programs(output, 0) == [48]
-    assert _programs(output, 1) == [40]
+    assert _programs(output, 0) == [0, 48]
+    assert _programs(output, 1) == [0, 40]
     assert any(
         event.message.type == "control_change"
         and event.message.channel == 0
@@ -184,16 +189,19 @@ async def test_piano_only_policy_is_heard_by_the_output(tmp_path: Path) -> None:
     await engine.transport("play")
     await clock.advance(duration + 0.01)
 
-    assert _programs(output, 0) == [0]
-    assert _programs(output, 1) == [0]
+    assert _programs(output, 0) == [0, 0]
+    assert _programs(output, 1) == [0, 0]
     assert not any(
         event.message.type == "note_on" and event.message.channel == 9
         for event in output.sent
     )
+    # The source's bank select (value 1) is suppressed; only the engine's
+    # bank-0 reset may appear on the channel.
     assert not any(
         event.message.type == "control_change"
         and event.message.channel == 0
         and event.message.control in {0, 32}
+        and event.message.value != 0
         for event in output.sent
     )
     assert any(
@@ -235,8 +243,8 @@ async def test_override_runtime_changes_only_target_channel(tmp_path: Path) -> N
     await engine.transport("play")
     await clock.advance(duration + 0.01)
 
-    assert _programs(output, 0) == [24]
-    assert _programs(output, 1) == [40]
+    assert _programs(output, 0) == [0, 24]
+    assert _programs(output, 1) == [0, 40]
     assert any(
         event.message.type == "note_on" and event.message.channel == 9
         for event in output.sent

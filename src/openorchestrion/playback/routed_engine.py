@@ -148,6 +148,9 @@ class PlaybackEngine(BasePlaybackEngine):
         anchor_clock: float,
     ) -> None:
         try:
+            if not await self._reset_channels_for_track(generation):
+                return
+
             if start_position > 0:
                 for event in timeline.priming_events(start_position):
                     for routed in self.router.route_messages(
