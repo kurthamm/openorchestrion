@@ -73,3 +73,5 @@ The Markdown documentation is authoritative and continues to evolve beyond the h
 ## Documentation rule
 
 When implementation changes one of the architectural boundaries or stable requirements, update the corresponding document/ADR in the same pull request. The goal is to keep the repository reproducible without requiring access to the original design conversation.
+
+- [Listening room redesign](web-listening-room.md): navigation, search, MIDI performance details, deferred AI integration, and release verification.

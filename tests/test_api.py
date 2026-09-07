@@ -18,6 +18,27 @@ COMMAND_ID_4 = "00000000-0000-4000-8000-000000000004"
 COMMAND_ID_5 = "00000000-0000-4000-8000-000000000005"
 
 
+def test_listening_room_api_and_atomic_clear(stocked_client):
+    client = stocked_client
+    page = client.get('/api/library/browse?limit=2').json()
+    assert len(page['items']) == 2 and page['total'] > 2 and page['has_more']
+    asset_id = page['items'][0]['asset_id']
+    assert client.get(f'/api/library/assets/{asset_id}/performance').status_code == 200
+    assert client.get('/api/library/assets/missing/performance').status_code == 404
+    assert client.get('/api/library/browse?sort=bad').status_code == 422
+    assert client.get('/api/library/browse?offset=-1').status_code == 422
+    assert client.get('/api/library/browse/facets').json()['total'] == page['total']
+    assert client.post('/api/queue', json={'asset_ids': [asset_id]}).status_code == 200
+    assert client.post('/api/transport/play', json={}).status_code == 200
+    cleared = client.post('/api/queue/clear', json={'command_id': COMMAND_ID_5})
+    assert cleared.status_code == 200
+    assert cleared.json()['items'] == [] and cleared.json()['current_index'] is None
+    assert not client.get('/api/status').json()['playing']
+    # A retry after a lost response cannot erase a newer session.
+    client.post('/api/queue', json={'asset_ids': [asset_id]})
+    assert len(client.post('/api/queue/clear', json={'command_id': COMMAND_ID_5}).json()['items']) == 1
+
+
 @pytest.mark.parametrize("endpoint,payload", [
     ("/api/stations/preview", {"intent": {"genres": ["classical"]}}),
     ("/api/concierge/ask", {"prompt": "classical music"}),

@@ -151,6 +151,38 @@ def test_rebuild_and_query(tmp_path: Path) -> None:
     }
 
 
+def test_listening_browse_combines_words_filters_and_pages(tmp_path):
+    from openorchestrion.library.browse import browse, browse_facets, performance_detail
+    _asset(tmp_path, 'a' * 64, title='Sonata', composer='Frédéric Chopin', genres=['classical'], moods=['calm'])
+    _asset(tmp_path, 'b' * 64, title='Sonata', composer='Frédéric Chopin', genres=['classical'], moods=['calm'])
+    _asset(tmp_path, 'c' * 64, title='Other', composer='Someone else', genres=['jazz'])
+    rebuild_catalog(tmp_path)
+    db = tmp_path / 'catalog.db'
+    first = browse(db, text='chopin sonata frederic', genre='classical', mood='calm', limit=1)
+    second = browse(db, text='chopin sonata frederic', genre='classical', mood='calm', limit=1, offset=1)
+    assert first['total'] == second['total'] == 2
+    assert first['has_more'] and not second['has_more']
+    assert first['items'][0]['asset_id'] != second['items'][0]['asset_id']
+    assert browse(db, text='%')['total'] == 0  # literal input, not wildcard injection
+    assert browse(db, genre='classical', mood='unknown')['total'] == 0
+    assert browse(db, favorite=True)['total'] == 0
+    assert browse(db, source='fixture', arrangement='SOLO_PIANO')['total'] == 3
+    assert browse_facets(db)['sources'] == [{'value': 'fixture', 'count': 3}]
+    details = performance_detail(db, 'sha256:' + 'a' * 64)
+    assert details['instruments'][0]['gm_program_number'] == 1
+    assert details['channels'] == [{'channel': 1, 'is_percussion': 0}]
+    assert details['sustain_used'] == 1
+    assert 'metadata_path' not in details and 'midi_path' not in details
+    assert performance_detail(db, 'missing') is None
+
+
+def test_listening_browse_rejects_unsafe_sort_and_limits(tmp_path):
+    from openorchestrion.library.browse import browse
+    for options in [{'sort': 'title; DROP TABLE assets'}, {'limit': 101}, {'offset': -1}]:
+        with pytest.raises(ValueError):
+            browse(tmp_path / 'unused.db', **options)
+
+
 def test_same_work_groups_multiple_performances(tmp_path: Path) -> None:
     _asset(tmp_path, "a" * 64, title="Maple Leaf Rag", composer="Scott Joplin", genres=["ragtime"])
     _asset(tmp_path, "b" * 64, title="Maple Leaf Rag", composer="Scott Joplin", genres=["ragtime"])

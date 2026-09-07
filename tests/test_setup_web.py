@@ -12,8 +12,8 @@ def test_setup_assets_and_tab_are_served() -> None:
         view = client.get("/js/views/setup.js")
 
     assert html.status_code == 200
-    assert 'data-view="setup"' in html.text
-    assert 'href="/setup.css"' in html.text
+    assert 'data-page="settings"' in html.text
+    assert 'id="device-settings"' in html.text
     assert css.status_code == 200
     assert view.status_code == 200
 
@@ -31,12 +31,12 @@ def test_browser_setup_code_has_no_secret_or_system_write_surface() -> None:
     assert "/etc/openorchestrion" not in setup_js
 
 
-def test_first_run_auto_route_requires_both_incomplete_and_not_ready() -> None:
+def test_settings_are_explicit_and_browsing_does_not_redirect() -> None:
     with TestClient(create_app()) as client:
         app_js = client.get("/js/app.js").text
 
-    assert "!data.complete && !data.ready" in app_js
-    assert "loadSetup({ autoRoute: true })" in app_js
+    assert "autoRoute" not in app_js
+    assert "drawDevices()" in app_js
 
 
 def test_setup_view_uses_text_only_dom_helper_not_html_injection() -> None:

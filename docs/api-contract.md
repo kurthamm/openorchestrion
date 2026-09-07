@@ -448,3 +448,7 @@ developed before the CTK-6200 and PSR-EW300 are present.
 Arbitrary imported SysEx is suppressed by default. See
 [Playback engine](playback-engine.md) for timing, routing, pause/resume, cleanup,
 and failure semantics.
+
+## Listening-room additions (September 2026)
+
+The [listening-room contract](web-listening-room.md#new-api-surface) adds paginated, composable `/api/library/browse`, complete `/api/library/browse/facets`, deterministic `/api/library/assets/{id}/performance`, and idempotent `/api/queue/clear`. Their strict response models are in `api/listening_models.py`; OpenAPI includes every field. Existing search, detail, station, rendering and Concierge contracts remain compatible. The current browser does not expose or call the Concierge.

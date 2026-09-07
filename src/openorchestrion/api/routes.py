@@ -9,13 +9,14 @@ from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures.process import BrokenProcessPool
 from functools import partial
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 
 from ..ai import ConciergeResult, MusicConcierge
 from ..history import apply_no_repeat_window
 from ..library.catalog import catalog_facets, catalog_stats, get_asset, reindex_asset, search_catalog
+from ..library.browse import browse, browse_facets, performance_detail
 from ..library.metadata import (
     AssetNotFoundError,
     MetadataConflictError,
@@ -36,6 +37,7 @@ from ..playback import (
 from ..playback.voicing import suggest_program_overrides
 from ..stations import StationConstraints, build_station
 from .errors import ApiError
+from .listening_models import BrowseFacets, BrowsePage, PerformanceDetail
 from .models import (
     TRANSPORT_ACTIONS,
     AiState,
@@ -77,6 +79,34 @@ from .settings import Settings
 
 router = APIRouter(prefix="/api")
 Connection = Request | WebSocket
+
+
+@router.get('/library/browse', response_model=BrowsePage)
+async def listening_library(
+    request: Request, text: str = Query('', max_length=200),
+    genre: str = '', mood: str = '', era: str = '', composer: str = '',
+    source: str = '', arrangement: str = '', favorite: bool = False,
+    sort: Literal['title', 'composer', 'duration', 'newest'] = 'title',
+    offset: int = Query(0, ge=0), limit: int = Query(40, ge=1, le=100),
+) -> dict[str, Any]:
+    return await asyncio.to_thread(
+        browse, _require_catalog(_settings(request)), text=text, genre=genre, mood=mood,
+        era=era, composer=composer, source=source, arrangement=arrangement,
+        favorite=favorite, sort=sort, offset=offset, limit=limit,
+    )
+
+
+@router.get('/library/browse/facets', response_model=BrowseFacets)
+async def listening_facets(request: Request) -> dict[str, Any]:
+    return await asyncio.to_thread(browse_facets, _require_catalog(_settings(request)))
+
+
+@router.get('/library/assets/{asset_id}/performance', response_model=PerformanceDetail)
+async def listening_performance(request: Request, asset_id: str) -> dict[str, Any]:
+    result = await asyncio.to_thread(performance_detail, _require_catalog(_settings(request)), asset_id)
+    if result is None:
+        raise ApiError('asset_not_found', 'This performance is no longer in the listening library.', status_code=404)
+    return result
 
 
 def _settings(connection: Connection) -> Settings:
@@ -568,6 +598,17 @@ async def reorder_queue(request: Request, payload: QueueReorderRequest) -> Queue
         snapshot = await _playback(request).reorder(
             payload.asset_id,
             payload.to_index,
+            command_id=str(payload.command_id) if payload.command_id else None,
+        )
+    except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:
+        raise _translate_playback_error(exc) from exc
+    return _queue_state_model(snapshot)
+
+
+@router.post("/queue/clear", response_model=QueueState)
+async def clear_queue(request: Request, payload: TransportCommand) -> QueueState:
+    try:
+        snapshot = await _playback(request).clear_queue(
             command_id=str(payload.command_id) if payload.command_id else None,
         )
     except (PlaybackConflict, PlaybackOutputError, PlaybackError) as exc:

@@ -1,87 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#12100E">
-<title>OpenOrchestrion</title>
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/app.css">
-<link rel="stylesheet" href="/setup.css">
-<link rel="stylesheet" href="/rendering.css">
-</head>
-<body>
-<a class="skip" href="#main">Skip to main content</a>
-
-<div class="shell">
-
-  <header class="topbar">
-    <h1 class="wordmark">OpenOrchestrion</h1>
-    <div class="health" id="health" role="status" aria-live="polite"></div>
-  </header>
-
-  <nav class="tabs" id="tabs" aria-label="Sections">
-    <button class="tab" data-view="listen" aria-current="page">Listen</button>
-    <button class="tab" data-view="browse">Browse</button>
-    <button class="tab" data-view="queue">Queue</button>
-    <button class="tab" data-view="history">History</button>
-    <button class="tab" data-view="setup">Setup</button>
-  </nav>
-
-  <main id="main" class="main" tabindex="-1">
-
-    <section class="view" data-view="listen">
-      <form class="ask" id="ask-form">
-        <label class="ask-label" for="ask-input">What do you want to hear?</label>
-        <textarea id="ask-input" class="ask-input" rows="2" enterkeyhint="go"
-          placeholder="Popular Christmas music while we eat"
-          autocomplete="off" autocapitalize="sentences"></textarea>
-        <div class="ask-actions">
-          <button class="btn btn-primary" type="submit" id="ask-submit">Make it happen</button>
-          <button class="btn" type="button" id="surprise">Surprise me</button>
-        </div>
-      </form>
-
-      <div class="chips" id="stations" role="group" aria-label="Station shortcuts"></div>
-
-      <div id="rendering-panel" aria-label="Playback sound"></div>
-
-      <div id="ask-result" class="ask-result" aria-live="polite"></div>
-    </section>
-
-    <section class="view" data-view="browse" hidden>
-      <form class="search" id="search-form" role="search">
-        <input id="search-input" class="search-input" type="search"
-          placeholder="Search titles, composers, performers" autocomplete="off"
-          aria-label="Search the library">
-        <button class="btn" type="submit">Search</button>
-      </form>
-      <div class="chips" id="search-facets" role="group" aria-label="Filters"></div>
-      <div id="search-results" class="results" aria-live="polite"></div>
-    </section>
-
-    <section class="view" data-view="queue" hidden>
-      <div id="queue-panel" class="panel-body"></div>
-    </section>
-
-    <section class="view" data-view="history" hidden>
-      <div id="history-panel" class="panel-body"></div>
-    </section>
-
-    <section class="view" data-view="setup" hidden>
-      <div id="setup-panel" class="panel-body" aria-live="polite"></div>
-    </section>
-
-  </main>
-
-  <footer class="nowplaying" id="nowplaying" aria-label="Now playing"></footer>
-
-</div>
-
-<div class="toasts" id="toasts" aria-live="assertive" aria-atomic="false"></div>
-
-<script type="module" src="/js/app.js"></script>
-</body>
-</html>
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#182e2d"><meta name="color-scheme" content="light">
+<title>Listening room · OpenOrchestrion</title><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/app.css?v=listening-room-2"><link rel="stylesheet" href="/rendering.css"></head><body>
+<a class="skip" href="#main">Skip to music</a>
+<aside class="sidebar"><a class="brand" href="#discover"><span class="brand-mark" aria-hidden="true">♮</span><span>OpenOrchestrion<small>THE LISTENING ROOM</small></span></a><div class="nav-label">YOUR MUSIC</div>
+<nav aria-label="Main navigation"><a href="#discover" data-nav="discover"><span aria-hidden="true">◈</span>Discover</a><a href="#library" data-nav="library"><span aria-hidden="true">▤</span>Music library</a><a href="#favorites" data-nav="favorites"><span aria-hidden="true">♡</span>Favorites</a><a href="#queue" data-nav="queue"><span aria-hidden="true">≡</span>Play queue <span id="queue-count" class="nav-count">0</span></a><a href="#recent" data-nav="recent"><span aria-hidden="true">◷</span>Recently played</a></nav>
+<div class="sidebar-bottom"><div class="sidebar-note">A little more music.<br>A little less noise.</div><a href="#settings" data-nav="settings">⚙ <span>Playback & devices</span></a><span id="connection" role="status">Connecting to your player…</span></div></aside>
+<div class="workspace"><header class="topbar"><span class="breadcrumb" id="breadcrumb">Your music / Discover</span><form id="search-form" role="search"><label class="sr-only" for="search-input">Search titles, composers and artists</label><span aria-hidden="true">⌕</span><input id="search-input" type="search" maxlength="200" placeholder="Find a piece, composer or artist" autocomplete="off"><button type="submit" aria-label="Search library">Search</button></form></header>
+<main id="main" tabindex="-1"><div id="device-notice" class="device-notice" role="status" hidden></div>
+<section id="discover" data-page="discover"><div class="hero"><div class="hero-copy"><p class="eyebrow">MAKE ROOM FOR MUSIC</p><h1>Your next<br>listening moment.</h1><p>Find an old favorite. Explore something unfamiliar.<br> Let your instruments do the rest.</p><a href="#library" class="btn btn-primary">Explore the library <span aria-hidden="true">↗</span></a></div><div class="piano-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="keys"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span>LIVE THROUGH YOUR INSTRUMENTS</span></div></div>
+<div class="library-caption"><span><strong id="library-total">—</strong> performances to explore</span><span>MIDI music · Your instruments · Your pace</span></div><div class="section-heading"><div><p class="eyebrow">A PLACE TO START</p><h2>Find your mood.</h2></div><a href="#library">View all music ↗</a></div><div id="collections" class="collections" aria-label="Music collections"></div><div class="section-heading"><div><p class="eyebrow">EXPLORE THE REPERTOIRE</p><h2 id="featured-title">In the library</h2></div><a id="featured-link" href="#library">Explore more ↗</a></div><div id="featured" class="music-list"></div></section>
+<section id="library" data-page="library" hidden><div class="page-heading"><p class="eyebrow">YOUR REPERTOIRE</p><h1 id="library-heading">Music library</h1><p id="library-intro">A world of music, ready to discover. Open any performance to explore its instruments.</p></div><div id="filters" class="filters"></div><div class="results-toolbar"><span id="result-summary" role="status"></span><label>Sort by <select id="sort"><option value="title">Title A–Z</option><option value="composer">Composer A–Z</option><option value="duration">Shortest first</option><option value="newest">Recently added</option></select></label><button id="clear-filters" class="text-btn">Clear filters</button></div><div class="list-heading" aria-hidden="true"><span>PERFORMANCE / COMPOSER</span><span>ARRANGEMENT</span><span>LENGTH</span><span>YOUR ACTIONS</span></div><div id="results" class="music-list"></div><div id="pagination" class="pagination"></div></section>
+<section id="queue" data-page="queue" hidden><div class="page-heading"><p class="eyebrow">SETTLE IN</p><h1>Your play queue</h1><p>Add performances from the library, then put them in your order.</p></div><div class="queue-toolbar"><span id="queue-summary"></span><button id="start-queue" class="btn btn-primary">Play queue</button><button id="clear-queue" class="btn">Clear queue</button></div><div id="queue-list" class="music-list"></div></section>
+<section id="recent" data-page="recent" hidden><div class="page-heading"><p class="eyebrow">BACK FOR ANOTHER LISTEN</p><h1>Recently played</h1><p>Your recent listening, all in one place. Very short previews are not recorded.</p></div><div id="history" class="music-list"></div></section>
+<section id="settings" data-page="settings" hidden><div class="page-heading"><p class="eyebrow">MAKE IT SOUND RIGHT</p><h1>Playback & devices</h1><p>Choose how your next additions to the queue will sound.</p></div><div class="settings-grid"><article class="settings-card"><h2>Your instruments</h2><div id="device-settings"></div><button id="refresh-status" class="btn">Check connection</button></article><article class="settings-card"><h2>Sound & arrangement</h2><p>These choices apply when you add music. Items already queued keep their own settings.</p><div id="rendering-panel"></div><label class="settings-volume">Master volume<input id="settings-volume" type="range" min="0" max="100" value="100" aria-label="Playback master volume"></label></article><article class="settings-card"><h2>About this library</h2><p>The listening library has been screened automatically for structural quality and duplicate performances. Musical completeness varies by arrangement.</p><p>Open a performance to see its encoded instruments, MIDI controls and source information. Instrument names describe the file; actual sound depends on your connected hardware.</p></article></div></section>
+</main></div>
+<footer class="player" aria-label="Now playing"><div class="player-track"><div class="mini-art" aria-hidden="true">♫</div><div><strong id="np-title">Your room is quiet.</strong><span id="np-sub">Add something you love to the queue.</span></div></div><div class="player-center"><div class="transport"><button id="stop" class="icon-btn" aria-label="Stop playback" title="Stop">■</button><button id="play" class="play-btn" aria-label="Play queue">▶</button><button id="skip" class="icon-btn" aria-label="Next performance" title="Next">▶▏</button></div><div class="timeline"><span id="elapsed">0:00</span><div id="progress" role="progressbar" aria-label="Playback position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="progress-fill"></div></div><span id="duration">0:00</span></div></div><div class="player-end"><label class="volume-label">Volume<input id="volume" type="range" min="0" max="100" value="100" aria-label="Master volume"></label><a href="#queue" class="icon-btn" aria-label="Open play queue">≡</a><button id="panic" class="icon-btn" aria-label="Silence all notes" title="Silence all notes">⊗</button></div></footer>
+<dialog id="detail" aria-labelledby="detail-title"><button class="dialog-close icon-btn" id="close-detail" aria-label="Close performance details">×</button><div id="detail-content"></div></dialog><dialog id="confirm" aria-labelledby="confirm-title"><h2 id="confirm-title"></h2><p id="confirm-message"></p><div class="dialog-actions"><button id="confirm-cancel" class="btn">Cancel</button><button id="confirm-accept" class="btn btn-primary">Continue</button></div></dialog><div id="toasts" class="toasts" role="status" aria-live="polite"></div><script type="module" src="/js/app.js?v=listening-room-2"></script></body></html>

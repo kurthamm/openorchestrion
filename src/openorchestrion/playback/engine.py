@@ -351,6 +351,25 @@ class PlaybackEngine:
             self.events.publish("state.queue", snapshot.to_dict())
             return snapshot
 
+    async def clear_queue(self, *, command_id: str | None = None) -> QueueSnapshot:
+        """Stop and empty the session atomically, including command replay protection."""
+        async with self._lock:
+            operation = "queue:clear"
+            if not self._check_command(command_id, operation):
+                return self._queue_snapshot_locked(command_id)
+            await self._interrupt_locked(mark_skipped=True, reset_position=True)
+            self._queue = []
+            self._current_index = None
+            self._state = "idle"
+            self._position_seconds = 0.0
+            self._active_duration_seconds = None
+            self._run_anchor_clock = None
+            self._remember_command(command_id, operation)
+            self.events.publish("state.playback", self._playback_snapshot_locked().to_dict())
+            snapshot = self._queue_snapshot_locked(command_id)
+            self.events.publish("state.queue", snapshot.to_dict())
+            return snapshot
+
     async def reorder(
         self,
         asset_id: str,
