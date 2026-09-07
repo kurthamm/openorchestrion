@@ -566,6 +566,37 @@ def get_asset(db_path: str | Path, asset_id: str) -> dict[str, Any] | None:
     return result
 
 
+FACET_KINDS = ("genre", "mood", "theme")
+
+
+def catalog_facets(db_path: str | Path, *, limit: int = 40) -> dict[str, list[dict[str, Any]]]:
+    """Distinct curated values with asset counts, most common first.
+
+    This is what a browse screen or station list should be built from: the
+    categories that actually exist in this library, not a preset list that may
+    name nothing the catalog holds.
+    """
+    if not 1 <= limit <= 500:
+        raise ValueError("limit must be between 1 and 500")
+    facets: dict[str, list[dict[str, Any]]] = {}
+    with _connect(db_path) as conn:
+        for kind in FACET_KINDS:
+            rows = conn.execute(
+                "SELECT value, COUNT(*) AS n FROM asset_tags WHERE kind = ? "
+                "GROUP BY value ORDER BY n DESC, value ASC LIMIT ?",
+                (kind, limit),
+            ).fetchall()
+            facets[kind + "s"] = [{"value": row[0], "count": row[1]} for row in rows]
+        for column, key in (("era", "eras"), ("composer", "composers")):
+            rows = conn.execute(
+                f"SELECT {column}, COUNT(*) AS n FROM assets WHERE {column} IS NOT NULL AND {column} != '' "
+                f"GROUP BY {column} ORDER BY n DESC, {column} ASC LIMIT ?",
+                (limit,),
+            ).fetchall()
+            facets[key] = [{"value": row[0], "count": row[1]} for row in rows]
+    return facets
+
+
 def catalog_stats(db_path: str | Path) -> dict[str, int]:
     with _connect(db_path) as conn:
         return {

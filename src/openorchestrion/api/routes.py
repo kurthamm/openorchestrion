@@ -11,7 +11,7 @@ from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 
 from ..ai import ConciergeResult, MusicConcierge
 from ..history import apply_no_repeat_window
-from ..library.catalog import catalog_stats, get_asset, reindex_asset, search_catalog
+from ..library.catalog import catalog_facets, catalog_stats, get_asset, reindex_asset, search_catalog
 from ..library.metadata import (
     AssetNotFoundError,
     MetadataConflictError,
@@ -49,6 +49,7 @@ from .models import (
     LibraryAsset,
     LibraryAssetDetail,
     LibraryCounts,
+    LibraryFacets,
     LibraryEnvelope,
     LibrarySearchResponse,
     OutputsState,
@@ -359,6 +360,17 @@ async def validate_intent(intent: PlaybackIntent) -> PlaybackIntent:
 @router.get("/library/stats", response_model=LibraryCounts)
 async def library_stats(request: Request) -> LibraryCounts:
     return _library_counts(_settings(request).catalog_db)
+
+
+@router.get("/library/facets", response_model=LibraryFacets)
+async def library_facets(
+    request: Request,
+    limit: Annotated[int, Query(ge=1, le=500)] = 40,
+) -> LibraryFacets:
+    settings = _settings(request)
+    if not settings.catalog_db.is_file():
+        return LibraryFacets(indexed=False)
+    return LibraryFacets(indexed=True, **catalog_facets(settings.catalog_db, limit=limit))
 
 
 @router.get("/library/search", response_model=LibrarySearchResponse)

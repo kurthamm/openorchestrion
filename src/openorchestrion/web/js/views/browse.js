@@ -17,17 +17,42 @@ export const FACETS = [
   { key: 'mood', value: 'relaxed', label: 'Relaxed' },
 ];
 
+function label(value) {
+  return value.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Chips come from what the catalog actually holds (`/api/library/facets`),
+ * most common first. The static FACETS list is only the fallback before that
+ * answer arrives or when the library is empty.
+ */
+export function facetChips(facets, { genres = 12, themes = 8, moods = 6, eras = 6 } = {}) {
+  if (!facets?.indexed) return FACETS;
+  const chips = [];
+  for (const [key, list, max] of [
+    ['genre', facets.genres, genres],
+    ['theme', facets.themes, themes],
+    ['mood', facets.moods, moods],
+  ]) {
+    for (const entry of (list || []).slice(0, max)) {
+      chips.push({ key, value: entry.value, label: label(entry.value), count: entry.count });
+    }
+  }
+  return chips.length ? chips : FACETS;
+}
+
 export function renderFacets(node, state, handlers) {
   render(
     node,
-    FACETS.map((facet) => {
+    facetChips(state.facets).map((facet) => {
       const active = state.search.facet?.value === facet.value && state.search.facet?.key === facet.key;
       return h('button', {
         class: `chip${active ? ' is-active' : ''}`,
         type: 'button',
         'aria-pressed': active ? 'true' : 'false',
         onClick: () => handlers.searchFacet(active ? null : facet),
-        text: facet.label,
+        title: facet.count ? `${facet.count} in the library` : undefined,
+        text: facet.count ? `${facet.label} · ${facet.count}` : facet.label,
       });
     }),
   );
