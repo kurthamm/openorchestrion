@@ -1,5 +1,10 @@
 # Autonomous listening-library admission
 
+For the fuller definition of musical quality, evidence requirements and gaps in
+this first admission policy, see [MIDI listening quality](library-quality-standard.md).
+The following remains the deployed v1 policy, not certification of every admitted
+file as a complete, expressive performance.
+
 The owner prefers a substantial, varied collection of good MIDI performances over
 an unfiltered import count. Admission is decided automatically per file, not by
 source collection or a target library size. It is not a claim of human audition.
