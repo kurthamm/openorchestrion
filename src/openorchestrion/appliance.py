@@ -28,6 +28,9 @@ DEFAULT_ENV_FILE = Path("/etc/openorchestrion/openorchestrion.env")
 DEPLOYMENT_FILES = (
     "openorchestrion.service",
     "openorchestrion-discovery.service",
+    "openorchestrion-offsite-backup.service",
+    "openorchestrion-offsite-backup.timer",
+    "openorchestrion-offsite-backup.sh",
     "openorchestrion.env",
     "openorchestrion-kiosk.desktop",
     "install-appliance.sh",

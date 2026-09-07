@@ -49,6 +49,17 @@ The destination must live **outside** the state root. The command reports archiv
 
 Backup is safe while the service is active because sidecars are atomic documents and both `history.db` and `player-state.db` are captured with SQLite's backup API rather than copied live.
 
+### Pi-initiated off-site backup
+
+The packaged `openorchestrion-offsite-backup.service` creates a verified archive on the Pi and then initiates an SSH upload over Tailscale. Configure a destination outside the Pi in `/etc/openorchestrion/openorchestrion.env`:
+
+```text
+OPENORCHESTRION_STATE_ROOT=/var/lib/openorchestrion
+OPENORCHESTRION_BACKUP_TARGET=user@tailscale-host:/home/user/openorchestrion-backups
+```
+
+Install the packaged shell script as `/opt/openorchestrion/bin/openorchestrion-offsite-backup`, install the service and timer under `/etc/systemd/system`, then enable `openorchestrion-offsite-backup.timer`. It runs nightly with a randomized delay and records `running`, `ok`, or `failed` state in `/var/lib/openorchestrion/backup-status.json`. Uploads use an `.part` name until complete and publish a SHA-256 companion file at the destination.
+
 ### Inspect / preflight an archive
 
 Before carrying an archive to another machine, or before a destructive replacement, it can be fully verified without changing live state:
