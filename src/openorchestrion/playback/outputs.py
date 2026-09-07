@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-import mido
+import rtmidi
 
-from openorchestrion.midi.devices import list_output_ports, port_base_name, resolve_output_port
+from openorchestrion.midi.devices import port_base_name, resolve_output_port
 from mido import Message
 
 from openorchestrion.midi.router import MidiRoute, RoutingPlan
@@ -79,18 +79,32 @@ class MidoMidiOutput:
         self.port_name: str | None = None
         self._port = None
 
-    async def send(self, message: Message) -> None:
-        if self._port is None:
-            resolved = resolve_output_port(self.name, list_output_ports())
+    def _open(self) -> None:
+        # python-rtmidi is used directly here. mido's open_output() treats any
+        # client_name as a request for a *virtual* port, which would publish a
+        # port named after the keyboard instead of subscribing to the real one.
+        client = rtmidi.MidiOut(name=self.client_name)
+        try:
+            ports = client.get_ports()
+            resolved = resolve_output_port(self.name, ports)
             if resolved is None:
                 raise PlaybackOutputError(f"MIDI output {self.name!r} is not connected")
-            self._port = mido.open_output(resolved, client_name=self.client_name)
-            self.port_name = resolved
-        self._port.send(message)
+            client.open_port(ports.index(resolved))
+        except Exception:
+            client.delete()
+            raise
+        self._port = client
+        self.port_name = resolved
+
+    async def send(self, message: Message) -> None:
+        if self._port is None:
+            self._open()
+        self._port.send_message(message.bytes())
 
     async def close(self) -> None:
         if self._port is not None:
-            self._port.close()
+            self._port.close_port()
+            self._port.delete()
             self._port = None
         self.port_name = None
 
