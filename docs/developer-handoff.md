@@ -1,5 +1,28 @@
 # Developer handoff — 7 September 2026
 
+## Automatic acquisition release
+
+[Runbook](automatic-acquisition.md), [source access research](music-sources.md#verified-automatic-source-registry--2026-09-07),
+and [deployment evidence](evidence/acquisition/deployment.json) describe the current
+release. It includes PR #93 core player operations. The nightly timer is enabled;
+first run added 29 new performances, taking the available library from **5,832 to
+5,861**, with all 25,893 original identities retained in duplicate history.
+The original curation counts below are historical and have not been recategorized.
+
+Enabled sources: Saarland v2, Classical Archives' free Schwob collection, VGMusic,
+Mutopia and MIDKAR. Four disabled sources and their access reasons are visible in
+the app. This is a bounded autonomous collector, not a human-review queue or a
+promise of daily new releases. Preserve `library/acquisition.sqlite3` with backups;
+do not delete rejected identities or bypass the admission list for future imports.
+Stop the acquisition timer/service before full curation or restore. Ordinary nightly
+acquisition adds files without restarting the player. The backup snapshot lock
+prevents inconsistent capture during admission.
+
+Validation: 726 tests, Ruff, repository contracts, browser checks, packaged virtual
+server smoke and a live systemd acquisition run. The 107-file installed package
+matches the repository. Final wheel SHA-256:
+`79c78b21875e165195d4c4b163182ea2812f4446ab7f4237a037fc0554c3a0d1`.
+
 ## Complete-listening v2 release
 
 The [quality publication record](library-quality-publication.md) supersedes the v1

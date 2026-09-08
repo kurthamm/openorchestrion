@@ -1,0 +1,26 @@
+[Unit]
+Description=Find and qualify new MIDI performances for OpenOrchestrion
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=openorchestrion
+Group=openorchestrion
+ExecStart=/opt/openorchestrion/venv/bin/openorchestrion-acquire
+TimeoutStartSec=45min
+Nice=15
+IOSchedulingClass=idle
+CPUQuota=40%
+MemoryMax=512M
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/openorchestrion/library /var/lib/openorchestrion/acquisition
+UMask=0027
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

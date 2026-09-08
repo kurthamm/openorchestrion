@@ -63,7 +63,7 @@ function route() {
     void loadLibrary();
   } else if (view === 'queue') { drawQueue(); void refreshQueue(); }
   else if (view === 'recent') void loadHistory();
-  else if (view === 'settings') { drawDevices(); mountRenderingControls($('rendering-panel')); void loadOperations(); }
+  else if (view === 'settings') { void drawAcquisition(); drawDevices(); mountRenderingControls($('rendering-panel')); void loadOperations(); }
   window.scrollTo({ top: 0 });
 }
 function favoriteButton(item) {
@@ -367,3 +367,17 @@ document.querySelector('.settings-grid').append(h('article', { class: 'settings-
 // Device settings remain reachable on narrow screens even when no warning is shown.
 $('search-form').after(h('a', { href: '#settings', class: 'icon-btn settings-shortcut', 'aria-label': 'Playback and devices', text: '⚙' }));
 route(); void loadDiscover(); void refreshStatus(); void refreshCollections(); socket.connect();
+
+async function drawAcquisition() {
+  const node = $('acquisition-status');
+  try {
+    const response = await fetch('/api/library/acquisition');
+    if (!response.ok) throw new Error('The last acquisition report could not be loaded.');
+    const report = await response.json();
+    render(node,
+      h('p', { text: report.finished_at ? `Last completed check: ${new Date(report.finished_at * 1000).toLocaleString()}. ${report.counts?.admitted || 0} new performances added.` : 'No completed automatic check has been recorded yet.' }),
+      h('p', { text: report.error || (report.status === 'running' ? 'Checking sources now; completed source results appear below.' : report.status === 'degraded' ? 'Some sources were unavailable. Other sources were checked; details are below.' : 'Existing songs and playback are left in place while new candidates are assessed.') }),
+      h('details', {}, h('summary', { text: 'Source results' }),
+        (report.sources || []).map(source => h('p', { text: `${source.source}: ${source.status}. ${source.error || source.reason || (source.retry_at ? `Retry after ${new Date(source.retry_at * 1000).toLocaleString()}` : `${source.counts?.admitted || 0} added`)}` }))));
+  } catch (error) { render(node, h('p', { text: error.message })); }
+}

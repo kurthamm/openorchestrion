@@ -38,6 +38,7 @@ from ..library.metadata import (
 )
 from ..library.readiness import readiness, source_facts
 from ..library.qualification import qualification
+from ..library.acquisition import status as acquisition_status
 from ..models import PlaybackIntent
 from ..playback import (
     PlaybackConflict,
@@ -691,6 +692,11 @@ async def set_favorite_endpoint(
 
     await asyncio.to_thread(reindex_asset, settings.catalog_db, settings.library_root, asset_id)
     return await library_asset(request, asset_id)
+
+
+@router.get("/library/acquisition")
+async def get_acquisition_status(request: Request) -> dict:
+    return await asyncio.to_thread(acquisition_status, _settings(request).library_root.resolve())
 
 
 @router.get("/queue", response_model=QueueState)

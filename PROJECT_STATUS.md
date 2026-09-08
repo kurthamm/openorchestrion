@@ -15,13 +15,22 @@ The major remaining engineering evidence is physical rather than architectural: 
 The [developer handoff](docs/developer-handoff.md) identifies the shared `main` baseline, exact deployed source, validation evidence and remaining limits. [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the reliability, curated library and listening-room changes on September 7. The [single-keyboard release record](docs/single-keyboard-release-2026-09.md) tracks its CI, installed wheel and Pi timing evidence.
 
 The [complete-listening v2 release](docs/library-quality-publication.md) is deployed:
-**5,832 performances available from 25,893 originals assessed**. All other originals
+**5,832 performances were retained from 25,893 originals assessed**. All other originals
 remain in the recovery archive. Publisher verification and independent arrangement
 assessment are labeled separately, with per-file decisions and playback details.
 The integrated release preserves the durable player workflows and PR #91 off-site
-backup support. It passes 704 tests; 101 deployed runtime files match the source.
+backup support. That historical build passed 704 tests with 101 matching runtime files.
 The earlier [readiness release](docs/library-playback-readiness.md) remains historical
 timing and compatibility evidence. Source admission does not certify acoustic fidelity.
+
+[Automatic acquisition](docs/automatic-acquisition.md) is now deployed and scheduled
+daily at 04:30–04:45 America/New_York. Five tested sources feed the existing v2
+quality gate; duplicate history covers all originals and subsequent decisions.
+The first run added **29 performances**, so **5,861 are now available**. It rejected
+50 candidates and skipped 7 duplicates. No original archives were deleted.
+The release integrates PR #93 player operations, passes **726 tests**, and has
+**107 deployed runtime files matching source**. Source failures and run results are
+visible in Playback & devices; the acquisition database survives normal backup.
 
 ## Implemented product stack
 
@@ -40,7 +49,7 @@ validation limits are listed there separately from completed software work.
 - `openorchestrion-reanalyze` for repairing deterministic analysis without re-importing immutable MIDI objects.
 - Rebuildable `catalog.db` with composition/performance separation and per-asset reconciliation.
 - Durable favorites and curated metadata that survive catalog deletion/rebuild.
-- Automated reversible admission: 5,832 active performances and 20,061 archived originals on the current Pi; rebuild and single-asset reindex enforce the v2 admission list. Complete original-library publication and restoration were rehearsed with all hashes verified.
+- Automated reversible admission: the initial 5,832-performance selection plus 29 newly acquired performances, with 20,061 original files archived; rebuild and single-asset reindex enforce the v2 admission list. Complete original-library publication and restoration were rehearsed with all hashes verified.
 
 ### Rights and starter repertoire
 

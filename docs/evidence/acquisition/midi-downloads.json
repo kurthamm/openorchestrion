@@ -1,0 +1,37 @@
+[
+  {
+    "source": "smd",
+    "url": "https://www.audiolabs-erlangen.de/content/resources/MIR/SMD/02_midi/data/midi/Bach_BWV849-01_001_20090916-SMD.mid",
+    "bytes": 18480,
+    "header": "MThd",
+    "sha256": "95bdfd46cfa37637d18db809d8a586608e3b18aa64ec0206b491e2de9d115fab"
+  },
+  {
+    "source": "classical-archives",
+    "url": "https://www.classicalarchives.com/prs/midi_free/Bach-Partita_No1_in_C_BWV772.mid",
+    "bytes": 3654,
+    "header": "MThd",
+    "sha256": "c61641bc734e245eb76941e51a0edcdc2811b0ae2185196560199e590e25bd41"
+  },
+  {
+    "source": "vgmusic",
+    "url": "https://www.vgmusic.com/music/other/miscellaneous/piano/dotHack_Loop2.mid",
+    "bytes": 35087,
+    "header": "MThd",
+    "sha256": "3c4d39522ae7ec12dba39e5c9c80f9d99220df6ba6d42f0dc0dd2d4f97838b3a"
+  },
+  {
+    "source": "mutopia",
+    "url": "https://www.mutopiaproject.org/ftp/AbtF/Vocalise1/Vocalise1.mid",
+    "bytes": 2159,
+    "header": "MThd",
+    "sha256": "bd6524f98752dd9190376e29dd0bce82d5bd5e57dcdbd549687e7836629434ff"
+  },
+  {
+    "source": "midkar",
+    "url": "https://midkar.com/Pop_Rock/ABC/2_times_aw.mid",
+    "bytes": 51260,
+    "header": "MThd",
+    "sha256": "0b65acb2adf6fec6bae9dfb0294829466ceec7790c72432ea563c36b949e7597"
+  }
+]
