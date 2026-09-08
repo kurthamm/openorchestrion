@@ -1,4 +1,4 @@
-"""``openorchestrion-stage-candidate`` — turn a downloaded file into a reviewable candidate.
+"""``openorchestrion-stage-candidate`` â€” turn a downloaded file into a reviewable candidate.
 
 Curation research and file retrieval do not always happen in the same place. The
 person who can read a license page may be unable to commit, and the machine that
@@ -6,17 +6,17 @@ can commit may be unable to reach the archive at all. This is the seam between
 those two halves: given a file that something else fetched, it verifies the file
 is what the research was about and writes the manifest row that vouches for it.
 
-Nothing here touches the network. That is deliberate — every check in this module
+Nothing here touches the network. That is deliberate â€” every check in this module
 is a pure function of a file and a claim, so the whole thing is testable without
 a fixture server, and the one step that genuinely needs the internet stays in the
 CI job where it can be reviewed as three lines of YAML.
 
 The order of checks is the point:
 
-1. **Host** — is this even a source the project has agreed to work through?
-2. **Digest** — are these the bytes the research was about?
-3. **MIDI** — is it music at all, or an error page with a ``.mid`` name?
-4. **Rights** — does the evidence support the claim being made?
+1. **Host** â€” is this even a source the project has agreed to work through?
+2. **Digest** â€” are these the bytes the research was about?
+3. **MIDI** â€” is it music at all, or an error page with a ``.mid`` name?
+4. **Rights** â€” does the evidence support the claim being made?
 
 A file that fails any of them never reaches a manifest.
 """
@@ -26,6 +26,9 @@ from __future__ import annotations
 import argparse
 import csv
 import hashlib
+import json
+import tempfile
+import zipfile
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -165,7 +168,7 @@ def stage_candidate(
 
     ``expected_sha256`` is optional but not decorative. Supplied, it proves the
     file is the one whose license was actually read. Omitted, the digest is
-    computed and recorded, and the result says so — because "I checked this
+    computed and recorded, and the result says so â€” because "I checked this
     file's terms" and "I checked some file's terms and this is a file" are
     different claims and must not look alike in review.
     """
@@ -178,7 +181,7 @@ def stage_candidate(
 
     # Blank means "not given", whichever way it arrives. Without the strip, an
     # empty string falls back to the source name while a whitespace-only one is
-    # refused — the same intent taking two different paths.
+    # refused â€” the same intent taking two different paths.
     target_name = _safe_target_name((filename or "").strip() or source.name)
 
     size = source.stat().st_size
@@ -230,6 +233,42 @@ def stage_candidate(
     )
 
 
+def stage_bundle_member(
+    file_path: str | Path, destination: str | Path, rights: RightsEvidence, *,
+    member: str, archive_sha256: str, expected_sha256: str, **kwargs,
+) -> StagedCandidate:
+    """Audit the whole bundle, then stage one explicitly researched member.
+
+    No extraction by archive pathname, inferred rights for siblings, or implicit
+    concatenation of practice parts. The audit travels with the candidate.
+    """
+    from .bundle import inspect_bundle
+
+    try:
+        report = inspect_bundle(Path(file_path), expected_sha256=archive_sha256)
+        selected = next((row for row in report["members"] if row["member"] == member), None)
+        if selected is None or selected["status"] != "readable-midi":
+            raise CandidateError("selected archive member is not readable MIDI with notes")
+        if any(row["status"] in {"invalid-midi", "empty-midi"} for row in report["members"]):
+            raise CandidateError("bundle contains invalid or empty MIDI; resolve its audit first")
+        if selected["sha256"] != expected_sha256.lower():
+            raise CandidateError("member digest does not match the researched file")
+        with zipfile.ZipFile(file_path) as archive, tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "candidate.mid"
+            with archive.open(member) as stream:
+                raw = stream.read(2 * 1024 * 1024 + 1)
+            if len(raw) > 2 * 1024 * 1024:
+                raise CandidateError("selected member exceeds the 2 MiB limit")
+            source.write_bytes(raw)
+            staged = stage_candidate(source, destination, rights,
+                                     expected_sha256=expected_sha256, **kwargs)
+        evidence = Path(destination) / f"bundle-{report['archive_sha256']}.json"
+        evidence.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        return staged
+    except (OSError, ValueError, zipfile.BadZipFile, RuntimeError) as exc:
+        raise CandidateError(str(exc)) from exc
+
+
 def _append_manifest_row(manifest: Path, values: dict[str, object]) -> None:
     """Add one row, replacing any existing row for the same file.
 
@@ -259,6 +298,8 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--file", required=True, help="The downloaded file to stage")
+    parser.add_argument("--archive-member", help="Exact ZIP member to stage after auditing all members")
+    parser.add_argument("--archive-sha256", help="Researched ZIP digest; member digest is also required")
     parser.add_argument("--into", required=True, help="Candidate directory to write into")
     parser.add_argument("--filename", help="Plain .mid/.midi basename to store")
     parser.add_argument(
@@ -303,13 +344,23 @@ def main() -> None:
     )
 
     try:
-        staged = stage_candidate(
+        extra = {}
+        stage = stage_candidate
+        if args.archive_member:
+            if not args.archive_sha256 or not args.expected_sha256 or not args.filename:
+                raise CandidateError("ZIP staging requires archive/member digests and --filename")
+            stage = stage_bundle_member
+            extra = {"member": args.archive_member, "archive_sha256": args.archive_sha256}
+        elif args.archive_sha256:
+            raise CandidateError("--archive-sha256 requires --archive-member")
+        staged = stage(
             args.file,
             args.into,
             rights,
             filename=args.filename,
             expected_sha256=args.expected_sha256,
             source_url=args.source_url,
+            **extra,
         )
     except CandidateError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -323,7 +374,7 @@ def main() -> None:
     if staged.digest_was_verified:
         print("  digest:   matches the researched value")
     else:
-        print("  digest:   OBSERVED, not verified — no researched digest was supplied")
+        print("  digest:   OBSERVED, not verified â€” no researched digest was supplied")
 
 
 if __name__ == "__main__":

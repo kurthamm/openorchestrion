@@ -41,6 +41,7 @@ Installing the starter catalog is therefore the ordinary manifest import:
 
 ```bash
 openorchestrion-import-midi --from-csv music/starter/catalog.csv --library-root var/library
+openorchestrion-tag --from-csv music/starter/tags.csv --library-root var/library
 openorchestrion-reindex var/library
 ```
 
@@ -72,6 +73,13 @@ file being free to download says nothing at all about redistribution.
 `openorchestrion.library.rights` enforces this: a `verified-open` claim missing
 either half is refused at import. See
 [../docs/music-sources.md](../docs/music-sources.md) for the recorded fields.
+
+## Current ensemble follow-up
+
+The shipped starter set now contains 18 rights-verified files. It is distinct from the
+private, quality-curated appliance library. The [September candidate review](../docs/repertoire-candidate-review.md)
+records why the named ensemble candidates were not added. Rights clearance alone
+is not evidence of expressive, complete playback; issue #64 remains open.
 
 ## Procedure
 
@@ -333,8 +341,7 @@ string is refused by the audit for exactly that reason.
 
 ## Status
 
-**Sixteen pieces have cleared** and ship in `music/starter/`, with breadth across five
-of the six categories:
+**Eighteen files have cleared redistribution checks** and ship in `music/starter/`, with breadth across all six categories:
 
 | Category | Cleared |
 | --- | --- |
@@ -343,19 +350,19 @@ of the six categories:
 | Classical / baroque | Prelude in C BWV 846, Invention No. 1 BWV 772, Air on the G String BWV 1068 |
 | Two-piano / duet | Diabelli Op. 149 Nos. 1, 4 and 5 (piano four hands) |
 | Seasonal | Stille Nacht (Silent Night) |
+| Chamber / orchestral | Donizetti Quartet No. 18, movements I and IV (documented viola-program derivatives) |
 
 The three Diabelli duets matter most: works *written* for two players rather than a
 solo part split after the fact, which is what the multi-device routing work exists to
-play. Five of the sixteen are under share-alike licences, so the attribution path is
-exercised by a third of the catalog rather than by a single item.
+play. Five of the original sixteen are under share-alike licences, so the attribution path is
+exercised by multiple entries.
 
-The Air is the only entry that is not solo piano — a string-ensemble rendering,
-tagged `MULTI_INSTRUMENT`, which gives the routing work something to distribute that
-was never a keyboard part to begin with.
-
-Still thin: **chamber and orchestral** repertoire is one piece, and the classical
-entries are otherwise all keyboard. Composition-level research for the remaining
-candidates is complete; their file-level terms are outstanding.
+The Air and two new Donizetti movements provide three ensemble entries tagged
+`MULTI_INSTRUMENT`. The Donizetti derivatives passed complete-listening-v2 after
+an evidence-backed viola program correction; all musical events were preserved.
+See [the source, ZIP and quality audit](../docs/repertoire-candidate-review.md).
+The original sixteen entries were admitted under the earlier rights-focused starter
+policy; they are not retroactively certified as expressive v2 listening performances.
 
 The generated conformance suite in `openorchestrion.testing.midi_fixtures` remains
 the project's own content under its own license, and is separate from this catalog.

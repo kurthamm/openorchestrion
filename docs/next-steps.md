@@ -1,33 +1,46 @@
-# Next work — issue and implementation review, 7 September 2026
+# Current work queue — September 2026
 
-Reviewed the seven open GitHub issues, the roadmap, current deployed source, and issue comments. The roadmap is a capability plan, not a completion checklist: many capabilities in it already exist.
+Start from `main` and [the developer handoff](developer-handoff.md). Historical
+release documents and roadmap phases are not unchecked implementation backlogs.
 
-## Corrected hardware baseline
+## Completed software and publication work
 
-[Issue #1's final WK-220 report](https://github.com/kurthamm/openorchestrion/issues/1#issuecomment-5564036325) records completion of its hardware checklist on September 6, on software `817e978`: audible playback, velocity, sustain, program/bank changes, multichannel/percussion, polyphony stress, expressive piano, sustained playback and reconnect. This is previously reported evidence, not a new test of the redesigned release. The CT-X700 named in issue #1 still needs its own validation. The current API reports one ready `CASIO USB-MIDI` output; that generic endpoint name alone does not establish the model.
+The listening-room redesign, v2 quality curation, instrument/performance details,
+saved playlists/stations, queue editing/persistence, playback modes, seek, sleep,
+secured tunnel, backups and nightly acquisition are implemented. Maintenance adds
+recovery-tested installation, empty-library bootstrap, ZIP inspection/staging,
+first-use/troubleshooting guides and two qualified ensemble starter derivatives.
 
-## Recommended order
+- **#6 — conformance/timing:** 14 fixtures and the benchmark harness are complete.
+  The 120-minute headless Pi run is recorded, plus a passing 10-minute Pi-local
+  Chromium/Xvfb run with catalog requests and WebSocket connectivity. These are
+  software timing measurements; actual two-engine/acoustic tests remain below.
+  [Evidence](repository-maintenance.md).
+- **#10 — publication:** v2.1 Markdown white paper and public static site describe
+  current software and its evidence limits. Pages Actions source is enabled;
+  deployment verification accompanies the maintenance PR. Future physical-build
+  photos/video supplement rather than withhold current documentation.
+- **#64 — repertoire:** starter repertoire grows from 16 to 18 files, with three
+  ensemble entries. Two Donizetti movements pass the unchanged quality policy;
+  per-file rights, exact program corrections and all ZIP members are recorded.
+  [Repertoire review](repertoire-candidate-review.md).
 
-1. **Integration completed.** [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the reliability, library-admission and listening-room changes into `main`, preserving independent acquisition tools and `docs/two-engine-orchestration.md`. CI passed on Python 3.11–3.13, and the primary Pi checkout now follows main. See the [release record](single-keyboard-release-2026-09.md).
-2. **Current headless timing milestone completed — [#6](https://github.com/kurthamm/openorchestrion/issues/6).** Three corrected idle checks, three loaded checks and a full 120-minute WK-220 loaded run passed all software targets on September 7. The release record retains raw reports, invalid earlier attempts, environment evidence and Auto Power Off setup. Kiosk, physical two-output and acoustic measurements remain separate pending evidence; this does not close all of #6.
-3. **Library readiness and responsiveness completed.** The [deployed follow-up](library-playback-readiness.md) adds sounding-part facts, policy-aware previews, explicit compatibility/completeness clues, faster repeat preparation/filtering, and a corrected metadata timing loader. All 20,549 admitted files are indexed; seven derived analysis records were repaired. The source MIDI and admission set are preserved.
-4. **Resolve evidence-backed library ambiguities.** Prioritize the reported device-specific banks/kits and broad MULTI_INSTRUMENT labels. Use deterministic mapping evidence and arrangement analysis; do not equate one channel with a bad performance. Cold parsing/dispatch for very dense files is a remaining measured optimization opportunity. This is the next lane, not a claim that those ambiguities have all been solved.
+## Remaining physical or owner-deferred work
 
-## Deferred until the new keyboard is available
+| Issue | Ready now | Remaining action |
+| --- | --- | --- |
+| [#1 — CT-X700 proof](https://github.com/kurthamm/openorchestrion/issues/1) | Manufacturer profile and fixture checklist; WK-220 evidence separately recorded | New keyboard unavailable and owner-deferred. Run its own receive/range/program/controller/endurance checks when available. |
+| [#8 — enclosure/BOM](https://github.com/kurthamm/openorchestrion/issues/8) | Concrete headless/display BOM, enclosure option and mounting/cabling/serviceability plan in [reference build](reference-build.md) | Fit, cooling and touch-stability validation on the physical display build, plus photographs. No measured enclosure or acoustic results are invented. |
+| [#11 — Yamaha engine](https://github.com/kurthamm/openorchestrion/issues/11) | Manufacturer research retained | Optional later expansion; not the current acquisition plan. No purchase or implementation scheduled. |
+| [#84 — two-engine orchestra](https://github.com/kurthamm/openorchestrion/issues/84) | Generic routing and future design retained | Owner-deferred until new hardware is available. Validate physical routing and relative acoustic latency before device-specific orchestra behavior. |
 
-The owner confirmed on September 7 that the CT-X700 is not available and this work is for later. **Do not start #84 orchestration implementation, a MIDI Orchestra UI, CT-X700 validation under #1, or physical two-engine tests now.** Keep the [two-engine plan](https://github.com/kurthamm/openorchestrion/blob/main/docs/two-engine-orchestration.md) as future design context. Virtual destinations may still be used by existing regression tests, but they do not advance this deferred feature into the current work queue.
+AI browser UI and volume-knob synchronization remain outside the current work.
+Do not infer arrival dates from old issue text, transfer WK-220 results to another
+model, or call a virtual-display test physical touchscreen validation.
 
-For #6, run only load profiles supported by the current Pi/WK-220 setup. Record any unavailable kiosk or physical two-output profile as pending; do not claim completion of the full hardware benchmark from a software-only result.
+## Library counts
 
-When this deferred work resumes, the orchestration UI should extend the new performance detail/settings surfaces with a visible parts-to-engines plan and estimated load, using existing queue/player controls. It is deterministic and does not require enabling AI. Actual timbre-affinity ratings should follow listening evidence; initial configured scores remain provisional.
-
-## Remaining open lanes
-
-| Issue | Status and priority |
-| --- | --- |
-| [#64 — starter chamber/orchestral repertoire](https://github.com/kurthamm/openorchestrion/issues/64) | Expand the verified-open starter collection with complete arrangements and per-file provenance. This is separate from the private 20,549-performance listening library; it is not a mandate for another bulk import. |
-| [#10 — white paper and project site](https://github.com/kurthamm/openorchestrion/issues/10) | Publication work, separate from the Pi control website just redesigned. Update software claims now; add hardware media/results only with evidence. |
-| [#8 — enclosure and BOM](https://github.com/kurthamm/openorchestrion/issues/8) | Follow a stable physical arrangement and power/cabling/cooling requirements. |
-| [#11 — complementary Yamaha engine](https://github.com/kurthamm/openorchestrion/issues/11) | Later expansion. The newer #84 reference plan prioritizes the two Casios; reconcile the older Yamaha lane rather than purchasing or implementing against it automatically. |
-
-AI remains deferred at the owner's request. Integration and current-keyboard timing work were subsequently authorized and are recorded in the release document. No provider or new-keyboard feature was activated; the broader hardware issues are not closed by these software/headless results.
+The original audit started with **25,893**, retained **5,832**, and archived
+**20,061** originals. The first acquisition run added 29, yielding **5,861** at
+that release. This is dated deployment history, not the public starter count or
+a fixed capacity. The current API reports subsequent additions.

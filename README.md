@@ -1,44 +1,67 @@
 # OpenOrchestrion
 
-**An open-source, local-first MIDI music appliance with natural-language selection, smart stations, multi-keyboard routing, and a household web interface.**
+**An open-source, local-first MIDI music appliance with a curated music library, saved playlists, smart stations, and a household web interface.**
 
 OpenOrchestrion began with a simple question:
 
 > What would a player piano look like if it were invented today?
 
-A Raspberry Pi maintains a local MIDI library, interprets requests such as **“recognizable Christmas piano music while we eat for two hours,”** builds an explainable queue, and drives one or more real hardware sound engines from a single authoritative playback timeline.
+A Raspberry Pi maintains a local MIDI library, builds queues and stations, and drives hardware sound engines from one authoritative playback timeline. The household interface centers on browsing and playback; natural-language interpretation exists as an optional backend capability.
 
 The attached keyboard is treated primarily as a MIDI-addressed synthesizer, amplifier, and speaker system. Human key feel is secondary to MIDI receive behavior, sound quality, polyphony, multitimbral capability, program support, reliability, and price.
 
+## Install and try it
+
+Start with [Getting started](docs/getting-started.md) for installation, first music,
+keyboard connection and a hardware-free demo. Use [Troubleshooting](docs/troubleshooting.md)
+for common problems and [Contributing](CONTRIBUTING.md) for development.
+The reference owner's personal library is not included in this public repository.
+
 ## Where the project is now
 
-The core software architecture is implemented and packaged as a boot-to-appliance system. Current work is shifting toward **physical validation, repertoire breadth, and publication**.
+The appliance is running on a Raspberry Pi 5 with a Casio WK-220. The shared
+`main` branch includes the listening-room redesign, durable player workflows,
+quality-gated library, secured remote-access integration, off-site backup, and
+nightly acquisition. Start with [the current developer handoff](docs/developer-handoff.md).
+
+The initial audit retained **5,832 of 25,893 original files**. The first acquisition
+run added **29**, giving **5,861 available performances as of September 7, 2026**.
+That is a dated deployment snapshot; the live library/API reports subsequent growth.
+The 20,061 excluded originals remain archived. See [quality publication](docs/library-quality-publication.md)
+and [automatic acquisition](docs/automatic-acquisition.md).
 
 Implemented today:
 
 - robust MIDI import and deterministic analysis;
 - SHA-256 content-addressed assets with durable JSON sidecars;
 - curated metadata, favorites, bulk tagging, and re-analysis;
-- [automated listening-library admission](docs/library-curation.md), reversible quality archives, and admission gating for new imports;
+- [complete-listening-v2 admission](docs/library-quality-standard.md), reversible quality archives, and admission gating for new imports;
 - rebuildable SQLite catalog plus durable listening history;
 - evidence-backed rights/provenance and verified-open starter repertoire;
 - deterministic Smart Stations with no-repeat, diversity, compatibility, and relaxation diagnostics;
 - offline Music Concierge plus optional hosted OpenAI structured intent interpretation;
-- server-owned queue, transport, scheduler, cleanup, and WebSocket state;
+- server-owned queue, seek, repeat/shuffle/continuous play, sleep timer, saved playlists/stations, restart recovery, and WebSocket state;
 - synchronized multi-output routing from one master timeline;
 - `SOLO_PIANO`, `MULTI_INSTRUMENT`, `PIANO_DUET`, `TWO_PIANO`, and `DUELING_PIANO` routing semantics;
 - non-destructive Original, Piano Only, and General MIDI Override rendering;
 - [responsive listening-room UI](docs/web-listening-room.md) with paginated search, favorites, queue and MIDI performance details;
-- first-run setup and privileged local configuration;
+- explicit Playback & devices settings and privileged local configuration;
 - optional `openorchestrion.local` discovery via Avahi/mDNS;
 - systemd appliance packaging and non-editable wheel smoke tests;
-- verified application-data backup/restore with rollback-safe replacement;
-- CI on Python 3.11/3.12 plus repository, schema, rights, generated-MIDI, and wheel contracts.
+- verified application-data backup/restore, off-site backup, nightly source acquisition, and system-health reporting;
+- CI on Python 3.11–3.13 plus repository, schema, rights, generated-MIDI, and wheel contracts.
 
-Still pending physical evidence:
+Recorded physical evidence:
 
-- Raspberry Pi 5 loaded scheduler measurements;
-- first real keyboard/sound-engine end-to-end validation;
+- WK-220 end-to-end checklist reported passed on September 6;
+- headless Pi/WK-220 loaded 120-minute software timing run passed on September 7.
+
+Those results belong to the builds named in [the release evidence](docs/single-keyboard-release-2026-09.md).
+They do not certify every later build or acoustic timing.
+
+Deferred or unavailable physical evidence:
+
+- physical touchscreen usability and measured MIDI-to-audio timing;
 - complementary second-engine validation and MIDI-to-audio latency measurement;
 - two-engine acoustic synchronization evidence;
 - reference enclosure/BOM;
@@ -173,7 +196,7 @@ The reference software path targets Raspberry Pi OS 64-bit and provides:
 - software under `/opt/openorchestrion/venv`;
 - local runtime configuration and separate service-only provider secrets;
 - optional Avahi/mDNS discovery;
-- first-run setup/readiness guidance;
+- device readiness and explicit settings without a forced setup redirect;
 - journald logs;
 - `openorchestrion-smoke` post-install verification;
 - safe update and uninstall/recovery procedures.
@@ -220,7 +243,7 @@ reliability fixes, regression checks, and remaining hardware/deployment validati
 - [Living architecture documentation](docs/README.md)
 - [Roadmap](ROADMAP.md)
 
-The publication deliberately distinguishes **implemented software**, **documented compatibility**, and **physical project validation**. Hardware measurements and demo media will be added after the reference build exists rather than invented in advance.
+The publication deliberately distinguishes **implemented software**, **documented compatibility**, and **physical project validation**. Recorded WK-220 and headless Pi measurements are linked above. CT-X700/second-engine validation, enclosure media, and acoustic calibration remain deferred. The public project site is published through GitHub Pages; release-specific deployment verification is recorded in the maintenance PR.
 
 ## Licensing
 

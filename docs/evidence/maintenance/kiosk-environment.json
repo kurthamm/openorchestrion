@@ -1,0 +1,83 @@
+{
+  "started": "2026-09-08T01:11:26.118355+00:00",
+  "source_commit": "afbe73168a47f477e5718f2add4228387346e8ff",
+  "profile": "Pi-local-Chromium-Xvfb-1280x720-readonly-ui",
+  "physical_display": false,
+  "physical_playback_changed": false,
+  "http_requests": 114,
+  "websocket_messages": 1,
+  "initial_playback": {
+    "phase": "ready",
+    "playing": false,
+    "ai": {
+      "enabled": true,
+      "provider": "deterministic-fallback",
+      "reason": "no_provider_configured_using_offline_interpreter"
+    },
+    "outputs": {
+      "ready": true,
+      "devices": [
+        "CASIO USB-MIDI:CASIO USB-MIDI MIDI 1 24:0"
+      ],
+      "reason": null
+    },
+    "library": {
+      "indexed": true,
+      "assets": 5861,
+      "compositions": 5478,
+      "genres": 58,
+      "moods": 25,
+      "themes": 17
+    }
+  },
+  "initial_queue": {
+    "items": [],
+    "current_index": null,
+    "total_duration_seconds": 0.0,
+    "command_id": null,
+    "repeat_mode": "off",
+    "shuffle": false,
+    "continuous": false,
+    "can_undo": false
+  },
+  "chromium_version": "Chromium 152.0.7977.82 built on Debian GNU/Linux 13 (trixie)",
+  "before_throttled": "throttled=0xe0000",
+  "benchmark_exit": 0,
+  "after_throttled": "throttled=0xe0000",
+  "final_playback": {
+    "phase": "ready",
+    "playing": false,
+    "ai": {
+      "enabled": true,
+      "provider": "deterministic-fallback",
+      "reason": "no_provider_configured_using_offline_interpreter"
+    },
+    "outputs": {
+      "ready": true,
+      "devices": [
+        "CASIO USB-MIDI:CASIO USB-MIDI MIDI 1 24:0"
+      ],
+      "reason": null
+    },
+    "library": {
+      "indexed": true,
+      "assets": 5861,
+      "compositions": 5478,
+      "genres": 58,
+      "moods": 25,
+      "themes": 17
+    }
+  },
+  "final_queue": {
+    "items": [],
+    "current_index": null,
+    "total_duration_seconds": 0.0,
+    "command_id": null,
+    "repeat_mode": "off",
+    "shuffle": false,
+    "continuous": false,
+    "can_undo": false
+  },
+  "finished": "2026-09-08T01:21:57.311546+00:00",
+  "browser_survived": true
+}

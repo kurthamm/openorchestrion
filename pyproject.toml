@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openorchestrion"
 version = "0.1.0-dev"
-description = "Open-source networked MIDI music appliance with AI-powered music selection"
+description = "Local-first MIDI music appliance with a curated library and household web interface"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
@@ -20,6 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
+openorchestrion-inspect-bundle = "openorchestrion.library.bundle:main"
 openorchestrion-fixtures = "openorchestrion.testing.midi_fixtures:main"
 openorchestrion-analyze = "openorchestrion.midi.analyzer:main"
 openorchestrion-import-midi = "openorchestrion.library.importer:main"

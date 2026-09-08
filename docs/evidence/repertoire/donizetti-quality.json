@@ -1,0 +1,404 @@
+[
+  {
+    "path": "donizetti-quartet18-movement1.mid",
+    "asset_id": "sha256:96941bf4f41503f1f19b4c942bb6b385f85f08a4fb8b2ebe17714e5b3160c53d",
+    "status": "qualified",
+    "reasons": [],
+    "evidence": [
+      {
+        "completeness": "complete",
+        "performance_capture": false,
+        "published_instrumentation": "string quartet",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=342",
+        "basis": "Full movement export identified in publisher score source; all four parts present. Viola program/name corrected to match the separately published viola part. Other events preserved exactly; derivative hashes and correction recipe recorded in repository.",
+        "download_sha256": "96941bf4f41503f1f19b4c942bb6b385f85f08a4fb8b2ebe17714e5b3160c53d"
+      }
+    ],
+    "facts": {
+      "format": 1,
+      "division": 384,
+      "duration": 746.5,
+      "notes": 9027,
+      "first_attack": 0.0,
+      "last_attack": 745.9999999999861,
+      "last_release": 746.4999999999861,
+      "longest_silence": 1.5,
+      "peak_pitched_notes": 7,
+      "parts": [
+        {
+          "channel": 1,
+          "percussion": false,
+          "notes": 1912,
+          "velocity_values": 17,
+          "dominant_velocity_fraction": 0.466527,
+          "velocity_min": 76,
+          "velocity_max": 124,
+          "note_min": 57,
+          "note_max": 93,
+          "unique_pitches": 36,
+          "patches": [
+            {
+              "program": 41,
+              "msb": 0,
+              "lsb": 0,
+              "implicit": false,
+              "notes": 1912
+            }
+          ],
+          "tracks": [
+            {
+              "index": 1,
+              "name": "violinI:"
+            }
+          ],
+          "controllers": [
+            {
+              "cc": 7,
+              "min": 100,
+              "max": 100,
+              "distinct": 1
+            }
+          ],
+          "pitch_bend": false,
+          "pressure": false,
+          "occupied_sections": 12,
+          "unreleased_keys": 0,
+          "pedal_held_at_end": 0
+        },
+        {
+          "channel": 2,
+          "percussion": false,
+          "notes": 2598,
+          "velocity_values": 22,
+          "dominant_velocity_fraction": 0.444188,
+          "velocity_min": 76,
+          "velocity_max": 127,
+          "note_min": 55,
+          "note_max": 88,
+          "unique_pitches": 32,
+          "patches": [
+            {
+              "program": 41,
+              "msb": 0,
+              "lsb": 0,
+              "implicit": false,
+              "notes": 2598
+            }
+          ],
+          "tracks": [
+            {
+              "index": 2,
+              "name": "violinII:"
+            }
+          ],
+          "controllers": [
+            {
+              "cc": 7,
+              "min": 100,
+              "max": 100,
+              "distinct": 1
+            }
+          ],
+          "pitch_bend": false,
+          "pressure": false,
+          "occupied_sections": 12,
+          "unreleased_keys": 0,
+          "pedal_held_at_end": 0
+        },
+        {
+          "channel": 3,
+          "percussion": false,
+          "notes": 2751,
+          "velocity_values": 9,
+          "dominant_velocity_fraction": 0.520538,
+          "velocity_min": 63,
+          "velocity_max": 101,
+          "note_min": 48,
+          "note_max": 76,
+          "unique_pitches": 29,
+          "patches": [
+            {
+              "program": 42,
+              "msb": 0,
+              "lsb": 0,
+              "implicit": false,
+              "notes": 2751
+            }
+          ],
+          "tracks": [
+            {
+              "index": 3,
+              "name": "viola:"
+            }
+          ],
+          "controllers": [
+            {
+              "cc": 7,
+              "min": 100,
+              "max": 100,
+              "distinct": 1
+            }
+          ],
+          "pitch_bend": false,
+          "pressure": false,
+          "occupied_sections": 12,
+          "unreleased_keys": 0,
+          "pedal_held_at_end": 0
+        },
+        {
+          "channel": 4,
+          "percussion": false,
+          "notes": 1766,
+          "velocity_values": 16,
+          "dominant_velocity_fraction": 0.451302,
+          "velocity_min": 63,
+          "velocity_max": 101,
+          "note_min": 36,
+          "note_max": 67,
+          "unique_pitches": 32,
+          "patches": [
+            {
+              "program": 43,
+              "msb": 0,
+              "lsb": 0,
+              "implicit": false,
+              "notes": 1766
+            }
+          ],
+          "tracks": [
+            {
+              "index": 4,
+              "name": "cello:"
+            }
+          ],
+          "controllers": [
+            {
+              "cc": 7,
+              "min": 100,
+              "max": 100,
+              "distinct": 1
+            }
+          ],
+          "pitch_bend": false,
+          "pressure": false,
+          "occupied_sections": 12,
+          "unreleased_keys": 0,
+          "pedal_held_at_end": 0
+        }
+      ],
+      "meta_counts": {
+        "3": 5,
+        "1": 2,
+        "88": 1,
+        "81": 1,
+        "47": 5,
+        "4": 4,
+        "89": 12
+      },
+      "sysex_count": 0,
+      "unknown_sysex": 0,
+      "fingerprint": "bb0c2ee944bd52457637add675bf6cf06d748edc027f0464402b9cf961843b1a"
+    }
+  },
+  {
+    "path": "donizetti-quartet18-movement4.mid",
+    "asset_id": "sha256:94e496254dcb33c56f792c3083874098445255be46411b4a66ee0ff97d905066",
+    "status": "qualified",
+    "reasons": [],
+    "evidence": [
+      {
+        "completeness": "complete",
+        "performance_capture": false,
+        "published_instrumentation": "string quartet",
+        "source": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=342",
+        "basis": "Full movement export identified in publisher score source; all four parts present. Viola program/name corrected to match the separately published viola part. Other events preserved exactly; derivative hashes and correction recipe recorded in repository.",
+        "download_sha256": "94e496254dcb33c56f792c3083874098445255be46411b4a66ee0ff97d905066"
+      }
+    ],
+    "facts": {
+      "format": 1,
+      "division": 384,
+      "duration": 359.99964,
+      "notes": 5081,
+      "first_attack": 0.0,
+      "last_attack": 358.36327800000487,
+      "last_release": 359.9996400000049,
+      "longest_silence": 0.545454,
+      "peak_pitched_notes": 8,
+      "parts": [
+        {
+          "channel": 1,
+          "percussion": false,
+          "notes": 1467,
+          "velocity_values": 17,
+          "dominant_velocity_fraction": 0.565781,
+          "velocity_min": 76,
+          "velocity_max": 127,
+          "note_min": 55,
+          "note_max": 88,
+          "unique_pitches": 34,
+          "patches": [
+            {
+              "program": 41,
+              "msb": 0,
+              "lsb": 0,
+              "implicit": false,
+              "notes": 1467
+            }
+          ],
+          "tracks": [
+            {
+              "index": 1,
+              "name": "violinI:"
+            }
+          ],
+          "controllers": [
+            {
+              "cc": 7,
+              "min": 100,
+              "max": 100,
+              "distinct": 1
+            }
+          ],
+          "pitch_bend": false,
+          "pressure": false,
+          "occupied_sections": 12,
+          "unreleased_keys": 0,
+          "pedal_held_at_end": 0
+        },
+        {
+          "channel": 2,
+          "percussion": false,
+          "notes": 1324,
+          "velocity_values": 15,
+          "dominant_velocity_fraction": 0.811934,
+          "velocity_min": 76,
+          "velocity_max": 104,
+          "note_min": 55,
+          "note_max": 83,
+          "unique_pitches": 29,
+          "patches": [
+            {
+              "program": 41,
+              "msb": 0,
+              "lsb": 0,
+              "implicit": false,
+              "notes": 1324
+            }
+          ],
+          "tracks": [
+            {
+              "index": 2,
+              "name": "violinII:"
+            }
+          ],
+          "controllers": [
+            {
+              "cc": 7,
+              "min": 100,
+              "max": 100,
+              "distinct": 1
+            }
+          ],
+          "pitch_bend": false,
+          "pressure": false,
+          "occupied_sections": 12,
+          "unreleased_keys": 0,
+          "pedal_held_at_end": 0
+        },
+        {
+          "channel": 3,
+          "percussion": false,
+          "notes": 1140,
+          "velocity_values": 4,
+          "dominant_velocity_fraction": 0.670175,
+          "velocity_min": 63,
+          "velocity_max": 90,
+          "note_min": 48,
+          "note_max": 80,
+          "unique_pitches": 32,
+          "patches": [
+            {
+              "program": 42,
+              "msb": 0,
+              "lsb": 0,
+              "implicit": false,
+              "notes": 1140
+            }
+          ],
+          "tracks": [
+            {
+              "index": 3,
+              "name": "viola:"
+            }
+          ],
+          "controllers": [
+            {
+              "cc": 7,
+              "min": 100,
+              "max": 100,
+              "distinct": 1
+            }
+          ],
+          "pitch_bend": false,
+          "pressure": false,
+          "occupied_sections": 12,
+          "unreleased_keys": 0,
+          "pedal_held_at_end": 0
+        },
+        {
+          "channel": 4,
+          "percussion": false,
+          "notes": 1150,
+          "velocity_values": 3,
+          "dominant_velocity_fraction": 0.867826,
+          "velocity_min": 63,
+          "velocity_max": 82,
+          "note_min": 36,
+          "note_max": 73,
+          "unique_pitches": 35,
+          "patches": [
+            {
+              "program": 43,
+              "msb": 0,
+              "lsb": 0,
+              "implicit": false,
+              "notes": 1150
+            }
+          ],
+          "tracks": [
+            {
+              "index": 4,
+              "name": "cello:"
+            }
+          ],
+          "controllers": [
+            {
+              "cc": 7,
+              "min": 100,
+              "max": 100,
+              "distinct": 1
+            }
+          ],
+          "pitch_bend": false,
+          "pressure": false,
+          "occupied_sections": 12,
+          "unreleased_keys": 0,
+          "pedal_held_at_end": 0
+        }
+      ],
+      "meta_counts": {
+        "3": 5,
+        "1": 2,
+        "88": 1,
+        "81": 1,
+        "47": 5,
+        "4": 4,
+        "89": 4
+      },
+      "sysex_count": 0,
+      "unknown_sysex": 0,
+      "fingerprint": "514fa6e6b6ea850c89b33b6c60b1b41bfa3f6bc1608fffb531a55076601a70aa"
+    }
+  }
+]

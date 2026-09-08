@@ -326,3 +326,43 @@ def test_backup_cannot_capture_ledger_mid_acquisition(library, tmp_path):
         with pytest.raises(BackupError, match="retry later"):
             create_backup(library.parent, tmp_path / "raced.zip")
     assert not (tmp_path / "raced.zip").exists()
+
+
+def test_snapshot_lock_does_not_require_write_permission(library):
+    path = library / '.acquisition-snapshot.lock'
+    previous = os.umask(0o077)
+    try:
+        with publication.snapshot_lock(library):
+            assert path.stat().st_mode & 0o777 == 0o644
+    finally:
+        os.umask(previous)
+    path.chmod(0o444)
+    with publication.snapshot_lock(library):
+        with pytest.raises(RuntimeError, match='retry later'):
+            with publication.snapshot_lock(library):
+                pass
+
+
+def test_new_user_can_initialize_and_publish_without_private_seed(tmp_path):
+    root = tmp_path / "new-library"
+    acq.initialize_empty(root)
+    record = candidate(tmp_path)
+    assert record["status"] == "qualified"
+    publication.publish(root, tmp_path / "publication.json", record)
+    assert catalog_stats(root / "catalog.db")["assets"] == 1
+    with pytest.raises(ValueError, match="existing collection"):
+        acq.initialize_empty(root)
+    assert catalog_stats(root / "catalog.db")["assets"] == 1
+
+
+def test_empty_bootstrap_preserves_rejection_history_and_refuses_unindexed_files(tmp_path):
+    root = tmp_path / "library"
+    acq.initialize_empty(root)
+    with closing(acq.connect(root)) as conn, conn:
+        conn.execute("INSERT INTO known VALUES (?,?,?,?)", ("sha256:discarded", "fp", "source", "rejected"))
+    acq.initialize_empty(root)
+    with closing(acq.connect(root)) as conn:
+        assert conn.execute("SELECT verdict FROM known").fetchone()[0] == "rejected"
+    (root / "assets" / "unindexed.mid").write_bytes(b"do not erase")
+    with pytest.raises(ValueError, match="existing collection"):
+        acq.initialize_empty(root)

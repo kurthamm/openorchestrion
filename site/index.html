@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="OpenOrchestrion is an open-source Raspberry Pi MIDI music appliance with natural-language selection, smart stations, multi-keyboard routing, and local-first playback.">
+  <meta name="description" content="OpenOrchestrion is an open-source Raspberry Pi MIDI music appliance with a curated MIDI library, saved playlists, smart stations, and local-first playback.">
   <title>OpenOrchestrion · The player piano, reinvented</title>
   <link rel="stylesheet" href="site.css">
 </head>
@@ -29,20 +29,20 @@
       <div class="hero-copy">
         <p class="eyebrow">Open source · local first · Raspberry Pi + MIDI</p>
         <h1>What would a player piano look like if it were invented today?</h1>
-        <p class="lede">A household music appliance that understands what you want to hear, chooses from a local MIDI library, and plays through one or more real keyboard sound engines.</p>
+        <p class="lede">Browse a quality-curated local MIDI library, save playlists, and play through real keyboard sound engines from your phone, tablet, or computer.</p>
         <div class="actions">
           <a class="button primary" href="https://github.com/kurthamm/openorchestrion">Explore the repository</a>
-          <a class="button" href="https://github.com/kurthamm/openorchestrion/blob/main/docs/appliance-install.md">Build the appliance</a>
+          <a class="button" href="https://github.com/kurthamm/openorchestrion/blob/main/docs/getting-started.md">Install and try it</a>
           <a class="button" href="https://github.com/kurthamm/openorchestrion/blob/main/docs/whitepaper/OpenOrchestrion_White_Paper_v2.md">Read the v2 white paper</a>
         </div>
       </div>
-      <div class="prompt-card" aria-label="Example OpenOrchestrion interaction">
-        <div class="prompt-title">What do you want to hear?</div>
-        <div class="prompt">Recognizable Christmas piano music while we eat for two hours.</div>
+      <div class="prompt-card" aria-label="Current listening-room controls">
+        <div class="prompt-title">Your listening room</div>
+        <div class="prompt">Choose a performance. Inspect its instruments. Build your evening queue.</div>
         <div class="intent">
-          <span>Christmas</span><span>dinner</span><span>piano</span><span>familiar</span><span>120 min</span>
+          <span>Discover</span><span>Library</span><span>Favorites</span><span>Playlists</span><span>Sleep timer</span>
         </div>
-        <div class="flow"><b>Intent</b> → Smart Station → Queue → MIDI → Keyboard</div>
+        <div class="flow"><b>Library</b> → Queue → MIDI → Keyboard</div>
       </div>
     </section>
 
@@ -52,8 +52,8 @@
       <p class="section-lede">OpenOrchestrion hides Linux, MIDI plumbing, scheduling, metadata, and routing behind one responsive interface used from the attached touchscreen or any household browser.</p>
       <div class="grid three">
         <article class="card">
-          <h3>Ask naturally</h3>
-          <p>Use the AI Music Concierge for requests such as dinner music, relaxing classical, Christmas, more upbeat, more recognizable, or more piano. Hosted interpretation is optional; a deterministic offline interpreter remains available.</p>
+          <h3>Find your music</h3>
+          <p>Search, combine filters, save favorites and playlists, and inspect encoded instruments before playing. AI is reserved for a future optional interface; the current browser has no assistant panel.</p>
         </article>
         <article class="card">
           <h3>Choose intelligently</h3>
@@ -124,17 +124,17 @@
         <a class="text-link" href="https://github.com/kurthamm/openorchestrion/blob/main/docs/appliance-install.md">Raspberry Pi installation guide →</a>
       </div>
       <aside class="hardware-card">
-        <div class="status pending">Hardware proof pending</div>
+        <div class="status pending">WK-220 evidence recorded</div>
         <h3>Keyboard-as-sound-engine model</h3>
         <p>The keyboard is selected primarily for MIDI receive behavior, tone quality, polyphony, multitimbral capability, speakers/outputs, reliability, and price. Human key feel is not the purchasing center of gravity.</p>
-        <p>Current candidate/reference families include Casio and Yamaha MIDI-receiving keyboards. Physical project validation is still required before a model is promoted from documented compatibility to project-validated hardware.</p>
+        <p>The current Pi uses a Casio WK-220. Its reported playback checklist and loaded headless timing evidence are recorded in the repository. The new CT-X700 and two-engine work remain deferred; acoustic synchronization is not yet measured.</p>
       </aside>
     </section>
 
     <section class="section">
       <p class="eyebrow">Music and rights</p>
       <h2>A starter library you can explain, not a mystery MIDI dump.</h2>
-      <p class="section-lede">Bundled music is content-addressed and carries separate evidence for composition rights and the rights of the specific MIDI performance/arrangement. Unknown or personal-use material does not become redistributable by wishful metadata.</p>
+      <p class="section-lede">The public repository contains 18 starter files; the reference owner’s personal library is not distributed. Bundled music is content-addressed and carries separate evidence for composition rights and the rights of the specific MIDI performance/arrangement. Unknown or personal-use material does not become redistributable by wishful metadata.</p>
       <div class="grid three">
         <article class="card"><h3>Verified/open</h3><p>Evidence-backed source, composition basis, file license, redistribution status, and required attribution.</p></article>
         <article class="card"><h3>Personal</h3><p>User-imported material can remain fully usable without being asserted safe for repository redistribution.</p></article>
@@ -144,12 +144,13 @@
 
     <section class="section dark" id="status">
       <p class="eyebrow">Where the project is now</p>
-      <h2>Software architecture is working. Physical evidence is next.</h2>
+      <h2>Working on the Pi, with evidence and clear next steps.</h2>
       <div class="status-grid">
-        <div class="status-row"><span class="dot done"></span><b>Implemented</b><span>Importer/analyzer, durable metadata, catalog, history, Smart Stations, hosted/offline Concierge, playback engine, multi-device routing, rendering, responsive UI, setup, discovery, CI, appliance packaging, backup/restore.</span></div>
-        <div class="status-row"><span class="dot active"></span><b>Active</b><span>Deeper chamber/orchestral verified-open repertoire.</span></div>
-        <div class="status-row"><span class="dot pending-dot"></span><b>Pending hardware</b><span>Pi 5 loaded timing evidence, first Casio/target-engine proof, complementary Yamaha validation, enclosure/BOM, photos and demo video.</span></div>
+        <div class="status-row"><span class="dot done"></span><b>Implemented</b><span>Curated library, nightly acquisition, saved playlists/stations, queue editing and undo, seek, playback modes, sleep timer, responsive UI, server-owned MIDI timing, remote-access integration, system health and verified backups.</span></div>
+        <div class="status-row"><span class="dot active"></span><b>Active</b><span>WK-220 checklist and 120-minute headless loaded timing evidence recorded. Pi-local Chromium software timing also passed. The public starter catalog includes 18 licensed files, including two new qualified Donizetti ensemble movements.</span></div>
+        <div class="status-row"><span class="dot pending-dot"></span><b>Pending hardware</b><span>Physical touchscreen/acoustic timing, CT-X700 and second-engine validation, enclosure fit/thermal checks, photos and demo video. New-keyboard work remains owner-deferred.</span></div>
       </div>
+      <p class="truth">Updated September 7, 2026. See the repository for release-specific test results and current library counts.</p>
       <p class="truth">This site deliberately distinguishes implemented software from manufacturer-documented compatibility and physical project validation.</p>
       <div class="actions">
         <a class="button" href="https://github.com/kurthamm/openorchestrion/blob/main/PROJECT_STATUS.md">Detailed project status</a>

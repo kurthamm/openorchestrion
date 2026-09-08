@@ -43,6 +43,38 @@ def inventory(root):
     }
 
 
+def initialize_empty(root: Path):
+    """Create a fresh quality-gated library without deployment-private evidence.
+
+    Existing collections must be assessed and seeded; this command cannot clear
+    admission, discarded identities, or a partially imported collection.
+    """
+    from .acquisition_publish import publication_lock
+    from .catalog import rebuild_catalog
+
+    root = root.resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    with snapshot_lock(root), publication_lock(root):
+        if any(p.is_file() for directory in (root / "assets", root / "archive")
+               for p in directory.rglob("*")):
+            raise ValueError("--init-empty refuses an existing collection; assess and seed it")
+        manifest_path = root / "listening-admission.json"
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_bytes())
+            if manifest.get("policy_version") != VERSION or manifest.get("asset_ids") != []:
+                raise ValueError("--init-empty cannot replace an existing admission policy")
+        (root / "assets").mkdir(exist_ok=True)
+        with closing(sqlite3.connect(root / "quality.sqlite3")) as conn, conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS quality(asset_id TEXT PRIMARY KEY, record TEXT)")
+        with closing(connect(root)) as conn, conn:
+            conn.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", ("bootstrap", "empty-v2"))
+        if not manifest_path.exists():
+            _write(manifest_path, json.dumps({"policy_version": VERSION, "asset_ids": [],
+                                            "origin": "empty-library"}).encode())
+        rebuild_catalog(root)
+    return {"initialized": True, "library_root": str(root), "policy_version": VERSION}
+
+
 def seed(root, archive, expected_sha):
     """Bootstrap all previous decisions; existing rejections must not be reacquired."""
     with zipfile.ZipFile(archive) as z:
@@ -133,7 +165,7 @@ def evaluate(root, state, conn, source, item, client):
     )
     if source.key == "classical-archives":
         candidate["attribution"] = (
-            "Sequence © Pierre R. Schwob — by permission. Original from Classical Archives."
+            "Sequence Â© Pierre R. Schwob â€” by permission. Original from Classical Archives."
         )
     _write(directory / "candidate.json", json.dumps(candidate).encode())
     try:
@@ -415,13 +447,20 @@ def main():
     )
     parser.add_argument("--page-limit", type=int, default=8)
     parser.add_argument("--source", action="append", choices=[s.key for s in SOURCES])
-    parser.add_argument("--seed-zip", type=Path)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--init-empty", action="store_true", help="Initialize a new empty quality-gated library")
+    modes.add_argument("--seed-zip", type=Path)
     parser.add_argument("--facts-sha256")
-    parser.add_argument("--status", action="store_true")
+    modes.add_argument("--status", action="store_true")
     args = parser.parse_args()
     if not 1 <= args.limit <= 200 or not 1 <= args.page_limit <= 40:
         parser.error("invalid work budget")
-    if args.seed_zip:
+    if args.init_empty:
+        try:
+            print(json.dumps(initialize_empty(args.library_root), indent=2))
+        except (OSError, ValueError, RuntimeError) as exc:
+            parser.exit(2, f"error: {exc}\n")
+    elif args.seed_zip:
         print(json.dumps({"seeded": seed(args.library_root, args.seed_zip, args.facts_sha256)}))
     elif args.status:
         print(json.dumps(status(args.library_root.resolve()), indent=2))

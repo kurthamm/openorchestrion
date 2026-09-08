@@ -1,5 +1,20 @@
 # Roadmap
 
+This is a capability roadmap, not an unchecked implementation backlog. The dated
+[current issue queue](docs/next-steps.md) and [developer handoff](docs/developer-handoff.md)
+are authoritative for what is deployed and what work is available now.
+
+| Area | Current status |
+| --- | --- |
+| Single-device appliance, library and player workflows | Implemented and deployed |
+| Quality curation and scheduled acquisition | Implemented; five reviewed sources, strict admission and duplicate history |
+| WK-220/headless Pi proof | Checklist and loaded 120-minute software timing evidence recorded |
+| AI browser integration | Deferred by owner; existing backend remains optional |
+| CT-X700/two-engine policy and UI | Deferred until new hardware is available |
+| Kiosk/acoustic timing, enclosure and second engine | Await physical setup/evidence |
+| Public site | Source exists; Pages admin enablement remains outstanding |
+| Distributed endpoints, speech, guest requests and physical controls | Future proposals, not current commitments |
+
 ## Phase 0: Hardware proof and conformance harness
 
 - Acquire a documented MIDI-receiving keyboard or sound engine.

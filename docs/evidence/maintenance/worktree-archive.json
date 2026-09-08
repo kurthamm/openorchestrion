@@ -1,0 +1,61 @@
+{
+  "archive_root": "/var/tmp/openorchestrion-repository-archive-20260908",
+  "git_bundle_sha256": "e0bb031ca6068e97ced6d2ffa6231691e970e7930783725c8f758c6637c81943",
+  "removed_worktrees": [
+    {
+      "worktree": "/tmp/openorchestrion-acquisition",
+      "archive": "openorchestrion-acquisition.tar.gz",
+      "archive_sha256": "92bb1cec34ea57f955b85070f92eb7495dcf8dd51743f77204598cc62255abc6",
+      "verified_files": 458
+    },
+    {
+      "worktree": "/tmp/openorchestrion-library-compatibility",
+      "archive": "openorchestrion-library-compatibility.tar.gz",
+      "archive_sha256": "6e98c1c4fcbee6c65ee01d120e635e96102090182771b9597158474a30cd6899",
+      "verified_files": 424
+    },
+    {
+      "worktree": "/tmp/openorchestrion-library-curation",
+      "archive": "openorchestrion-library-curation.tar.gz",
+      "archive_sha256": "1d8a55e259251d5eeca6fe02bc92d5635999df3975533c8411f64859f8cbe5c5",
+      "verified_files": 321
+    },
+    {
+      "worktree": "/tmp/openorchestrion-library-readiness",
+      "archive": "openorchestrion-library-readiness.tar.gz",
+      "archive_sha256": "8a762da95539b8d87c7ceaffd95347283f8e7ff78ef6b7b8326ca116a710fa8d",
+      "verified_files": 410
+    },
+    {
+      "worktree": "/tmp/openorchestrion-listening-room",
+      "archive": "openorchestrion-listening-room.tar.gz",
+      "archive_sha256": "ec16ffb1419feea3c9d390f14ac7e2754bf08d3d10e36d608ea410de3ba2799b",
+      "verified_files": 330
+    },
+    {
+      "worktree": "/tmp/openorchestrion-quality-final",
+      "archive": "openorchestrion-quality-final.tar.gz",
+      "archive_sha256": "f924db0cf99a4eea001b03b6cd7de6f6a4a914a4eb787bbe6d3d20913d33e91b",
+      "verified_files": 442
+    },
+    {
+      "worktree": "/tmp/openorchestrion-review-fixes",
+      "archive": "openorchestrion-review-fixes.tar.gz",
+      "archive_sha256": "d7786e831791354fed2e9990a27c0c3e116b6cf2f779ff86b9dc45999a1102d8",
+      "verified_files": 309
+    },
+    {
+      "worktree": "/tmp/openorchestrion-single-keyboard-evidence",
+      "archive": "openorchestrion-single-keyboard-evidence.tar.gz",
+      "archive_sha256": "37dfa32f93277d889c607f29dcd149bb3ffa60d125e90252f0b334a7948109ed",
+      "verified_files": 270
+    },
+    {
+      "worktree": "/tmp/openorchestrion-single-keyboard-release",
+      "archive": "openorchestrion-single-keyboard-release.tar.gz",
+      "archive_sha256": "933ff389b04bec031ce248edf6ab19325b03b2c441b722f6d69a18249206f693",
+      "verified_files": 340
+    }
+  ],
+  "remaining": "worktree /home/kurt/openorchestrion\nHEAD afbe73168a47f477e5718f2add4228387346e8ff\nbranch refs/heads/main\n\nworktree /tmp/openorchestrion-repository-current\nHEAD afbe73168a47f477e5718f2add4228387346e8ff\nbranch refs/heads/codex/repository-current\n\n"
+}
