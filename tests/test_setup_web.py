@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from openorchestrion.app import create_app
@@ -46,3 +47,19 @@ def test_setup_view_uses_text_only_dom_helper_not_html_injection() -> None:
     assert "innerHTML" not in setup_js
     assert "insertAdjacentHTML" not in setup_js
     assert "h(" in setup_js
+
+
+@pytest.fixture(autouse=True)
+def isolated_web_environment(monkeypatch, tmp_path):
+    """A developer's exported appliance settings must never reach live state."""
+    for key, value in {
+        "LIBRARY_ROOT": str(tmp_path / "library"),
+        "CATALOG_DB": str(tmp_path / "catalog.db"),
+        "HISTORY_DB": str(tmp_path / "history.db"),
+        "PLAYER_STATE_DB": str(tmp_path / "player-state.db"),
+        "VIRTUAL_MIDI": "1",
+        "AI_PROVIDER": "off",
+    }.items():
+        monkeypatch.setenv("OPENORCHESTRION_" + key, value)
+    monkeypatch.setattr("openorchestrion.playback.factory.list_output_ports", lambda: [])
+    monkeypatch.setattr("openorchestrion.app.list_output_ports", lambda: [])

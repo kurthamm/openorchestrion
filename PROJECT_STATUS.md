@@ -34,6 +34,12 @@ visible in Playback & devices; the acquisition database survives normal backup.
 
 ## Implemented product stack
 
+The [title metadata repair](docs/title-metadata-repair.md) corrected **2,230 titles**
+and updated identity metadata on **4,190 records**, retaining all **5,861 songs**.
+Imports now normalize encoded labels; the UI separates source context and creator
+credits and exposes original labels and evidence. Four researched upload labels
+remain explicitly unresolved. The repair record contains deployment and rollback details.
+
 The [September 2026 Pi implementation review](docs/implementation-review.md) records
 fixes for event-loop blocking, MIDI discovery after startup, favorite state, restore
 failure recovery, and smoke-check diagnostics. Deployment/profile binding and physical

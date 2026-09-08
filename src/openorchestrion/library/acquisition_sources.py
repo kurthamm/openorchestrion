@@ -14,6 +14,8 @@ from urllib.request import Request, HTTPRedirectHandler, build_opener
 from urllib.robotparser import RobotFileParser
 import xml.etree.ElementTree as ET
 
+from .title_identity import decode_label
+
 AGENT = "OpenOrchestrion/0.1 (+https://github.com/kurthamm/openorchestrion; personal-library acquisition)"
 
 
@@ -145,7 +147,9 @@ def checked_url(source: Source, url: str) -> str:
     ):
         raise ValueError("URL outside reviewed source paths")
     return urlunsplit(
-        ("https", p.netloc.lower(), quote(decoded, safe="/:@-._~!$&'()*+,;="), p.query, "")
+        # Validate decoded path components above, but preserve original URL bytes.
+        # Re-encoding a legacy %C9 byte as UTF-8 changes the download identity.
+        ("https", p.netloc.lower(), quote(p.path, safe="/%:@-._~!$&'()*+,;="), p.query, "")
     )
 
 
@@ -232,7 +236,7 @@ def page_links(source, url, raw):
             target = checked_url(source, urljoin(url, href))
         except ValueError:
             continue
-        path = urlsplit(target).path.lower()
+        path = unquote(urlsplit(target).path).lower()
         if path.endswith((".mid", ".midi", ".kar")):
             kind = "midi"
         elif path.endswith(("/", ".htm", ".html", ".shtml", ".rss")) or (
@@ -248,7 +252,7 @@ def page_links(source, url, raw):
             continue
         if title.lower() in {"mid", "midi", "download", ""}:
             title = (
-                posixpath.basename(unquote(urlsplit(target).path))
+                posixpath.basename(decode_label(urlsplit(target).path))
                 .rsplit(".", 1)[0]
                 .replace("_", " ")
             )

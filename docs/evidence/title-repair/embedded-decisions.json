@@ -1,0 +1,1849 @@
+[
+  {
+    "asset_id": "sha256:00e25f99c603f07211f9064ec3cb58239efdacdd8b22255e0fa08adab1d83b92",
+    "original_title": "BOWIE.Blue Jean k",
+    "changes": {
+      "title": "Blue Jean"
+    },
+    "required_text": [
+      "Blue Jean"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/bowie-blue-jean-k-mid"
+  },
+  {
+    "asset_id": "sha256:047c6c4cfad06f1c9247574fc5aaf5568e461b7df8c1676aacbc0b6328c5f7fa",
+    "original_title": "ABBA.Thank you for the music k",
+    "changes": {
+      "title": "Thank you for the music"
+    },
+    "required_text": [
+      "* THANK YOU FOR THE MUSIC"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/abba-thank-you-for-the-music-k-mid"
+  },
+  {
+    "asset_id": "sha256:057c6ce09a77778869886eb8961a27cef4b4e865ba3c18a19f38ea92c5953130",
+    "original_title": "GIPSY KING.Bamboleo K",
+    "changes": {
+      "title": "Bamboleo"
+    },
+    "required_text": [
+      "* BAMBOLEO"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/gipsy-king-bamboleo-k-mid"
+  },
+  {
+    "asset_id": "sha256:066613dc314f3ee4a6d0731fbe43132a95f432c3af63b6e6e844ccce410cc664",
+    "original_title": "E.W.F.Boogie wonderland K",
+    "changes": {
+      "title": "Boogie wonderland"
+    },
+    "required_text": [
+      "* BOOGIE WONDERLAND"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/e-w-f-boogie-wonderland-k-mid"
+  },
+  {
+    "asset_id": "sha256:0972b8d472c8f62dd86b37ee2d983e0898b56ec5581d6360d21c6ff010793139",
+    "original_title": "HOUSTON.All at once K",
+    "changes": {
+      "title": "All at once"
+    },
+    "required_text": [
+      "ALL AT ONCE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/houston-all-at-once-k-mid"
+  },
+  {
+    "asset_id": "sha256:0b083fea642a223ba7c775d00d985865a87ef1a5b3b5c4330c4f8e8a432ad0ba",
+    "original_title": "BEAGLE MUSIC.Daydream K",
+    "changes": {
+      "title": "Daydream"
+    },
+    "required_text": [
+      "DAYDREAM"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/beagle-music-daydream-k-mid"
+  },
+  {
+    "asset_id": "sha256:0c50639a0aa08a2a66c6510c397576d4dc1d3e5beb76fe88e7963341e26d9113",
+    "original_title": "ULTIMATE KAOS.Casanova K",
+    "changes": {
+      "title": "Casanova"
+    },
+    "required_text": [
+      "CASANOVA"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/ultimate-kaos-casanova-k-mid"
+  },
+  {
+    "asset_id": "sha256:0e0cb9e7f0421b44f6502f2694b65e41da70f89be7ee43c0c31deafeb11d9a03",
+    "original_title": "JACKSON.The girl is mine K",
+    "changes": {
+      "title": "The girl is mine"
+    },
+    "required_text": [
+      "* THE GIRL IS MINE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/jackson-the-girl-is-mine-k-mid"
+  },
+  {
+    "asset_id": "sha256:111e0f76a7fd2393a807df22ffb90fa3c1e78be99f07ddd9ba42eb888194b123",
+    "original_title": "SINATRA.New York,New York K",
+    "changes": {
+      "title": "New York,New York"
+    },
+    "required_text": [
+      "* NEW YORK, NEW YORK"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/sinatra-new-yorknew-york-k-mid"
+  },
+  {
+    "asset_id": "sha256:122d118e059d43949be944b333b8b9b878c9b96b97f26539be449d70b9eda5dd",
+    "original_title": "THE BLUES BR.Sweet home Chicago K",
+    "changes": {
+      "title": "Sweet home Chicago"
+    },
+    "required_text": [
+      "Sweet home Chicago"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-blues-br-sweet-home-chicago-k-mid"
+  },
+  {
+    "asset_id": "sha256:12b266b08d6c916a94d74dc102f656e0976cdf835a55ea5e7e66d0568eea93f3",
+    "original_title": "P.SIMON-GARFUNKEL.Bridge over troubled water k",
+    "changes": {
+      "title": "Bridge over troubled water"
+    },
+    "required_text": [
+      "* Bridge Over Troubled Water"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/p-simon-garfunkel-bridge-over-troubled-water-k-mid"
+  },
+  {
+    "asset_id": "sha256:12dea171a4ab37f7b76a7475b2295586c9736c3ec0b599d8f8b8f676091b3b91",
+    "original_title": "MENTAL AS ANYTHING.Live it up K",
+    "changes": {
+      "title": "Live it up"
+    },
+    "required_text": [
+      "LIVEITUP"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/mental-as-anything-live-it-up-k-mid"
+  },
+  {
+    "asset_id": "sha256:164f6f16e2a4deeeaa459d2ad4d267a9494541004aece30d3c314aed9d2d4694",
+    "original_title": "SIMPLY RED.For your babies  K",
+    "changes": {
+      "title": "For your babies"
+    },
+    "required_text": [
+      "For Your Babies"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/simply-red-for-your-babies-k-mid"
+  },
+  {
+    "asset_id": "sha256:1655096e90e5f6a6766c0fb8bd92202456c0b8d13ec21fe8bdfa6b23453b2da5",
+    "original_title": "THE CARDIGANS.Love fool K",
+    "changes": {
+      "title": "Love fool"
+    },
+    "required_text": [
+      "LOVEFOOL"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-cardigans-love-fool-k-mid"
+  },
+  {
+    "asset_id": "sha256:19186b67bb004fc3ce04d1d70d628ec820522a29dde7275ead01c0cdc252c68b",
+    "original_title": "OASIS.All around the world K",
+    "changes": {
+      "title": "All around the world"
+    },
+    "required_text": [
+      "* All Around The World"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/oasis-all-around-the-world-k-mid"
+  },
+  {
+    "asset_id": "sha256:1a822969737faa2b5364de54d08f89295fad53cc607721b335832bae3759fb0d",
+    "original_title": "051230",
+    "changes": {
+      "title": "051230",
+      "composer": "Benjamin Robert Tubb"
+    },
+    "required_text": [
+      "\"051230\" (30 Dec 2005)",
+      "by Benjamin Robert Tubb"
+    ],
+    "basis": "The MIDI explicitly names this work \"051230\" and credits Benjamin Robert Tubb; this numeric title is intentional.",
+    "source_reference": "https://bitmidi.com/051230-mid"
+  },
+  {
+    "asset_id": "sha256:1b05b10ac038440269a1a8ef57c82f52f1797d69b23d15249f06651544a7b39d",
+    "original_title": "CHICAGO.You're the inspiration K",
+    "changes": {
+      "title": "You're the inspiration"
+    },
+    "required_text": [
+      "* You're The Inspiration"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/chicago-youre-the-inspiration-k-mid"
+  },
+  {
+    "asset_id": "sha256:1ce1a7d296d1e6489a32c6af3cc49da88975df35a2665e7469a1ccf15ee42a19",
+    "original_title": "UNCLE KRACKER.Follow me K",
+    "changes": {
+      "title": "Follow me"
+    },
+    "required_text": [
+      "FOLLOWME"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/uncle-kracker-follow-me-k-mid"
+  },
+  {
+    "asset_id": "sha256:1d4a4950fcea3d20f9592efec301c4403b93fadc9d44f8054b3d4988c6aacfa6",
+    "original_title": "JOEL.Uptown girl K",
+    "changes": {
+      "title": "Uptown girl"
+    },
+    "required_text": [
+      "Uptown Girl"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/joel-uptown-girl-k-mid"
+  },
+  {
+    "asset_id": "sha256:2102bdbaf99e0d4d801216a231b69813819d39b5d185a3be553c2130d04ea1be",
+    "original_title": "070102 (I'll Love You Always)",
+    "changes": {
+      "title": "I'll Love You Always",
+      "composer": "Benjamin Robert Tubb"
+    },
+    "required_text": [
+      "I'll Love You Always (070102)",
+      "Words and Music",
+      "by Benjamin Robert Tubb"
+    ],
+    "basis": "Title and words/music credit are explicit in the MIDI. The leading upload date is retained in the source title.",
+    "source_reference": "https://bitmidi.com/070102-ill-love-you-always-mid"
+  },
+  {
+    "asset_id": "sha256:22eed131ec5ddb11bdcea3bd80d665d5fa7cfacf7a1eba3996db76445505bce3",
+    "original_title": "THE PLATTERS.Twilight time K",
+    "changes": {
+      "title": "Twilight time"
+    },
+    "required_text": [
+      "* Twilight Time"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-platters-twilight-time-k-mid"
+  },
+  {
+    "asset_id": "sha256:23a92bca0136913a5f5f4cd5a66270b45312eedc9613d97a6086b25e74422695",
+    "original_title": "N.COLE.Unforgettable K",
+    "changes": {
+      "title": "Unforgettable"
+    },
+    "required_text": [
+      "UNFORGETTABLE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/n-cole-unforgettable-k-mid"
+  },
+  {
+    "asset_id": "sha256:23b5040db48bf161523bffd096f250aeb473454adda11fe06c2871ee3f291e16",
+    "original_title": "DION.The reason K",
+    "changes": {
+      "title": "The reason"
+    },
+    "required_text": [
+      "* The Reason"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/dion-the-reason-k-mid"
+  },
+  {
+    "asset_id": "sha256:25b6749de8ae3607413a47d3d249d7d0010111af0680cfddbba86c0b87eba532",
+    "original_title": "JACKSON.Thriller k",
+    "changes": {
+      "title": "Thriller"
+    },
+    "required_text": [
+      "* THRILLER"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/jackson-thriller-k-mid"
+  },
+  {
+    "asset_id": "sha256:272200222b65fb8b31416cc2420358b6f2c76113a909c16e4fae93f8f5843a91",
+    "original_title": "AEROSMITH.Janie's got a gun K",
+    "changes": {
+      "title": "Janie's got a gun"
+    },
+    "required_text": [
+      "Janie's Got A Gun"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/aerosmith-janies-got-a-gun-k-mid"
+  },
+  {
+    "asset_id": "sha256:27979fd9963f1c68cd4574d9cb4a65ac04ad718dd3a659d8c499626aa1934311",
+    "original_title": "060222-Tribute to Mozart",
+    "changes": {
+      "title": "Tribute to Mozart",
+      "composer": "Wolfgang Amadeus Mozart",
+      "source_context": "Adapted and arranged by Benjamin Robert Tubb"
+    },
+    "required_text": [
+      "Tribute to Mozart",
+      "Music by Wolfgang Amadeus Mozart. Adapted and Arranged by Benjamin Robert Tubb."
+    ],
+    "basis": "Embedded title and role-specific credits. The MIDI has conflicting catalogue-number text; no catalogue number is asserted here.",
+    "source_reference": "https://bitmidi.com/060222-tribute-to-mozart-mid"
+  },
+  {
+    "asset_id": "sha256:294beba8430ca5c5adc29c8d2d42c7ade510ad7522722dc1347682e32f3df22b",
+    "original_title": "DION.Think twice K",
+    "changes": {
+      "title": "Think twice"
+    },
+    "required_text": [
+      "* Think Twice"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/dion-think-twice-k-mid"
+  },
+  {
+    "asset_id": "sha256:2a64375a8bcce67fc68ed2ff6c73fd7ae7a726d89077629f5410f68bbef09fc8",
+    "original_title": "SADE.Smooth operator K",
+    "changes": {
+      "title": "Smooth operator"
+    },
+    "required_text": [
+      "* SMOOTH OPERATOR"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/sade-smooth-operator-k-mid"
+  },
+  {
+    "asset_id": "sha256:2b5c3959a91322f79c38969071d0612747aa1e1eb61a562950eaa48920dee104",
+    "original_title": "GUNS'N ROSES.Since i don't have you K",
+    "changes": {
+      "title": "Since i don't have you"
+    },
+    "required_text": [
+      "* SINCE I DON'T HAVE YOU"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/gunsn-roses-since-i-dont-have-you-k-mid"
+  },
+  {
+    "asset_id": "sha256:2d7acf570fa7f6c18112aedd03542a084faf91518561aa41201639371c272c5a",
+    "original_title": "DION.Because you loved me K",
+    "changes": {
+      "title": "Because you loved me"
+    },
+    "required_text": [
+      "* Because You Loved Me"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/dion-because-you-loved-me-k-mid"
+  },
+  {
+    "asset_id": "sha256:2e4f2b0facd1c336bfcc93f688a8e215da8d4b3839eff723dba8222346d4a0f1",
+    "original_title": "BACKSTREET BOYS.All i have to give K",
+    "changes": {
+      "title": "All i have to give"
+    },
+    "required_text": [
+      "* All I Have To Give"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/backstreet-boys-all-i-have-to-give-k-mid"
+  },
+  {
+    "asset_id": "sha256:2f99b58a2149ea62adece32f23e26b677a196245e9b4c5e101cd68676daee9ac",
+    "original_title": "ASZNAVOUR.Je m'voyais de\u0301ja\u0300 K",
+    "changes": {
+      "title": "Je m'voyais d\u00e9j\u00e0"
+    },
+    "required_text": [
+      "* Je m'voyais d\u00e9j\u00e0"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/asznavour-je-mvoyais-deja-k-mid"
+  },
+  {
+    "asset_id": "sha256:301cbedb04aeb965a5fe5e4c5ea5b09f9f6653feb8974012f5b1374e54f0a6a2",
+    "original_title": "MADONNA.Deeper and deeper K",
+    "changes": {
+      "title": "Deeper and deeper"
+    },
+    "required_text": [
+      "* DEEPER AND DEEPER"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/madonna-deeper-and-deeper-k-mid"
+  },
+  {
+    "asset_id": "sha256:30a9c304c37cbe8e7a05a05fc6bfb9b6d49480b045a77918c62ab3157f7a1fea",
+    "original_title": "BONEY M.Rasputin K",
+    "changes": {
+      "title": "Rasputin"
+    },
+    "required_text": [
+      "* RASPUTIN"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/boney-m-rasputin-k-mid"
+  },
+  {
+    "asset_id": "sha256:31bef100a432ead226b36e8f6336313dca63c638d2d1912bdd58667c5b1b8c8c",
+    "original_title": "JACKSON.Heal the world K",
+    "changes": {
+      "title": "Heal the world"
+    },
+    "required_text": [
+      "* HEAL THE WORLD"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/jackson-heal-the-world-k-mid"
+  },
+  {
+    "asset_id": "sha256:367089ed25a54aa29bf62e09693e4a3756ed74f4af3e177284539fb54bed7baa",
+    "original_title": "K.W.S.Please don't go K",
+    "changes": {
+      "title": "Please don't go"
+    },
+    "required_text": [
+      "* PLEASE DON'T GO"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/k-w-s-please-dont-go-k-mid"
+  },
+  {
+    "asset_id": "sha256:36bb247c057522296013bbe698775ef745c1381227975ba6adfb6ac072336bd4",
+    "original_title": "CHICAGO.If you leave me now K",
+    "changes": {
+      "title": "If you leave me now"
+    },
+    "required_text": [
+      "* IF YOU LEAVE ME NOW"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/chicago-if-you-leave-me-now-k-mid"
+  },
+  {
+    "asset_id": "sha256:39a04bec834080b80d43b50b010f42a32da547aaedbd0dfdd0a72facb2eca296",
+    "original_title": "JOHN.Candle in the wind K",
+    "changes": {
+      "title": "Candle in the wind"
+    },
+    "required_text": [
+      "* CANDLE IN THE WIND"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/john-candle-in-the-wind-k-mid"
+  },
+  {
+    "asset_id": "sha256:3bbe06387cb09604196ebd20b035ca97abb06b28aabe2f2892369e74cc03df28",
+    "original_title": "WONDER.Part time lover K",
+    "changes": {
+      "title": "Part time lover"
+    },
+    "required_text": [
+      "PART TIME LOVER"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/wonder-part-time-lover-k-mid"
+  },
+  {
+    "asset_id": "sha256:3ced605f1d8c50960e0a2faf7f5862a8fcb0507b60ce888c6e6db19cb9caae7a",
+    "original_title": "ACE OF BASE.Lucky love K",
+    "changes": {
+      "title": "Lucky love"
+    },
+    "required_text": [
+      "* LUCKY LOVE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/ace-of-base-lucky-love-k-mid"
+  },
+  {
+    "asset_id": "sha256:3d009c3b02a644b3e00a3c46eb0b940bb4274b256274cc2a120b33a60a4ac53e",
+    "original_title": "U2.Angel of Harlem K",
+    "changes": {
+      "title": "Angel of Harlem"
+    },
+    "required_text": [
+      "* Angel of Harlem"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/u2-angel-of-harlem-k-mid"
+  },
+  {
+    "asset_id": "sha256:3dbd6fef13ece41b4c1c577e866dc2d21cec4ded89672966cc1a20ae36e1f3d9",
+    "original_title": "ROXETTE.Spending my time k",
+    "changes": {
+      "title": "Spending my time"
+    },
+    "required_text": [
+      "* SPENDING MY TIME"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/roxette-spending-my-time-k-mid"
+  },
+  {
+    "asset_id": "sha256:3f6806396ce8079b38197d0cd8498880011cd45e2abdce9e756a3724fa267920",
+    "original_title": "THE BEATLES.And i love her K",
+    "changes": {
+      "title": "And i love her"
+    },
+    "required_text": [
+      "* And I love her"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-beatles-and-i-love-her-k-mid"
+  },
+  {
+    "asset_id": "sha256:40227a674dd8a4c8277aca18f477532b72be15bdfc89e5a37bd8bfcacf31c8e0",
+    "original_title": "ARMSTRONG.Moon river K",
+    "changes": {
+      "title": "Moon river"
+    },
+    "required_text": [
+      "Moon river"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/armstrong-moon-river-k-mid"
+  },
+  {
+    "asset_id": "sha256:412efdb471d85a9c713585bbf296161011071c563d19feb7693517d9aee33365",
+    "original_title": "N'TRANCE.Do you think i'm sexy k",
+    "changes": {
+      "title": "Do you think i'm sexy"
+    },
+    "required_text": [
+      "DO YOU THINK I'M SEXY"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/ntrance-do-you-think-im-sexy-k-mid"
+  },
+  {
+    "asset_id": "sha256:417de4e8bf89367e84cefbfedbc656ccf89d50a832a9eab4f55a9e6e4665c423",
+    "original_title": "BEEGEES.He ain't heavy K",
+    "changes": {
+      "title": "He ain't heavy"
+    },
+    "required_text": [
+      "* He Ain't Heavy"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/beegees-he-aint-heavy-k-mid"
+  },
+  {
+    "asset_id": "sha256:41be59146b6219e0e3572ab03873683889ae805cf3fd8e76e03c5f3605465e01",
+    "original_title": "PET SHOP BOYS.Always on my mind K",
+    "changes": {
+      "title": "Always on my mind"
+    },
+    "required_text": [
+      "* ALWAYS ON MY MIND"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/pet-shop-boys-always-on-my-mind-k-mid"
+  },
+  {
+    "asset_id": "sha256:424591b8f05356a25f0bf3a3a4cdd15e337baaf97a1d5ebce360953cb863937b",
+    "original_title": "GENESIS.Jesus he knows me K",
+    "changes": {
+      "title": "Jesus he knows me"
+    },
+    "required_text": [
+      "* JESUS HE KNOWS ME"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/genesis-jesus-he-knows-me-k-mid"
+  },
+  {
+    "asset_id": "sha256:446c1dc480a05edaff353de7072730820f11cb1a82b1a0a99e64a69bfbea2256",
+    "original_title": "THE EAGLES.Lyin' eyes K",
+    "changes": {
+      "title": "Lyin' eyes"
+    },
+    "required_text": [
+      "* Lyin' Eyes"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-eagles-lyin-eyes-k-mid"
+  },
+  {
+    "asset_id": "sha256:46fa942d3c0bbe44c3fce8a0cdad02f2f2368c10e3a96ec3e2b628afce7380fe",
+    "original_title": "ACE OF BASE.Wheel of fortune K",
+    "changes": {
+      "title": "Wheel of fortune"
+    },
+    "required_text": [
+      "* WHEEL OF FORTUNE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/ace-of-base-wheel-of-fortune-k-mid"
+  },
+  {
+    "asset_id": "sha256:49b9c29c765a4dce5b333623f61493f2c766a18ede7785bf32eb76cab00fc8cb",
+    "original_title": "WONDER.My Cherie Amour K",
+    "changes": {
+      "title": "My Cherie Amour"
+    },
+    "required_text": [
+      "* My Cherie Amour"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/wonder-my-cherie-amour-k-mid"
+  },
+  {
+    "asset_id": "sha256:49fd7d12da2966fe933e8aa30f7f7ad9c2ed11f9f11af01fb8fb3ad4fd3e8f31",
+    "original_title": "13th",
+    "changes": {
+      "title": "The Thirteenth",
+      "source_context": "The Cure"
+    },
+    "required_text": [
+      "the thirteenth",
+      "by the cure"
+    ],
+    "basis": "Title and band reference are stated in embedded text; the MIDI sequencer is a separate credit.",
+    "source_reference": "https://bitmidi.com/13th-mid"
+  },
+  {
+    "asset_id": "sha256:4a92cd4e948270672157fe48a41f4ce587c8a90ede67b2dfb4e6086b1f234c6d",
+    "original_title": "THE BEATLES.Birthday K",
+    "changes": {
+      "title": "Birthday"
+    },
+    "required_text": [
+      "* BIRTHDAY"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-beatles-birthday-k-mid"
+  },
+  {
+    "asset_id": "sha256:50a4e121de5db5a00e602cf44af155ec70e7243638c88cbbf87201656e8a9b87",
+    "original_title": "BON JOVI.Livin' on a prayer K",
+    "changes": {
+      "title": "Livin' on a prayer"
+    },
+    "required_text": [
+      "* Livin' ON A Prayer"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/bon-jovi-livin-on-a-prayer-k-mid"
+  },
+  {
+    "asset_id": "sha256:521599a0f0adf00015dd27db1bb6950f5b21eee8ea9c915de257cae86299f92b",
+    "original_title": "ALLMAN BR.One way out K",
+    "changes": {
+      "title": "One way out"
+    },
+    "required_text": [
+      "ONE  WAY  OUT"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/allman-br-one-way-out-k-mid"
+  },
+  {
+    "asset_id": "sha256:52c4085b06aad345e43db15f4bc0f19865633756d5bd100ec10c711efbe15b8b",
+    "original_title": "COMO.Magic moments K",
+    "changes": {
+      "title": "Magic moments"
+    },
+    "required_text": [
+      "Magic moments"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/como-magic-moments-k-mid"
+  },
+  {
+    "asset_id": "sha256:538516f0e88d05055fe1d0c1399d507e189068d8948ff427fa9e9064b500e3f4",
+    "original_title": "THE PLATTERS.The great pretender K",
+    "changes": {
+      "title": "The great pretender"
+    },
+    "required_text": [
+      "* The Great Pretender"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-platters-the-great-pretender-k-mid"
+  },
+  {
+    "asset_id": "sha256:547fb6da2b63eb75fa6442ebfb487327c42e4c751b8539c20f5acf38591178b8",
+    "original_title": "SINATRA.The way you look tonight K",
+    "changes": {
+      "title": "The way you look tonight"
+    },
+    "required_text": [
+      "* THE WAY YOU LOOK TONIGHT"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/sinatra-the-way-you-look-tonight-k-mid"
+  },
+  {
+    "asset_id": "sha256:54844088b6a6619139eeeade32ee5261a7d81272718d6e5368d1fd0012217c2c",
+    "original_title": "ASZNAVOUR.Sur ma vie K",
+    "changes": {
+      "title": "Sur ma vie"
+    },
+    "required_text": [
+      "* Sur ma vie"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/asznavour-sur-ma-vie-k-mid"
+  },
+  {
+    "asset_id": "sha256:54b730a433b5346465de484185925bcaa7ef05f12b64c0d65062773d400e6406",
+    "original_title": "ABBA.Why did it have to be me K",
+    "changes": {
+      "title": "Why did it have to be me"
+    },
+    "required_text": [
+      "Why Did It Have To Be Me"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/abba-why-did-it-have-to-be-me-k-mid"
+  },
+  {
+    "asset_id": "sha256:54c4031943549c99c83d267721f5ec6fa9ab916c25cd574d97a6c817f7b87496",
+    "original_title": "UB 40.Can't help falling in love K",
+    "changes": {
+      "title": "Can't help falling in love"
+    },
+    "required_text": [
+      "\"Can't Help Falling In Love\""
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/ub-40-cant-help-falling-in-love-k-mid"
+  },
+  {
+    "asset_id": "sha256:567e8c04e1117b3d3aa710fbf5d0ecb3733485042148993e82850135bfca8fa6",
+    "original_title": "BUBLE'.Spiderman K",
+    "changes": {
+      "title": "Spiderman"
+    },
+    "required_text": [
+      "SPIDERMAN"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/buble-spiderman-k-mid"
+  },
+  {
+    "asset_id": "sha256:5718caa6a612a652d2cf4f98307990d2a010f19548afadc918a506c7ce9340e2",
+    "original_title": "TLC.No scrubs k",
+    "changes": {
+      "title": "No scrubs"
+    },
+    "required_text": [
+      "NOSCRUBS"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/tlc-no-scrubs-k-mid"
+  },
+  {
+    "asset_id": "sha256:5868990ffcc623c3c7cde92af65f39c0b5ea1558dc56c12576d0b7327e23668c",
+    "original_title": "THE EAGLES.Best of my love K",
+    "changes": {
+      "title": "Best of my love"
+    },
+    "required_text": [
+      "* Best Of My Love"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-eagles-best-of-my-love-k-mid"
+  },
+  {
+    "asset_id": "sha256:587c5626bbf74d574bb5ee3dc6d572e6f019e8f80206e3202e8603a471637f4a",
+    "original_title": "BEEGEES.Nights on Broadway K",
+    "changes": {
+      "title": "Nights on Broadway"
+    },
+    "required_text": [
+      "* Nights On Broadway"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/beegees-nights-on-broadway-k-mid"
+  },
+  {
+    "asset_id": "sha256:600d4658d71c8e0adfd74b01917748e8d1a9ff23a078481fd1a6c1ad4a8243bc",
+    "original_title": "THE BEATLES.Free as a bird K",
+    "changes": {
+      "title": "Free as a bird"
+    },
+    "required_text": [
+      "* FREE AS A BIRD"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-beatles-free-as-a-bird-k-mid"
+  },
+  {
+    "asset_id": "sha256:63c4a92eea9968b5506ef7e02b45963552a77c2d18276081a874fd1ddb64bc75",
+    "original_title": "A.BAKER.Sweet love K",
+    "changes": {
+      "title": "Sweet love"
+    },
+    "required_text": [
+      "Sweet Love"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/a-baker-sweet-love-k-mid"
+  },
+  {
+    "asset_id": "sha256:645ae7fdc693b1af2c556bc2ef57f355462db6016e1033c1be56e4748a1421e0",
+    "original_title": "THE BEATLES.Do you want to know a secret K",
+    "changes": {
+      "title": "Do you want to know a secret"
+    },
+    "required_text": [
+      "* DO YOU WANT TO KNOW A SECRET?"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-beatles-do-you-want-to-know-a-secret-k-mid"
+  },
+  {
+    "asset_id": "sha256:66f12fcb915bfe040c244a63df52be3eba1a26fabd21695dafb7c426326460b8",
+    "original_title": "THE CARPENTERS.Only Yesterday  K",
+    "changes": {
+      "title": "Only Yesterday"
+    },
+    "required_text": [
+      "Only Yesterday"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-carpenters-only-yesterday-k-mid"
+  },
+  {
+    "asset_id": "sha256:66fbb74e2dad5beec272eeddd3ac36507ed164e8a7480863c3f775ad1b38b2cf",
+    "original_title": "PRINCE.Raspberry beret K",
+    "changes": {
+      "title": "Raspberry beret"
+    },
+    "required_text": [
+      "RASPBERRY BERET"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/prince-raspberry-beret-k-mid"
+  },
+  {
+    "asset_id": "sha256:6a9a32bce1d0211deadaae0b61fc21e6edd2697fdb3c6a55d22f1a8e12503918",
+    "original_title": "73-06-cinema",
+    "changes": {
+      "title": "The Cinema Show",
+      "source_context": "Genesis"
+    },
+    "required_text": [
+      "The Cinema Show",
+      "by Genesis"
+    ],
+    "basis": "The embedded work label and band reference establish the title hidden behind the upload filename.",
+    "source_reference": "https://bitmidi.com/73-06-cinema-mid"
+  },
+  {
+    "asset_id": "sha256:6c26c6a9198c5084646de0ae835b64fae972523113dde7ab072a3e72fefb2f72",
+    "original_title": "P.MC CARTNEY.We got  married k",
+    "changes": {
+      "title": "We got married"
+    },
+    "required_text": [
+      "* WE GOT MARRIED"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/p-mc-cartney-we-got-married-k-mid"
+  },
+  {
+    "asset_id": "sha256:6ca65fbb5dd9d01503dc5ff98f42d91bd4a305c1c76bf3ac5c100fa8273be81b",
+    "original_title": "C.KING.It's Too Late k",
+    "changes": {
+      "title": "It's Too Late"
+    },
+    "required_text": [
+      "* It's Too Late"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/c-king-its-too-late-k-mid"
+  },
+  {
+    "asset_id": "sha256:6cb45bcf13fbba71a7cfb535afaa6754653a5c6c05667f1ccbeab36f6db28856",
+    "original_title": "070606 (Hail the Comic Song)",
+    "changes": {
+      "title": "Hail the Comic Song",
+      "composer": "Benjamin Robert Tubb"
+    },
+    "required_text": [
+      "Hail the Comic Song",
+      "Music by Benjamin Robert Tubb"
+    ],
+    "basis": "Embedded work title and music credit; lyricist is Cumberland Clark, as stated in the MIDI.",
+    "source_reference": "https://bitmidi.com/070606-hail-the-comic-song-mid"
+  },
+  {
+    "asset_id": "sha256:6e226277176cab8470aac3363586dbef7b25ce19484801f745b38e86145cb873",
+    "original_title": "CHICAGO.Hard to say I'm sorry K",
+    "changes": {
+      "title": "Hard to say I'm sorry"
+    },
+    "required_text": [
+      "Hard to say I'm sorry"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/chicago-hard-to-say-im-sorry-k-mid"
+  },
+  {
+    "asset_id": "sha256:6f1d37cd30cf7904c292ce3ff934573c8e4df665796e05baf0f4175f333b83a6",
+    "original_title": "THE BEATLES.Day tripper K",
+    "changes": {
+      "title": "Day tripper"
+    },
+    "required_text": [
+      "Day tripper"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-beatles-day-tripper-k-mid"
+  },
+  {
+    "asset_id": "sha256:70f92229412b7db01776e748ee2b7bc8fe8eece429bae5809c0218072e84bf9d",
+    "original_title": "ESTEFAN.Con los an\u0303os que me quedan k",
+    "changes": {
+      "title": "Con los a\u00f1os que me quedan"
+    },
+    "required_text": [
+      "* CON LOS A\u00d1OS QUE ME QUEDAN"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/estefan-con-los-anos-que-me-quedan-k-mid"
+  },
+  {
+    "asset_id": "sha256:7349777cea3d0d2e31702f0bb8fc25f8b47b4e257d1aa95a2f674bcb7d92448f",
+    "original_title": "1-2-3",
+    "changes": {
+      "title": "1-2-3",
+      "source_context": "Miami Sound Machine"
+    },
+    "required_text": [
+      "123 by Miami | Sound Machine"
+    ],
+    "basis": "Numeric title and band reference are supported by the embedded label. Meaningful title hyphens are preserved.",
+    "source_reference": "https://bitmidi.com/1-2-3-mid"
+  },
+  {
+    "asset_id": "sha256:7773178809714f22f3e7886659ac0a01747ef2dcdedef2719784f1460ba0563d",
+    "original_title": "PRESLEY.Return to sender K",
+    "changes": {
+      "title": "Return to sender"
+    },
+    "required_text": [
+      "* Return to Sender"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/presley-return-to-sender-k-mid"
+  },
+  {
+    "asset_id": "sha256:777b7817a304b4fc0ab4bd673ec0daf6246bfb19bc9c3df6ceec62c1edae9fdd",
+    "original_title": "THE BEATLES.Ticket to ride K",
+    "changes": {
+      "title": "Ticket to ride"
+    },
+    "required_text": [
+      "Ticket to Ride"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-beatles-ticket-to-ride-k-mid"
+  },
+  {
+    "asset_id": "sha256:77c7a240e553a8d94fb1981bd5a5aca3d2e16485ef9d7277bbc4f0dd5197fcd9",
+    "original_title": "DELTA V.Un'estate fa K",
+    "changes": {
+      "title": "Un'estate fa"
+    },
+    "required_text": [
+      "Un'estate fa"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/delta-v-unestate-fa-k-mid"
+  },
+  {
+    "asset_id": "sha256:7c27a8309d5e879487b734a408a435f3b79529bd267a68a0a7de2f1f8abbb430",
+    "original_title": "P.FLOYD.Shine on you crazy diamond K",
+    "changes": {
+      "title": "Shine on you crazy diamond"
+    },
+    "required_text": [
+      "Shine on you crazy diamond"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/p-floyd-shine-on-you-crazy-diamond-k-mid"
+  },
+  {
+    "asset_id": "sha256:7de0467b59534318cc2990f31b800543d131e302a735e1ee0197e083337196e7",
+    "original_title": "MADONNA.Material girl K",
+    "changes": {
+      "title": "Material girl"
+    },
+    "required_text": [
+      "MATERIAL GIRL"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/madonna-material-girl-k-mid"
+  },
+  {
+    "asset_id": "sha256:801081231a7b4665085e9aed48ee664ac7301832c79e9d98b0d4e951d9f1e0fa",
+    "original_title": "ENYA.Only time K",
+    "changes": {
+      "title": "Only time"
+    },
+    "required_text": [
+      "ONLYTIME"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/enya-only-time-k-mid"
+  },
+  {
+    "asset_id": "sha256:804f87441037b0c0ab8010de2b590d0a549bbf092ba21545315e548f21c2efa2",
+    "original_title": "EAST17.It's Alright K",
+    "changes": {
+      "title": "It's Alright"
+    },
+    "required_text": [
+      "* It's Alright"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/east17-its-alright-k-mid"
+  },
+  {
+    "asset_id": "sha256:81b5518f60f7e6d6a177c329ea81ca18170d3d24019e248314db30514112cb37",
+    "original_title": "PRESLEY.Suspicious minds K",
+    "changes": {
+      "title": "Suspicious minds"
+    },
+    "required_text": [
+      "* Suspicious Minds"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/presley-suspicious-minds-k-mid"
+  },
+  {
+    "asset_id": "sha256:82a83eae7efa2c824dd4605108b6ef54a9081094c31540d6bc883591ff5aac65",
+    "original_title": "JOHN.Don't let the sun go down on me K",
+    "changes": {
+      "title": "Don't let the sun go down on me"
+    },
+    "required_text": [
+      "* DON'T LET THE SUN GO DOWN ON ME"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/john-dont-let-the-sun-go-down-on-me-k-mid"
+  },
+  {
+    "asset_id": "sha256:82edc57af3de3b05ec7d8e1fc510d749bd18e6ddf2bc3210b969460249e89abd",
+    "original_title": "COOLIO.Gangsta's paradise K",
+    "changes": {
+      "title": "Gangsta's paradise"
+    },
+    "required_text": [
+      "* GANGSTA'S PARADISE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/coolio-gangstas-paradise-k-mid"
+  },
+  {
+    "asset_id": "sha256:88ff7f78fc593b2ff98f0a65de188a090fe291febcd4b8ad7b95051513b1495f",
+    "original_title": "DION.To love you more K",
+    "changes": {
+      "title": "To love you more"
+    },
+    "required_text": [
+      "* To Love You More"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/dion-to-love-you-more-k-mid"
+  },
+  {
+    "asset_id": "sha256:8a084da5188da938f7d85ed083618049a080c57dd77614410db35428cb3b9dc4",
+    "original_title": "ABBA.Fernando K",
+    "changes": {
+      "title": "Fernando"
+    },
+    "required_text": [
+      "* FERNANDO"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/abba-fernando-k-mid"
+  },
+  {
+    "asset_id": "sha256:8a35a9dedcf6e661dfffebc00e3f872b6b326704d9765abd5fe8cf9b6636569d",
+    "original_title": "ABBA.Dance (While The Music Still Goes On) K",
+    "changes": {
+      "title": "Dance (While The Music Still Goes On)"
+    },
+    "required_text": [
+      "* Dance (While The Music Still Goes On)"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/abba-dance-while-the-music-still-goes-on-k-mid"
+  },
+  {
+    "asset_id": "sha256:8ac27a4617d8cb0a57b4135c835270468a351aec724b166214b0719fe39267ee",
+    "original_title": "FITZGERALD.Summertime K",
+    "changes": {
+      "title": "Summertime"
+    },
+    "required_text": [
+      "SUMMERTIME"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/fitzgerald-summertime-k-mid"
+  },
+  {
+    "asset_id": "sha256:8b2b832528899e0ba3edb05506a585c9415d7bb2f46d5176d4c533772a28b5a6",
+    "original_title": "HOUSTON.Step by step K",
+    "changes": {
+      "title": "Step by step"
+    },
+    "required_text": [
+      "Step by step"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/houston-step-by-step-k-mid"
+  },
+  {
+    "asset_id": "sha256:8e0f714abc440b2cb01f77e545f79d9d04ad4b1ce3bebe7da26f492e0ec6e9ee",
+    "original_title": "THE POLICE.Message in a bottle K",
+    "changes": {
+      "title": "Message in a bottle"
+    },
+    "required_text": [
+      "* MESSAGE IN A BOTTLE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-police-message-in-a-bottle-k-mid"
+  },
+  {
+    "asset_id": "sha256:8fda64b770bd24e780fbe6a0394170ba51defb430a368f174feca67b415533f3",
+    "original_title": "BON JOVI.Real life K",
+    "changes": {
+      "title": "Real life"
+    },
+    "required_text": [
+      "REALLIFE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/bon-jovi-real-life-k-mid"
+  },
+  {
+    "asset_id": "sha256:93d261f567408182316aed69ab3af618f5d36aca44c75623cf9f76ab86293a9a",
+    "original_title": "DION.My heart will go on K",
+    "changes": {
+      "title": "My heart will go on"
+    },
+    "required_text": [
+      "* MY HEART WILL GO ON"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/dion-my-heart-will-go-on-k-mid"
+  },
+  {
+    "asset_id": "sha256:95c9158ff78c3829d75014db7324554dac44a130ee3c3e259dbe75736a5919c6",
+    "original_title": "MARLEY.Could you be loved K",
+    "changes": {
+      "title": "Could you be loved"
+    },
+    "required_text": [
+      "* Could You Be Loved"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/marley-could-you-be-loved-k-mid"
+  },
+  {
+    "asset_id": "sha256:98966e0dd91b7569aaed48e0d0d9632398764f07647bbd1bedd134f2fac500c2",
+    "original_title": "MAROON 5.She will be loved K",
+    "changes": {
+      "title": "She will be loved"
+    },
+    "required_text": [
+      "SHE WILL BE LOVED"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/maroon-5-she-will-be-loved-k-mid"
+  },
+  {
+    "asset_id": "sha256:98a31675eded4d2299abf6882d0d7749e65e28c29ab28b5069ff6832ad0b9253",
+    "original_title": "STATUS QUO.Mony mony K",
+    "changes": {
+      "title": "Mony mony"
+    },
+    "required_text": [
+      "Monymony"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/status-quo-mony-mony-k-mid"
+  },
+  {
+    "asset_id": "sha256:9a294af42124f6045bba285bb0f82f32bff5495a3e3291b35fd4a7ebcd5f8942",
+    "original_title": "AQUA.Barbie girl K",
+    "changes": {
+      "title": "Barbie girl"
+    },
+    "required_text": [
+      "* Barbie Girl"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/aqua-barbie-girl-k-mid"
+  },
+  {
+    "asset_id": "sha256:9ba5fcb411930e7a3dfb8e8547a6c50a77205892c623e99a5b019a633bab1e82",
+    "original_title": "BEEGEES.Kiss of life K",
+    "changes": {
+      "title": "Kiss of life"
+    },
+    "required_text": [
+      "* Kiss Of Life"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/beegees-kiss-of-life-k-mid"
+  },
+  {
+    "asset_id": "sha256:9d28aeb817a7b818668e22b1fa8c6ced950bafa759d4234cc96ea5c372079d9e",
+    "original_title": "SINATRA.Witchcraft K",
+    "changes": {
+      "title": "Witchcraft"
+    },
+    "required_text": [
+      "* WITCHCRAFT"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/sinatra-witchcraft-k-mid"
+  },
+  {
+    "asset_id": "sha256:9f38e5326a8bcc2371c19890e418e525103ee00de1870eae55349bd3c2f92e26",
+    "original_title": "10,000Years",
+    "changes": {
+      "title": "100,000 Years",
+      "source_context": "Kiss"
+    },
+    "required_text": [
+      "100,000 Years (Kiss)"
+    ],
+    "basis": "The embedded work label has 100,000, unlike the upload label; Kiss is retained as the stated source context.",
+    "source_reference": "https://bitmidi.com/10000years-mid"
+  },
+  {
+    "asset_id": "sha256:9fe993f5f7db7aaff8bcd3026e90c0c374bd5eb8b6c851cba4bfaf211b9ef7ec",
+    "original_title": "STEELY DAN.Reelin' in the years K",
+    "changes": {
+      "title": "Reelin' in the years"
+    },
+    "required_text": [
+      "* Reelin' in the Years"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/steely-dan-reelin-in-the-years-k-mid"
+  },
+  {
+    "asset_id": "sha256:a540ca556a21960a4c5b7ab9e6f2b2c120388bfc7d127db0d01c8b68e0ca2150",
+    "original_title": "070527 (Oh for a Poet)",
+    "changes": {
+      "title": "Oh for a Poet\u2014a Beacon Bright",
+      "composer": "Benjamin Robert Tubb"
+    },
+    "required_text": [
+      "Oh for a Poet--a Beacon Bright",
+      "Music by Benjamin Robert Tubb."
+    ],
+    "basis": "Embedded work title and explicit music credit; lyricist is Edwin Arlington Robinson, as stated in the MIDI.",
+    "source_reference": "https://bitmidi.com/070527-oh-for-a-poet-mid"
+  },
+  {
+    "asset_id": "sha256:a8660fa2da8a0cd08abb936be32c18db6840e7a03d794e972a47801b4b6f574d",
+    "original_title": "JACKSON.BillieJean K",
+    "changes": {
+      "title": "BillieJean"
+    },
+    "required_text": [
+      "* BILLIE JEAN"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/jackson-billiejean-k-mid"
+  },
+  {
+    "asset_id": "sha256:abc72c5755d575a073484fefc8af1d9e1f504095fefa8c64cece568bc0c27a04",
+    "original_title": "74-04-parade",
+    "changes": {
+      "title": "The Grand Parade",
+      "source_context": "Genesis"
+    },
+    "required_text": [
+      "The Grand Parade",
+      "by GENESIS"
+    ],
+    "basis": "Uses the exact embedded title and band reference, without inventing a longer title.",
+    "source_reference": "https://bitmidi.com/74-04-parade-mid"
+  },
+  {
+    "asset_id": "sha256:ace6a579960924ec4897893b0d7585de2dbb6081bb1d40dc15bf368319de10a7",
+    "original_title": "THE BEATLES.Revolution K",
+    "changes": {
+      "title": "Revolution"
+    },
+    "required_text": [
+      "* Revolution"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-beatles-revolution-k-mid"
+  },
+  {
+    "asset_id": "sha256:b274db52f4d78438cbd98c2a4ae1b8d8c663017dad96e033ce519cab4086f6e9",
+    "original_title": "L.PRIMA.Just a gigolo K",
+    "changes": {
+      "title": "Just a gigolo"
+    },
+    "required_text": [
+      "Just a Gigolo"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/l-prima-just-a-gigolo-k-mid"
+  },
+  {
+    "asset_id": "sha256:b5e0161c3e571df007c0137bdb0c0e73017d62ae0249f0ebc44aacce5af1884c",
+    "original_title": "THE POLICE.Every little thing she does is magic K",
+    "changes": {
+      "title": "Every little thing she does is magic"
+    },
+    "required_text": [
+      "* Every Little Thing She Does is Magic"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-police-every-little-thing-she-does-is-magic-k-mid"
+  },
+  {
+    "asset_id": "sha256:ba266b60f0879bb6998e820f93fd4024f5747569c469f94aa46d805582b506c9",
+    "original_title": "DAKOTA MOON.She knows K",
+    "changes": {
+      "title": "She knows"
+    },
+    "required_text": [
+      "SHEKNOWS"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/dakota-moon-she-knows-k-mid"
+  },
+  {
+    "asset_id": "sha256:bacdc9c5151fd87ad2a12b5aa611c99b64c0a514c83e2857ae73f04224d2d3cb",
+    "original_title": "E.W.F.After the love has gone K",
+    "changes": {
+      "title": "After the love has gone"
+    },
+    "required_text": [
+      "* AFTER THE LOVE HAS GONE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/e-w-f-after-the-love-has-gone-k-mid"
+  },
+  {
+    "asset_id": "sha256:bbb137c310bf1807c9fe04a41b4a078fbc63453e56f4f2346abef731e91a873f",
+    "original_title": "MARLEY.Is this love K",
+    "changes": {
+      "title": "Is this love"
+    },
+    "required_text": [
+      "* Is This Love"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/marley-is-this-love-k-mid"
+  },
+  {
+    "asset_id": "sha256:bbd78c4f77315694febbe909b0b1f8411c4fbf2a099f6434299f7844456c396f",
+    "original_title": "FIVE.Keep on moving K",
+    "changes": {
+      "title": "Keep on moving"
+    },
+    "required_text": [
+      "KEEP ON MOVING"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/five-keep-on-moving-k-mid"
+  },
+  {
+    "asset_id": "sha256:bbe07abb6295a5af81dbd6af808edb4f29d9fe14e9a5bc9001c5fe41ffb86f6f",
+    "original_title": "A.PARSON PROJECT.Don't answer me K",
+    "changes": {
+      "title": "Don't answer me"
+    },
+    "required_text": [
+      "* Don't Answer Me"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/a-parson-project-dont-answer-me-k-mid"
+  },
+  {
+    "asset_id": "sha256:bdc18ee1b5d26939e8ce66e644f41a509abd4791ceb909a35fb91e86002d7a46",
+    "original_title": "i just wanna stop L",
+    "changes": {
+      "title": "i just wanna stop"
+    },
+    "required_text": [
+      "I Just Wanna Stop"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/i-just-wanna-stop-l-mid"
+  },
+  {
+    "asset_id": "sha256:c0a25ac172f5e71fd95d176aea48413de26a998310a556efc31c42bd26b0dd53",
+    "original_title": "2 x 4",
+    "changes": {
+      "title": "2 \u00d7 4",
+      "source_context": "Metallica"
+    },
+    "required_text": [
+      "2 X 4 by Metallica"
+    ],
+    "basis": "Title and band reference are stated in the embedded work label.",
+    "source_reference": "https://bitmidi.com/metallica-2-x-4-mid"
+  },
+  {
+    "asset_id": "sha256:c2094bac4bed2385f08c1219af81342690d3b75f56a102417138b4c920e726bc",
+    "original_title": "JUNIA.It's funny K",
+    "changes": {
+      "title": "It's funny"
+    },
+    "required_text": [
+      "ITSFUNNY"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/junia-its-funny-k-mid"
+  },
+  {
+    "asset_id": "sha256:c368e8f9febd2958af2cd215c986c1c0bf8497bf3b0ec79684e263740c7a2be0",
+    "original_title": "J.L.LEWIS.Greats balls of fire K",
+    "changes": {
+      "title": "Greats balls of fire"
+    },
+    "required_text": [
+      "Greats balls of fire"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/j-l-lewis-greats-balls-of-fire-k-mid"
+  },
+  {
+    "asset_id": "sha256:c3f847888db742b9f7ccc1de4127646bacf8c9f68f599880da95c6bfcd938ba9",
+    "original_title": "GENESIS.In too deep K",
+    "changes": {
+      "title": "In too deep"
+    },
+    "required_text": [
+      "* IN TOO DEEP"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/genesis-in-too-deep-k-mid"
+  },
+  {
+    "asset_id": "sha256:c793109ac65ed6c45643740d39e23512ced3478e1b059e51e73f2bbc7c786437",
+    "original_title": "WONDER.You are the sunshine of my life K",
+    "changes": {
+      "title": "You are the sunshine of my life"
+    },
+    "required_text": [
+      "* You Are The Sunshine Of My Life"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/wonder-you-are-the-sunshine-of-my-life-k-mid"
+  },
+  {
+    "asset_id": "sha256:c8a98e32a11f4aa9ed3b083dc73cf75190fa17acf2b7ca3a8231a4c7e76539ca",
+    "original_title": "WHAM.Wake me up K",
+    "changes": {
+      "title": "Wake me up"
+    },
+    "required_text": [
+      "WAKEMEUP"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/wham-wake-me-up-k-mid"
+  },
+  {
+    "asset_id": "sha256:cac9dccf7e2963ff3f3b8fd6b30e31d9b37a316272e78dc426cdb6cfced8b51d",
+    "original_title": "ASZNAVOUR.Comme ils disent K",
+    "changes": {
+      "title": "Comme ils disent"
+    },
+    "required_text": [
+      "* Comme \"ils disent\""
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/asznavour-comme-ils-disent-k-mid"
+  },
+  {
+    "asset_id": "sha256:cd7c1ef53ac28456cd9c8254b68af5f4eae9058f286dcf7aa1b029f07ccf89f2",
+    "original_title": "COLLINS.Something happened on the way to heaven K",
+    "changes": {
+      "title": "Something happened on the way to heaven"
+    },
+    "required_text": [
+      "* Something Happened On The Way To Heaven"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/collins-something-happened-on-the-way-to-heaven-k-mid"
+  },
+  {
+    "asset_id": "sha256:cd8524ef5d43834e7317977f9fd1e4e739c8aa861bffd7db6250b1e26d34447f",
+    "original_title": "CHER.Strong enough K",
+    "changes": {
+      "title": "Strong enough"
+    },
+    "required_text": [
+      "Strong enough"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/cher-strong-enough-k-mid"
+  },
+  {
+    "asset_id": "sha256:d01be072f2a5c556448d6154eef605928b67d7ffc32ec0501ea1f1f6c36676a0",
+    "original_title": "ADAMS.Summer of 69 K",
+    "changes": {
+      "title": "Summer of 69"
+    },
+    "required_text": [
+      "* SUMMER OF '69"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/adams-summer-of-69-k-mid"
+  },
+  {
+    "asset_id": "sha256:d03df6731557910ef2fbf471e8fdd3a8c1ab1840f0b0c078b2db7f991831890a",
+    "original_title": "DIAMOND.September morn' K",
+    "changes": {
+      "title": "September morn'"
+    },
+    "required_text": [
+      "September morn"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/diamond-september-morn-k-mid"
+  },
+  {
+    "asset_id": "sha256:d43f1e35bd1209cbaeafa3d2a0e07c681a25a1c8ef2ad3cb67456fcbd88e87dc",
+    "original_title": "JAN & DEAN.Surf city K",
+    "changes": {
+      "title": "Surf city"
+    },
+    "required_text": [
+      "Surfcity"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/jan-and-dean-surf-city-k-mid"
+  },
+  {
+    "asset_id": "sha256:d546fbd50be0bae275d7599bb929dadde38d204c080f76bd22a88af9953b6f39",
+    "original_title": "110521-Lines to My Son",
+    "changes": {
+      "title": "Lines to My Son",
+      "composer": "Benjamin Robert Tubb"
+    },
+    "required_text": [
+      "Lines to My Son",
+      "Music by Benjamin Robert Tubb"
+    ],
+    "basis": "Embedded title and music credit. William Shakespeare Hays is credited for the words, not the music.",
+    "source_reference": "https://bitmidi.com/110521-lines-to-my-son-mid"
+  },
+  {
+    "asset_id": "sha256:d7969352e35a6a492b93acd538fcaa1a58b5961241fa18a532e88d85302a88a9",
+    "original_title": "THE DOORS.Light my fire k",
+    "changes": {
+      "title": "Light my fire"
+    },
+    "required_text": [
+      "* LIGHT MY FIRE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-doors-light-my-fire-k-mid"
+  },
+  {
+    "asset_id": "sha256:d992c6b1f1dad1d2f0cd0f9ce9fcb158b724292667b6c9b03f50f72c66c8c8cd",
+    "original_title": "WESTLIFE.Up town girl K",
+    "changes": {
+      "title": "Up town girl"
+    },
+    "required_text": [
+      "Uptown Girl"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/westlife-up-town-girl-k-mid"
+  },
+  {
+    "asset_id": "sha256:da410b7fc1514611dc0a8d58cca6aa651ecc82f50b7c7f8a571066c7e8fac033",
+    "original_title": "JACKSON.Man in the mirror k",
+    "changes": {
+      "title": "Man in the mirror"
+    },
+    "required_text": [
+      "* MAN IN THE MIRROR"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/jackson-man-in-the-mirror-k-mid"
+  },
+  {
+    "asset_id": "sha256:da66e50e2a38b751a2b1f06ac23da0a22f0f642a21415456aec1de40e7c86ef9",
+    "original_title": "JACKSON.You Are Not Alone K",
+    "changes": {
+      "title": "You Are Not Alone"
+    },
+    "required_text": [
+      "You Are Not Alone"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/jackson-you-are-not-alone-k-mid"
+  },
+  {
+    "asset_id": "sha256:db88e6645dc998f4fc40fbd37bf0088eeddffc54a6f5ee4be4b16dfaf49333d6",
+    "original_title": "CLAPTON.Tears in heaven K",
+    "changes": {
+      "title": "Tears in heaven"
+    },
+    "required_text": [
+      "TEARS IN HEAVEN"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/clapton-tears-in-heaven-k-mid"
+  },
+  {
+    "asset_id": "sha256:e051760c9c08d7512e5ec0b5604b09e27b5d5c229aff25e979e78b8032e4741a",
+    "original_title": "C.REA.Blue cafe K",
+    "changes": {
+      "title": "Blue cafe"
+    },
+    "required_text": [
+      "BLUECAFE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/c-rea-blue-cafe-k-mid"
+  },
+  {
+    "asset_id": "sha256:e1008ee7b826872886ff70ecaf0e25063eabeb9373ce55f31db06d158973e73d",
+    "original_title": "ABBA.Hasta Manana K",
+    "changes": {
+      "title": "Hasta Manana"
+    },
+    "required_text": [
+      "Hasta Manana"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/abba-hasta-manana-k-mid"
+  },
+  {
+    "asset_id": "sha256:e157b2a776234f35ef9e7c60d1f88a6655bf6353629503c63b164c278d805bc0",
+    "original_title": "CHRIS REA.The Blue Cafe K",
+    "changes": {
+      "title": "The Blue Cafe"
+    },
+    "required_text": [
+      "* The Blue Cafe"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/chris-rea-the-blue-cafe-k-mid"
+  },
+  {
+    "asset_id": "sha256:e27fbaefb448901ca0a45cca13e9e4ff63ebd8d3e5d6b6dbc4a15d2ed7dee53c",
+    "original_title": "CHARLES.Georgia on my mind  K",
+    "changes": {
+      "title": "Georgia on my mind"
+    },
+    "required_text": [
+      "Georgia on my mind"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/charles-georgia-on-my-mind-k-mid"
+  },
+  {
+    "asset_id": "sha256:e610c0aa97b63ba11cb944bf4c87d4eb7d4f78436dde7127e498d95c35353beb",
+    "original_title": "ROXETTE.It must have been love K",
+    "changes": {
+      "title": "It must have been love"
+    },
+    "required_text": [
+      "* IT MUST HAVE BEEN LOVE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/roxette-it-must-have-been-love-k-mid"
+  },
+  {
+    "asset_id": "sha256:e68bb09c23d583493dceb78d23756b3d496bc124e4a258e8b57c4cc60e8d0cf9",
+    "original_title": "JOHN.Your song K",
+    "changes": {
+      "title": "Your song"
+    },
+    "required_text": [
+      "* Your Song"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/john-your-song-k-mid"
+  },
+  {
+    "asset_id": "sha256:e94f9a4bfd8c47ade8f62e697ca92c07b402786a31e04811fb34a56b1243b23f",
+    "original_title": "L.MARLIN.Sitting down here K",
+    "changes": {
+      "title": "Sitting down here"
+    },
+    "required_text": [
+      "Sitting down here"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/l-marlin-sitting-down-here-k-mid"
+  },
+  {
+    "asset_id": "sha256:ebf110b7e44a612742c14c9e307f23eb1eaed69a9ffcbb6ae4f000206c2ac289",
+    "original_title": "ABBA.Mamma Mia K",
+    "changes": {
+      "title": "Mamma Mia"
+    },
+    "required_text": [
+      "Mamma Mia"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/abba-mamma-mia-k-mid"
+  },
+  {
+    "asset_id": "sha256:edceab5aa26c9b8b47048daadb89b0b59eb3251cc1656de3f8b182cf7888eb61",
+    "original_title": "E.IGLESIAS.Be with you k",
+    "changes": {
+      "title": "Be with you"
+    },
+    "required_text": [
+      "Be With You"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/e-iglesias-be-with-you-k-mid"
+  },
+  {
+    "asset_id": "sha256:ee3ebd1583871fe143e62f969403a62b49e3fe36bab40fd560c1e13f227ad598",
+    "original_title": "LENNOX.Would i lie to you K",
+    "changes": {
+      "title": "Would i lie to you"
+    },
+    "required_text": [
+      "WOULD I LIE TO YOU"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/lennox-would-i-lie-to-you-k-mid"
+  },
+  {
+    "asset_id": "sha256:ee45f448e030f1d1ac0ac815e819d8acb1f532df0304d1d707fb6b6eef9e667a",
+    "original_title": "A.LEAR.Follow me K",
+    "changes": {
+      "title": "Follow me"
+    },
+    "required_text": [
+      "FOLLOWME"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/a-lear-follow-me-k-mid"
+  },
+  {
+    "asset_id": "sha256:f1638802dd69140cba3a0502fdb9dece865152139f72a992241e15ab36087d3f",
+    "original_title": "JACKSON.The way you make me feel K",
+    "changes": {
+      "title": "The way you make me feel"
+    },
+    "required_text": [
+      "* THE WAY YOU MAKE ME FEEL"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/jackson-the-way-you-make-me-feel-k-mid"
+  },
+  {
+    "asset_id": "sha256:f79f66a3c1ba6b72dd0d00f62fbcae797730eebe06e6f3bff4c1243337185b60",
+    "original_title": "FAITH HILL.This kiss K",
+    "changes": {
+      "title": "This kiss"
+    },
+    "required_text": [
+      "THISKISS"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/faith-hill-this-kiss-k-mid"
+  },
+  {
+    "asset_id": "sha256:f9143f5bad0f0934e7b11401bcf4cf6fd6178675e2c76015b05ecf6bb1a48ffe",
+    "original_title": "E.W.F.Let's groove K",
+    "changes": {
+      "title": "Let's groove"
+    },
+    "required_text": [
+      "* LET'S GROOVE"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/e-w-f-lets-groove-k-mid"
+  },
+  {
+    "asset_id": "sha256:f9be401391916d0d0cb2c327be3749daa9115b014553771f50d917d10ea3ed5e",
+    "original_title": "Vogel im K%E4fig",
+    "changes": {
+      "title": "Vogel im K\u00e4fig"
+    },
+    "required_text": [
+      "Vogel im K\u00e4fig"
+    ],
+    "basis": "Decoded title agrees with the MIDI work label. The separate Hiroyuki Sawano credit is retained in the source file; its role is not inferred from a track name.",
+    "source_reference": "https://bitmidi.com/attack-on-titan-vogel-im-ke4fig-mid"
+  },
+  {
+    "asset_id": "sha256:fa8c1b885f30eb6679a6d5ead539588b8b0c108086dfb72449f4931722424075",
+    "original_title": "RICHIE.Say you say me K",
+    "changes": {
+      "title": "Say you say me"
+    },
+    "required_text": [
+      "* SAY YOU SAY ME"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/richie-say-you-say-me-k-mid"
+  },
+  {
+    "asset_id": "sha256:faf0c3423235e076e097ed388aecc2420c2eac69211253c6e8ded565ce6a7073",
+    "original_title": "BONEY M.Dreadlock holiday K",
+    "changes": {
+      "title": "Dreadlock holiday"
+    },
+    "required_text": [
+      "* DREADLOCK HOLIDAY"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/boney-m-dreadlock-holiday-k-mid"
+  },
+  {
+    "asset_id": "sha256:fdc89b71ef99df5747c8f9439acab60508f82954d42d3f5118bae0da0925e631",
+    "original_title": "THE BEATLES.OblaDi OblaDa K",
+    "changes": {
+      "title": "OblaDi OblaDa"
+    },
+    "required_text": [
+      "* OB-LA-DI OB-LA-DA"
+    ],
+    "basis": "Embedded title corroborates the upload title without its trailing K/L marker. The full upload label is preserved separately.",
+    "source_reference": "https://bitmidi.com/the-beatles-obladi-oblada-k-mid"
+  }
+]

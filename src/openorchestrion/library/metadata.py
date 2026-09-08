@@ -33,6 +33,7 @@ from typing import Any, Iterable, Iterator, Mapping
 from uuid import uuid4
 
 from . import rights
+from .title_identity import decode_label, IDENTITY_FIELDS
 
 try:  # POSIX advisory locking; the appliance targets Raspberry Pi OS/Linux.
     import fcntl
@@ -51,6 +52,7 @@ PERFORMANCE_TYPES = (
 QUALITY_GRADES = ("A", "B", "C", "D")
 
 TEXT_FIELDS = (
+    *IDENTITY_FIELDS,
     "composition_id",
     "title",
     "composition_title",
@@ -678,6 +680,12 @@ def read_csv_edits(csv_path: str | Path) -> list[tuple[str, dict[str, Any]]]:
                 raise MetadataValidationError(
                     f"{path}: row {number} has unknown column(s): {', '.join(unknown)}"
                 )
+            original_title = changes.get("title")
+            for name in ("title", "composition_title", "composer", "artist", "source_context"):
+                if name in changes:
+                    changes[name] = decode_label(changes[name])
+            if original_title and changes["title"] != original_title:
+                changes.setdefault("source_title", original_title)
             edits.append((identifier, changes))
     return edits
 

@@ -44,6 +44,10 @@
       "description": "Curated or user-edited descriptive fields. Kept separate from facts extracted from MIDI bytes.",
       "additionalProperties": false,
       "properties": {
+        "source_title": {"type": "string", "minLength": 1},
+        "source_context": {"type": "string", "minLength": 1},
+        "title_status": {"type": "string", "minLength": 1},
+        "metadata_note": {"type": "string", "minLength": 1},
         "composition_id": {"type": "string", "minLength": 1},
         "title": {"type": "string", "minLength": 1},
         "composition_title": {"type": "string", "minLength": 1},

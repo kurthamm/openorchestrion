@@ -178,3 +178,19 @@ def test_correlation_ids_stay_out_of_the_intent() -> None:
     source = (WEB_ROOT / "js" / "api.js").read_text(encoding="utf-8")
     intent_call = source[source.index("stationPreview:") : source.index("search:")]
     assert "command_id" not in intent_call
+
+
+@pytest.fixture(autouse=True)
+def isolated_web_environment(monkeypatch, tmp_path):
+    """A developer's exported appliance settings must never reach live state."""
+    for key, value in {
+        "LIBRARY_ROOT": str(tmp_path / "library"),
+        "CATALOG_DB": str(tmp_path / "catalog.db"),
+        "HISTORY_DB": str(tmp_path / "history.db"),
+        "PLAYER_STATE_DB": str(tmp_path / "player-state.db"),
+        "VIRTUAL_MIDI": "1",
+        "AI_PROVIDER": "off",
+    }.items():
+        monkeypatch.setenv("OPENORCHESTRION_" + key, value)
+    monkeypatch.setattr("openorchestrion.playback.factory.list_output_ports", lambda: [])
+    monkeypatch.setattr("openorchestrion.app.list_output_ports", lambda: [])

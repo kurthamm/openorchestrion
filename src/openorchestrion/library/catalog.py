@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from .curation import admitted_ids
+from .title_identity import IDENTITY_FIELDS
 
 CATALOG_SCHEMA_VERSION = 1
 TAG_FIELDS = {
@@ -366,6 +367,12 @@ def _index_document(
             ),
         )
 
+    for field in IDENTITY_FIELDS:
+        value = _optional_str(metadata.get(field))
+        if value:
+            conn.execute("INSERT INTO asset_tags(asset_id, kind, value) VALUES (?, ?, ?)",
+                         (document["asset_id"], "identity_" + field, value))
+
     for field, kind in TAG_FIELDS.items():
         for value in _list_of_strings(metadata.get(field), field):
             conn.execute(
@@ -499,9 +506,9 @@ def search_catalog(
     clauses = ["1=1"]
     params: list[Any] = []
     if text:
-        clauses.append("(a.title LIKE ? OR a.composer LIKE ? OR a.artist LIKE ? OR a.original_filename LIKE ?)")
+        clauses.append("(a.title LIKE ? OR a.composer LIKE ? OR a.artist LIKE ? OR a.original_filename LIKE ? OR EXISTS (SELECT 1 FROM asset_tags t WHERE t.asset_id=a.asset_id AND t.kind IN ('identity_source_title','identity_source_context') AND t.value LIKE ?))")
         needle = f"%{text}%"
-        params.extend([needle, needle, needle, needle])
+        params.extend([needle, needle, needle, needle, needle])
     if composer:
         clauses.append("a.composer = ? COLLATE NOCASE")
         params.append(composer)
@@ -568,6 +575,8 @@ def get_asset(db_path: str | Path, asset_id: str) -> dict[str, Any] | None:
         ).fetchall()
 
     result = dict(row)
+    for field in IDENTITY_FIELDS:
+        result[field] = next((tag["value"] for tag in tag_rows if tag["kind"] == "identity_" + field), None)
     result["favorite"] = bool(result["favorite"])
     result["sustain_used"] = bool(result["sustain_used"])
     for field, kind in TAG_FIELDS.items():

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from openorchestrion.api.web import WEB_ROOT
@@ -106,3 +107,19 @@ def test_rendering_css_is_already_covered_by_package_data_glob() -> None:
     pyproject = Path(__file__).resolve().parents[1] / "pyproject.toml"
     source = pyproject.read_text(encoding="utf-8")
     assert '"web/*.css"' in source
+
+
+@pytest.fixture(autouse=True)
+def isolated_web_environment(monkeypatch, tmp_path):
+    """A developer's exported appliance settings must never reach live state."""
+    for key, value in {
+        "LIBRARY_ROOT": str(tmp_path / "library"),
+        "CATALOG_DB": str(tmp_path / "catalog.db"),
+        "HISTORY_DB": str(tmp_path / "history.db"),
+        "PLAYER_STATE_DB": str(tmp_path / "player-state.db"),
+        "VIRTUAL_MIDI": "1",
+        "AI_PROVIDER": "off",
+    }.items():
+        monkeypatch.setenv("OPENORCHESTRION_" + key, value)
+    monkeypatch.setattr("openorchestrion.playback.factory.list_output_ports", lambda: [])
+    monkeypatch.setattr("openorchestrion.app.list_output_ports", lambda: [])

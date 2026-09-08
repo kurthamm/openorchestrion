@@ -3,13 +3,13 @@
 import csv
 import hashlib
 import json
-import re
 import sys
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from openorchestrion.library.title_identity import source_identity
 
 OUT = Path(sys.argv[1])
 LIMIT = int(sys.argv[2]) if len(sys.argv) > 2 else 10**9
@@ -50,10 +50,8 @@ print(len(entries), "entries", flush=True)
 
 
 def parse_name(name):
-    base = re.sub(r"\.midi?$", "", name, flags=re.I).replace("_", " ").strip()
-    base = re.sub(r"\s*\(\d+\)$", "", base)
-    m = re.match(r"^(.{2,60}?)\s+-\s+(.+)$", base)
-    return (m.group(1).strip(), m.group(2).strip()) if m else ("", base)
+    identity = source_identity(name, source="BitMidi")
+    return identity.get("source_context", ""), identity["title"]
 
 
 def fetch(e):
@@ -82,7 +80,10 @@ def fetch(e):
         sha256=sha,
         title=title[:200],
         composer="",
-        artist=artist[:120],
+        artist="",
+        source_context=artist[:120],
+        source_title=e["name"],
+        title_status=source_identity(e["name"], source="BitMidi")["title_status"],
         year_composed="",
         era="",
         performance_type="MULTI_INSTRUMENT",

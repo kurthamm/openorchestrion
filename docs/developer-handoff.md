@@ -10,6 +10,13 @@ for acquisition, player operations, library quality and the listening-room UI.
 The repository-maintenance release builds on it; its exact validation and deployment
 identity are in [the maintenance record](repository-maintenance.md).
 
+The subsequent [title metadata repair](title-metadata-repair.md) is deployed with
+110 runtime files. It corrects 2,230 titles without changing the 5,861-song inventory,
+preserves original labels, and distinguishes upload context from creator credits.
+Use the shared identity normalizer for imports; do not reintroduce filename-prefix
+composer/artist inference. The repair record documents evidence, the installed
+wheel, private rollback plan and verification.
+
 ## Current product and data
 
 - Music-first UI: Discover, filtered library, Favorites, Queue, Recently Played,
