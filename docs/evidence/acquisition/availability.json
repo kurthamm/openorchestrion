@@ -1,0 +1,110 @@
+[
+  {
+    "source": "bitmidi",
+    "url": "https://bitmidi.com/api/midi/all?page=0&pageSize=3",
+    "status": 200,
+    "final_url": "https://bitmidi.com/api/midi/all?page=0&pageSize=3",
+    "bytes": 1078,
+    "content_type": "application/json; charset=utf-8",
+    "sha256": "de34ab8ad4d58543182cf25adcd5988f8d96778dcbdb4e25015b24a161b8ba8d",
+    "seconds": 8.02
+  },
+  {
+    "source": "mutopia",
+    "url": "https://www.mutopiaproject.org/latestadditions.rss",
+    "status": 200,
+    "final_url": "https://www.mutopiaproject.org/latestadditions.rss",
+    "bytes": 9751,
+    "content_type": "application/x-rss+xml",
+    "sha256": "3d8d984af74872985bef629f588e5f6560579c932909e307f9e1e8a34fab2a5d",
+    "seconds": 0.4
+  },
+  {
+    "source": "commons",
+    "url": "https://commons.wikimedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:MIDI_files&cmlimit=3&format=json",
+    "status": 200,
+    "final_url": "https://commons.wikimedia.org/w/api.php?action=query&list=categorymembers&cmtitle=Category:MIDI_files&cmlimit=3&format=json",
+    "bytes": 400,
+    "content_type": "application/json; charset=utf-8",
+    "sha256": "17a64c5e5badfb71994235967615c123fd8ff10afafc3ebc8b5ab9390d85d72d",
+    "seconds": 0.28
+  },
+  {
+    "source": "piano-midi",
+    "url": "https://www.piano-midi.de/",
+    "error": "<urlopen error [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate (_ssl.c:1029)>",
+    "seconds": 0.49
+  },
+  {
+    "source": "classical-archives-free",
+    "url": "https://www.classicalarchives.com/prs/free.html",
+    "status": 200,
+    "final_url": "https://www.classicalarchives.com/prs/free.html",
+    "bytes": 6690,
+    "content_type": "text/html",
+    "sha256": "3f51c3a8d033a17705d1d29c6366cbff8cf67f035d814cf411fa8828a8dc3a8b",
+    "seconds": 0.12
+  },
+  {
+    "source": "vgmusic",
+    "url": "https://www.vgmusic.com/music/",
+    "status": 200,
+    "final_url": "https://www.vgmusic.com/music/",
+    "bytes": 20047,
+    "content_type": "text/html",
+    "sha256": "21707e387149ff5a983dcada0c051dee4a003e4f5081b46432673fbc6c00e952",
+    "seconds": 0.19
+  },
+  {
+    "source": "kunstderfuge",
+    "url": "https://kunstderfuge.com/",
+    "status": 200,
+    "final_url": "https://kunstderfuge.com/",
+    "bytes": 23075,
+    "content_type": "text/html",
+    "sha256": "ea5edad06ef406301c7a05cb391a65a5202e860eeb5445f9428bca164720336c",
+    "seconds": 1.17
+  },
+  {
+    "source": "smd",
+    "url": "https://www.audiolabs-erlangen.de/resources/MIR/SMD/",
+    "status": 200,
+    "final_url": "https://www.audiolabs-erlangen.de/resources/MIR/SMD/",
+    "bytes": 8972,
+    "content_type": "text/html; charset=UTF-8",
+    "sha256": "e25ea18e295bdc12fe8efd985830bce3da0c1b12651d8f32f0d320a8a1188c35",
+    "seconds": 1.21
+  },
+  {
+    "source": "ecompetition",
+    "url": "https://www.ecompetition.org/about/about-e-competition",
+    "status": 200,
+    "final_url": "https://www.ecompetition.org/about/about-e-competition",
+    "bytes": 186925,
+    "content_type": "text/html; charset=utf-8",
+    "sha256": "7569639b92c34cc48ef7f2003a758b3c6ea2e6e18c868007e7fe0b56092c11f1",
+    "seconds": 0.53
+  },
+  {
+    "source": "imslp",
+    "url": "https://imslp.org/wiki/Category:MIDI",
+    "error": "HTTP Error 404: Not Found",
+    "seconds": 0.23
+  },
+  {
+    "source": "ichigo",
+    "url": "https://ichigos.com/midi",
+    "error": "HTTP Error 404: Not Found",
+    "seconds": 0.57
+  },
+  {
+    "source": "midkar",
+    "url": "https://midkar.com/",
+    "status": 200,
+    "final_url": "https://midkar.com/",
+    "bytes": 24658,
+    "content_type": "text/html; charset=UTF-8",
+    "sha256": "576d742be79d41a2a0b7637b037333ba93018bd44fc20e259ac3ab8d6a7e44a7",
+    "seconds": 0.51
+  }
+]

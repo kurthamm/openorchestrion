@@ -26,6 +26,8 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 DEFAULT_ENV_FILE = Path("/etc/openorchestrion/openorchestrion.env")
 DEPLOYMENT_FILES = (
+    "openorchestrion-acquire.service",
+    "openorchestrion-acquire.timer",
     "openorchestrion.service",
     "openorchestrion-discovery.service",
     "openorchestrion-offsite-backup.service",

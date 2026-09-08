@@ -100,3 +100,34 @@ files, an importer manifest (`catalog.csv`, one rights row per file) and a
 
 They are personal-library tooling, not part of the package, and they respect the
 rate limits of each archive (Commons refuses bursts with HTTP 429).
+
+
+## Verified automatic source registry — 2026-09-07
+
+Repository history documented Commons HTTP 429 bursts and an earlier manual-fetch
+fallback. It did not name a complete list of inaccessible archives. The checks below
+were run from the Raspberry Pi, including actual MIDI downloads where enabled.
+[Probe evidence](evidence/acquisition/midi-downloads.json) and
+[the automatic importer runbook](automatic-acquisition.md) are checked in.
+
+| Source | Current automatic use | Access evidence and scope |
+| --- | --- | --- |
+| [Saarland Music Data v2](https://www.audiolabs-erlangen.de/resources/MIR/SMD/midi) | Enabled | Actual MIDI verified. 50 listed Disklavier piano performances. Version 2 restores sustain/soft pedal controls lost in v1. CC BY-NC-SA 3.0; retain attribution. Fixed research collection, not a daily release feed. |
+| [Classical Archives: Pierre R. Schwob free collection](https://www.classicalarchives.com/prs/free.html) | Enabled | Actual MIDI verified. Only the expressly free `/prs/midi_free/` collection; no subscription catalog. Publisher credit retained. |
+| [VGMusic](https://www.vgmusic.com/music/) | Enabled | Actual piano-arrangement MIDI verified. Reviewed music directories including piano arrangements; every file still requires v2 structural evidence. |
+| [Mutopia](https://www.mutopiaproject.org/latestadditions.rss) | Enabled | Actual per-piece MIDI verified. RSS is dated 2019: useful for missing backcatalog, not evidence of recent publication. No bundled ZIP extraction or automatic per-work rights certification in this adapter. |
+| [MIDKAR](https://midkar.com/Blues/Blues_MIDIs.html) | Enabled | Actual MIDI verified in Blues and Pop/Rock paths. MIDI/KAR only, no member areas, software or SoundFonts. Backing-track labels are a negative completeness signal, never publisher proof of a full arrangement. |
+| [BitMidi](https://bitmidi.com/robots.txt) | Disabled | API returns HTTP 200, but MIDI downloads use `/uploads/`, disallowed by the current robots policy. Homepage/API availability does not establish permission to crawl downloads. Existing library files remain available. |
+| [Wikimedia Commons](https://commons.wikimedia.org/wiki/Category:MIDI_files) | Disabled | API responds but tested route is disallowed by the client's robots check; old crawler also encountered HTTP 429. Needs an approved API access route before unattended use. |
+| [Piano MIDI](https://www.piano-midi.de/) | Disabled | TLS certificate verification failed on the Pi. Verification is not disabled to force access. |
+| [Kunst der Fuge](https://www.kunstderfuge.com/info.htm) | Disabled | Website reachable, but subscription/daily free-download limits are unsuitable for this unattended collector. |
+| [MAESTRO](https://magenta.tensorflow.org/datasets/maestro) | Existing library | Already represented by 1,276 admitted publisher-verified performances. Versioned dataset, no separate daily adapter. |
+| [e-Competition](https://www.ecompetition.org/about/about-e-competition) | Research candidate | Official page reachable and describes Disklavier recordings; a current direct MIDI route remains unverified. Check overlap with MAESTRO before building an adapter. |
+| IMSLP / Ichigo | Research candidates | Guessed category paths returned 404; that is not evidence the whole sites are inaccessible. Work-specific download routes and metadata remain to be reviewed. |
+
+New sources should be found through primary publisher/arranger sites and official
+performance datasets, then checked in this order: current listing, an actual MIDI
+file, usage/access policy, source metadata, representative arrangement quality, and
+cross-library duplicate overlap. Large audio-transcribed datasets do not automatically
+meet the recorded-performance standard. More files or more channels alone do not
+establish completeness. Do not add sources to inflate the available count.

@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily MIDI discovery and quality admission
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=15min
+Persistent=true
+Unit=openorchestrion-acquire.service
+
+[Install]
+WantedBy=timers.target

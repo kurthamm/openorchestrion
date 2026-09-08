@@ -1,0 +1,114 @@
+{
+  "integrated_main": "c5c0dec",
+  "wheel_sha256": "79c78b21875e165195d4c4b163182ea2812f4446ab7f4237a037fc0554c3a0d1",
+  "runtime_files": 107,
+  "tests": 726,
+  "library_count": 5861,
+  "queue_and_collections_preserved": true,
+  "installed_wheel_smoke": "passed",
+  "offsite_backup_support_preserved": true,
+  "first_run": {
+    "status": "ok",
+    "started_at": 1788827143.380326,
+    "finished_at": 1788827351.18233,
+    "counts": {
+      "listing_pages": 13,
+      "admitted": 29,
+      "not_qualified": 50,
+      "duplicate_bytes": 7
+    },
+    "sources": [
+      {
+        "source": "Saarland Music Data v2",
+        "started_at": "2026-09-08T00:25:44.331971+00:00",
+        "counts": {
+          "listing_pages": 1,
+          "admitted": 20
+        },
+        "status": "ok",
+        "finished_at": "2026-09-08T00:27:08.368063+00:00"
+      },
+      {
+        "source": "Classical Archives \u2014 Pierre R. Schwob free collection",
+        "started_at": "2026-09-08T00:27:08.413746+00:00",
+        "counts": {
+          "listing_pages": 1,
+          "not_qualified": 19,
+          "admitted": 1
+        },
+        "status": "ok",
+        "finished_at": "2026-09-08T00:27:31.121284+00:00"
+      },
+      {
+        "source": "VGMusic",
+        "started_at": "2026-09-08T00:27:31.163332+00:00",
+        "counts": {
+          "listing_pages": 2,
+          "admitted": 5,
+          "not_qualified": 14,
+          "duplicate_bytes": 1
+        },
+        "status": "ok",
+        "finished_at": "2026-09-08T00:28:05.027644+00:00"
+      },
+      {
+        "source": "BitMidi",
+        "started_at": "2026-09-08T00:28:05.048879+00:00",
+        "counts": {},
+        "status": "disabled",
+        "reason": "The download directory /uploads/ is disallowed by the publisher robots policy."
+      },
+      {
+        "source": "Mutopia Project",
+        "started_at": "2026-09-08T00:28:05.069842+00:00",
+        "counts": {
+          "listing_pages": 8,
+          "duplicate_bytes": 6
+        },
+        "status": "ok",
+        "finished_at": "2026-09-08T00:28:19.519823+00:00"
+      },
+      {
+        "source": "Wikimedia Commons",
+        "started_at": "2026-09-08T00:28:19.540672+00:00",
+        "counts": {},
+        "status": "disabled",
+        "reason": "The tested API route is disallowed by robots policy; previous acquisition also recorded HTTP 429. An approved API access route is required."
+      },
+      {
+        "source": "MIDKAR",
+        "started_at": "2026-09-08T00:28:19.561009+00:00",
+        "counts": {
+          "listing_pages": 1,
+          "not_qualified": 17,
+          "admitted": 3
+        },
+        "status": "ok",
+        "finished_at": "2026-09-08T00:29:08.629084+00:00"
+      },
+      {
+        "source": "Piano MIDI",
+        "started_at": "2026-09-08T00:29:08.739737+00:00",
+        "counts": {},
+        "status": "disabled",
+        "reason": "TLS certificate verification failed on the Pi; certificates are not bypassed."
+      },
+      {
+        "source": "Kunst der Fuge",
+        "started_at": "2026-09-08T00:29:08.847333+00:00",
+        "counts": {},
+        "status": "disabled",
+        "reason": "Subscription and daily download limits; not enabled for unattended bulk acquisition."
+      }
+    ],
+    "policy_version": "complete-listening-v2"
+  },
+  "baseline_available": 5832,
+  "new_admissions": 29,
+  "available_after_first_run": 5861,
+  "baseline_originals": 25893,
+  "baseline_archived_originals": 20061,
+  "timer_enabled": "enabled",
+  "next_timer": "Tue 2026-09-08 04:40:42 EDT",
+  "admission_catalog_hashes_verified": true
+}

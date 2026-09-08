@@ -265,7 +265,7 @@ def _stage_assets(source_library: Path, staged_library: Path) -> tuple[ManifestF
     # Admission and its explanation must survive restore; otherwise subsequent
     # imports could bypass the listening policy. Recovery archives are separate
     # appliance data and are retained by the full curation snapshot.
-    for name in ('listening-admission.json', 'quality.sqlite3'):
+    for name in ('listening-admission.json', 'quality.sqlite3', 'acquisition.sqlite3'):
         source = source_library / name
         if not source.exists():
             continue
@@ -409,7 +409,15 @@ def create_backup(state_root: str | Path, destination: str | Path) -> BackupRepo
 
     with tempfile.TemporaryDirectory(prefix="openorchestrion-backup-") as temp_name:
         staging = Path(temp_name)
-        files = list(_stage_assets(root / "library", staging / "library"))
+        if (root / 'library' / 'acquisition.sqlite3').exists():
+            from .library.acquisition_publish import snapshot_lock
+            try:
+                with snapshot_lock(root / 'library'):
+                    files = list(_stage_assets(root / "library", staging / "library"))
+            except RuntimeError as exc:
+                raise BackupError(str(exc)) from exc
+        else:
+            files = list(_stage_assets(root / "library", staging / "library"))
         history_included = False
         history = root / "history.db"
         if history.exists():
@@ -450,7 +458,7 @@ def _safe_member_name(name: str) -> str:
 
 
 def _allowed_payload_path(path: str) -> bool:
-    if path in {'library/listening-admission.json', 'library/quality.sqlite3'}:
+    if path in {'library/listening-admission.json', 'library/quality.sqlite3', 'library/acquisition.sqlite3'}:
         return True
     if path in {"history.db", "player-state.db"}:
         return True
