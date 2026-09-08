@@ -12,7 +12,8 @@ are authoritative for what is deployed and what work is available now.
 | AI browser integration | Deferred by owner; existing backend remains optional |
 | CT-X700/two-engine policy and UI | Deferred until new hardware is available |
 | Kiosk/acoustic timing, enclosure and second engine | Await physical setup/evidence |
-| Public site | Source exists; Pages admin enablement remains outstanding |
+| Public site | Published through GitHub Pages; deployment evidence recorded |
+| Versioned distribution and first music | 0.1.0 release workflow, packages/checksums and guided Add music |
 | Distributed endpoints, speech, guest requests and physical controls | Future proposals, not current commitments |
 
 ## Phase 0: Hardware proof and conformance harness

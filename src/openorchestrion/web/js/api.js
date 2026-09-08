@@ -76,6 +76,8 @@ export function commandId() {
 }
 
 export const api = {
+  acquisitionJob: () => request('/api/library/acquisition/job'),
+  startAcquisition: sources => request('/api/library/acquisition/job', { method: 'POST', body: { sources } }),
   status: () => request('/api/status'),
   devices: () => request('/api/devices'),
   testNote: () => request('/api/devices/test-note', { method: 'POST', body: {} }),

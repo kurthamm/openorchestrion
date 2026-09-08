@@ -40,3 +40,12 @@ const legacy = harness([{ asset_id: 'a', favorite: true }], async () => {
 await assert.rejects(toggleFavorite('a', legacy));
 assert.equal(favoriteValue(legacy.getState(), legacy.getState().search.items[0]), false);
 console.log('Browser favorites: reload, optimistic removal, duplicate click, rollback, legacy fallback passed.');
+
+const acquisitionSource = (await readFile(new URL('../../src/openorchestrion/web/js/views/acquisition.js', import.meta.url), 'utf8')).replace(/^import .*;\n/gm, '');
+const { acquisitionSummary } = await import(`data:text/javascript;base64,${Buffer.from(acquisitionSource).toString('base64')}`);
+assert.deepEqual(acquisitionSummary({ status: 'idle' }), { added: 0, rejected: 0, duplicates: 0, problems: 0 });
+const progress = { sources: [{ status: 'ok', counts: { admitted: 2, duplicate_bytes: 3 } }, { status: 'running', counts: { not_qualified: 4, duplicate_playback: 1 } }] };
+assert.deepEqual(acquisitionSummary({ progress }), { added: 2, rejected: 4, duplicates: 4, problems: 0 });
+assert.equal(acquisitionSummary({ progress: { ...progress, counts: { admitted: 2 } } }).added, 2, 'Final totals are not double-counted');
+assert.equal(acquisitionSummary({ progress: { sources: [{ status: 'backoff' }, { status: 'error' }] } }).problems, 2);
+console.log('Acquisition progress, final totals, duplicate counts and partial source failures passed.');

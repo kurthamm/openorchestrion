@@ -213,7 +213,7 @@ def evaluate(root, state, conn, source, item, client):
     return verdict
 
 
-def run_source(root, state, conn, source, limit, page_limit):
+def run_source(root, state, conn, source, limit, page_limit, progress=None):
     counts = Counter()
     report = {
         "source": source.label,
@@ -301,6 +301,8 @@ def run_source(root, state, conn, source, limit, page_limit):
                     (due, source.key, url),
                 )
                 conn.commit()
+                if progress:
+                    progress(report | {'status': 'running'})
             except (HTTPError, OSError, ValueError, RuntimeError) as exc:
                 delay = min(7 * 86400, 3600 * 2 ** min(attempts, 7))
                 if isinstance(exc, HTTPError):
@@ -339,7 +341,7 @@ def run(root, state, *, limit=20, page_limit=8, only=None):
     state.mkdir(parents=True, exist_ok=True)
     with (
         snapshot_lock(root),
-        (state / "worker.lock").open("w") as lock,
+        (root / ".acquisition-run.lock").open("a") as lock,
         closing(connect(root)) as conn,
     ):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -387,7 +389,10 @@ def run(root, state, *, limit=20, page_limit=8, only=None):
         for source in SOURCES:
             if only and source.key not in only:
                 continue
-            report = run_source(root, state, conn, source, limit, page_limit)
+            save_status(conn, progress | {'sources': reports, 'active_source': source.label})
+            report = run_source(root, state, conn, source, limit, page_limit,
+                                lambda active: save_status(conn, progress | {
+                                    'sources': reports + [active], 'active_source': source.label}))
             reports.append(report)
             conn.execute(
                 "INSERT INTO sources(source,report) VALUES (?,?) ON CONFLICT(source) DO UPDATE SET report=excluded.report",
@@ -473,6 +478,8 @@ def main():
                 page_limit=args.page_limit,
                 only=args.source,
             )
+        except BlockingIOError:
+            parser.exit(2, 'Another acquisition run holds the library lock; retry later.\n')
         except Exception as exc:
             with closing(connect(args.library_root)) as conn:
                 save_status(

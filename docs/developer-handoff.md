@@ -19,6 +19,10 @@ wheel, private rollback plan and verification.
 
 ## Current product and data
 
+The numbered [0.1.0 release](releases/0.1.0.md) adds guided **Add music** acquisition.
+[Release publication/upgrades](releases.md) and [job lifecycle/locking](guided-acquisition.md)
+are the current shipping contracts. Stop older acquisition workers before upgrading.
+
 - Music-first UI: Discover, filtered library, Favorites, Queue, Recently Played,
   performance details, and Playback & devices. The current browser has no AI panel.
 - Saved playlists/stations, queue editing, repeat/shuffle/continuous playback, seek,

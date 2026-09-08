@@ -12,6 +12,10 @@ The attached keyboard is treated primarily as a MIDI-addressed synthesizer, ampl
 
 ## Install and try it
 
+Download [numbered releases](https://github.com/kurthamm/openorchestrion/releases)
+and follow [release installation/upgrades](docs/releases.md). In the browser,
+**Music library → Add music** finds qualifying performances from reviewed sources.
+
 Start with [Getting started](docs/getting-started.md) for installation, first music,
 keyboard connection and a hardware-free demo. Use [Troubleshooting](docs/troubleshooting.md)
 for common problems and [Contributing](CONTRIBUTING.md) for development.
