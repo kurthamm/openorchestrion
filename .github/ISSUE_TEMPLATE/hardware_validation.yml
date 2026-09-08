@@ -1,0 +1,29 @@
+name: Hardware evidence
+description: Record inbound-MIDI compatibility or measured physical behavior.
+title: "Hardware: "
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Exact model and firmware
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup and tested build
+      description: Pi/OS, software commit or wheel hash, cable topology, power and any interface adapters.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Results and evidence
+      description: Fixture names, observed results, manufacturer links, measured data and method. Distinguish documentation, audible observations and instrumented measurements.
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Untested behavior and limitations
+      description: Include note range, banks/programs, controller support, polyphony and acoustic timing when relevant.

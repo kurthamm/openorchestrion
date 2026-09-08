@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a reproducible software, installation or playback problem.
+title: "Bug: "
+body:
+  - type: markdown
+    attributes:
+      value: "Please omit credentials, tunnel tokens and private library files. See docs/troubleshooting.md first."
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Commit or wheel version, OS, Python version, install method and keyboard model (or virtual mode).
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include the exact action and a synthetic or redistributable MIDI example if needed.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant diagnostics
+      description: Smoke result and the relevant error excerpt. Redact secrets and private identifying data.

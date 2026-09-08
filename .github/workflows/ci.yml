@@ -96,6 +96,9 @@ jobs:
       - name: Validate schemas, profiles, and generated MIDI pipeline
         run: python .github/scripts/validate_repo.py
 
+      - name: Check documentation link targets
+        run: python .github/scripts/check-doc-links.py
+
       - name: Build and smoke-test non-editable appliance wheel
         shell: bash
         run: |

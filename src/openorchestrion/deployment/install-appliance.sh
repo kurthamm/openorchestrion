@@ -94,10 +94,24 @@ fi
 
 command -v python3 >/dev/null 2>&1 || { echo "python3 is required" >&2; exit 2; }
 command -v systemctl >/dev/null 2>&1 || { echo "systemd is required" >&2; exit 2; }
+command -v flock >/dev/null 2>&1 || { echo "flock is required" >&2; exit 2; }
+exec 9>/run/lock/openorchestrion-install.lock
+flock -n 9 || { echo "another appliance installation is running" >&2; exit 2; }
+[ ! -L "$VENV" ] || { echo "installer requires a directory at $VENV, not a symlink" >&2; exit 2; }
 if [ -n "$APPLIANCE_HOSTNAME" ]; then
     command -v hostnamectl >/dev/null 2>&1 || {
         echo "hostnamectl is required when --hostname is used" >&2
         exit 2
+    }
+fi
+
+python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Python 3.11 or newer is required")'
+if [ "$MODE" = kiosk ]; then
+    getent passwd "$KIOSK_USER" >/dev/null 2>&1 || {
+        echo "unknown --kiosk-user: $KIOSK_USER" >&2; exit 2;
+    }
+    command -v chromium >/dev/null 2>&1 || command -v chromium-browser >/dev/null 2>&1 || {
+        echo "Chromium is required for kiosk mode; install chromium first" >&2; exit 2;
     }
 fi
 
@@ -119,25 +133,80 @@ install -d -m 0750 -o "$SERVICE_USER" -g "$SERVICE_USER" "$STATE_DIR"
 install -d -m 0750 -o "$SERVICE_USER" -g "$SERVICE_USER" "$STATE_DIR/library"
 install -d -m 0755 "$CONFIG_DIR"
 
-# An update must not replace package files underneath a live playback process.
-# A normal systemd stop runs FastAPI's graceful shutdown and closes the active
-# history attempt before the virtual environment is modified.
+# Resolve/build every dependency before stopping a working appliance. Keep the
+# original virtual environment intact until the offline installation is ready.
+TMP=$(mktemp -d)
+WAS_RUNNING=0
+INSTALL_STARTED=0
+HAD_VENV=0
+cleanup() {
+    result=$?
+    trap - EXIT INT TERM
+    if [ "$result" -ne 0 ] && [ "$INSTALL_STARTED" -eq 1 ]; then
+        echo "installation failed; restoring the previous Python environment" >&2
+        systemctl stop openorchestrion.service 2>/dev/null || true
+        for unit in openorchestrion.service openorchestrion-discovery.service; do
+            if [ -f "$TMP/previous-units/$unit" ]; then
+                cp -a "$TMP/previous-units/$unit" "/etc/systemd/system/$unit"
+            else
+                rm -f "/etc/systemd/system/$unit"
+            fi
+        done
+        systemctl daemon-reload
+        rm -rf "$VENV"
+        if [ "$HAD_VENV" -eq 1 ]; then
+            cp -a "$TMP/previous-venv" "$VENV"
+            if [ "$WAS_RUNNING" -eq 1 ]; then
+                systemctl daemon-reload
+                systemctl restart openorchestrion.service || {
+                    echo "rollback restored; service restart failed; inspect journalctl" >&2
+                }
+            fi
+        fi
+    fi
+    rm -rf "$TMP"
+    exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+python3 -m venv "$TMP/bootstrap"
+"$TMP/bootstrap/bin/python" -m pip wheel --wheel-dir "$TMP/wheels" "$PACKAGE_SPEC"
+if [ "$WITH_OPENAI" -eq 1 ]; then
+    "$TMP/bootstrap/bin/python" -m pip wheel --wheel-dir "$TMP/wheels" "openai>=2.0"
+fi
+# Require the actual appliance wheel, not an arbitrary successful pip download.
+set -- "$TMP"/wheels/openorchestrion-*.whl
+[ "$#" -eq 1 ] && [ -f "$1" ] || {
+    echo "package must build exactly one OpenOrchestrion wheel" >&2; exit 2;
+}
+APPLIANCE_WHEEL=$1
+mkdir -p "$TMP/previous-units"
+for unit in openorchestrion.service openorchestrion-discovery.service; do
+    if [ -f "/etc/systemd/system/$unit" ]; then
+        cp -a "/etc/systemd/system/$unit" "$TMP/previous-units/$unit"
+    fi
+done
+if [ -d "$VENV" ]; then
+    cp -a "$VENV" "$TMP/previous-venv"
+    HAD_VENV=1
+fi
 if systemctl is-active --quiet openorchestrion.service 2>/dev/null; then
+    WAS_RUNNING=1
     echo "stopping running OpenOrchestrion for update"
     systemctl stop openorchestrion.service
 fi
-
+INSTALL_STARTED=1
 if [ ! -x "$VENV/bin/python" ]; then
     python3 -m venv "$VENV"
 fi
-"$VENV/bin/python" -m pip install --upgrade pip
-"$VENV/bin/python" -m pip install --upgrade "$PACKAGE_SPEC"
+"$VENV/bin/python" -m pip install --no-index --find-links "$TMP/wheels" \
+    --upgrade --force-reinstall "$APPLIANCE_WHEEL"
 if [ "$WITH_OPENAI" -eq 1 ]; then
-    "$VENV/bin/python" -m pip install --upgrade "openai>=2.0"
+    "$VENV/bin/python" -m pip install --no-index --find-links "$TMP/wheels" \
+        --upgrade "openai>=2.0"
 fi
-
-TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT INT TERM
 "$VENV/bin/openorchestrion-deploy" --output-dir "$TMP"
 
 install -m 0644 "$TMP/openorchestrion.service" /etc/systemd/system/openorchestrion.service
@@ -198,6 +267,21 @@ fi
 systemctl daemon-reload
 systemctl enable openorchestrion.service
 systemctl restart openorchestrion.service
+
+READY=0
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if runuser -u "$SERVICE_USER" -- "$VENV/bin/openorchestrion-smoke" >"$TMP/smoke.log" 2>&1; then
+        READY=1
+        break
+    fi
+    sleep 1
+done
+if [ "$READY" -ne 1 ]; then
+    cat "$TMP/smoke.log" >&2
+    echo "updated appliance failed its health check" >&2
+    exit 1
+fi
+INSTALL_STARTED=0
 
 DISCOVERY_STATE=unavailable
 if command -v avahi-publish-service >/dev/null 2>&1 \

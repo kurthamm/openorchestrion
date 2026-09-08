@@ -50,7 +50,17 @@ def snapshot_lock(root):
         # Automatic acquisition is Linux-only; Windows can still restore backups.
         yield
         return
-    with (root / ".acquisition-snapshot.lock").open("a") as stream:
+    path = root / ".acquisition-snapshot.lock"
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    except FileExistsError:
+        descriptor = os.open(path, os.O_RDONLY)
+    else:
+        # The root-run off-site backup and unprivileged importer share this empty
+        # lock file. Neither needs write access; do not let root's umask prevent
+        # the importer from locking it after a fresh install or restored backup.
+        os.fchmod(descriptor, 0o644)
+    with os.fdopen(descriptor, "rb") as stream:
         try:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError as exc:

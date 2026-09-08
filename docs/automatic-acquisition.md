@@ -78,6 +78,24 @@ from the saved discovery frontier.
 
 ## Installation and operation
 
+### New public installation
+
+A fresh installation does not need the reference owner's private evidence archive.
+Run `openorchestrion-acquire --init-empty` as the service user to create v2
+admission and quality/catalog databases. It refuses existing music and never
+resets prior rejections. Run a bounded scan first; see [Getting started](getting-started.md).
+
+To enable recurring scans, export deployment templates with
+`openorchestrion-deploy --output-dir /tmp/openorchestrion-deploy`, then install
+`openorchestrion-acquire.service` and `openorchestrion-acquire.timer` from that
+directory into `/etc/systemd/system/`. Create the acquisition state directory
+owned by the service user, reload systemd and enable the timer as below.
+The timer uses the reference timezone explicitly; change `OnCalendar` locally
+if another schedule is desired. Downloads are personal-library imports, not
+a license to redistribute files.
+
+### Existing reference collection
+
 The wheel includes the command and unit files. On this appliance, seed history once
 from the verified final-curation evidence **before the first acquisition**:
 

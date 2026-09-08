@@ -1,0 +1,240 @@
+{
+  "archive_sha256": "7cf540ae644fe96d5f1e596ad0e19015f7a628a873a0d46212afd6040be42284",
+  "source_reference": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=342",
+  "member_audit": [
+    {
+      "member": "quart18-cello-1.mid",
+      "sha256": "c8f66c0648dff8c6359dd7bf6fa3dabf89fedf7012c3f3d091dd967b060d0183",
+      "size_bytes": 3861,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-cello-2.mid",
+      "sha256": "8212a7bbeef21c616b571eccc61ed411557f193a7327d0f815f0c771eb119d01",
+      "size_bytes": 3863,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-cello-3.mid",
+      "sha256": "0e8679869490fdaba15e64cf29ae95bb3b96c196edb2d420c52c925d2575d2ad",
+      "size_bytes": 10418,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-cello.mid",
+      "sha256": "eb068f18a985c18b6a70d5b639ba1c4774bc24cbb9c35bdacb635f43e63957dc",
+      "size_bytes": 16701,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-score-1.mid",
+      "sha256": "2e80e572ea503aaef7eb6bbe8f4a22acf232f9f8a32fa916fd0e6c645c696ca7",
+      "size_bytes": 24036,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-score-2.mid",
+      "sha256": "da6c90f092ae4dabd406826013273f6aa443926063487abae55fac13681d0e28",
+      "size_bytes": 23149,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-score-3.mid",
+      "sha256": "89001c286678419fc87dafd345757164536821cedf9fcef6e1debb9b3810977a",
+      "size_bytes": 45079,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-score.mid",
+      "sha256": "f9b89563f4ef78b21951baa44a0067ac834bcf41f5d5256c7dde69a2aab30fda",
+      "size_bytes": 83257,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-viola-1.mid",
+      "sha256": "909401ad4ef8b70178853d288ae711b36d5471a702173f8a553364e0227dcf58",
+      "size_bytes": 5436,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-viola-2.mid",
+      "sha256": "b04b4f484f167fe5201fe52a99df1ffd4beeec8a4e677e6e50d9c017f18a262a",
+      "size_bytes": 6292,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-viola-3.mid",
+      "sha256": "62d80122258d8bdf4c621ff13e7ba4af56202ca72a7cb842b6f15267f4de9839",
+      "size_bytes": 10261,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-viola.mid",
+      "sha256": "77d66ebc7f343971056a9d899609c4d06e4c498002486b8188ef0239c55e0b37",
+      "size_bytes": 25246,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-violin1-1.mid",
+      "sha256": "ec09aeed923186db700beec451dbef70d8fad92e9918f98282ee45ca654d2b80",
+      "size_bytes": 9087,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-violin1-2.mid",
+      "sha256": "d62f67636ad457c5676aa873619246d3c9b1aa8bede535cc19a1b8c08d2c9e1f",
+      "size_bytes": 6031,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-violin1-3.mid",
+      "sha256": "99cbe294974fa6a83a1e1bb8114af5f9c669d07e7d0bdba3868036e4ef8d09b4",
+      "size_bytes": 12809,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-violin1.mid",
+      "sha256": "0082482119db3739e2dc77553b171f8dcc3d913f4641e9bcb974dec70e25e2e3",
+      "size_bytes": 17698,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-violin2-1.mid",
+      "sha256": "a22abd758a63107013c6d96d1659cbdfb8814820acdedc8199ff152b97f8ae09",
+      "size_bytes": 5785,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-violin2-2.mid",
+      "sha256": "8d68155e4b8ebcad0d4acaf8c380c5005fb4a2e5d883713f8126f478612fe85a",
+      "size_bytes": 7118,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-violin2-3.mid",
+      "sha256": "0d20b5c2f44b90b2d68b7ad958763d7e02b440fb4d7f840c75c1f7cc09f88db6",
+      "size_bytes": 11765,
+      "status": "readable-midi"
+    },
+    {
+      "member": "quart18-violin2.mid",
+      "sha256": "66e3a2704c24156861d09e99922197711e141b163ea54bb7a95bc496d2f9ab5a",
+      "size_bytes": 23796,
+      "status": "readable-midi"
+    }
+  ],
+  "derivatives": [
+    {
+      "path": "donizetti-quartet18-movement1.mid",
+      "source_member": "quart18-score.mid",
+      "source_sha256": "f9b89563f4ef78b21951baa44a0067ac834bcf41f5d5256c7dde69a2aab30fda",
+      "sha256": "96941bf4f41503f1f19b4c942bb6b385f85f08a4fb8b2ebe17714e5b3160c53d",
+      "corrections": [
+        {
+          "track": 3,
+          "event": 1,
+          "from": {
+            "type": "program_change",
+            "time": 0,
+            "program": 42,
+            "channel": 2
+          },
+          "to": {
+            "type": "program_change",
+            "time": 0,
+            "channel": 2,
+            "program": 41
+          }
+        },
+        {
+          "track": 3,
+          "event": 2,
+          "from": {
+            "type": "program_change",
+            "time": 0,
+            "program": 42,
+            "channel": 2
+          },
+          "to": {
+            "type": "program_change",
+            "time": 0,
+            "channel": 2,
+            "program": 41
+          }
+        },
+        {
+          "track": 3,
+          "event": 3,
+          "from": {
+            "type": "instrument_name",
+            "name": "cello",
+            "time": 0
+          },
+          "to": {
+            "type": "instrument_name",
+            "name": "viola",
+            "time": 0
+          }
+        }
+      ],
+      "other_events_identical": true,
+      "viola_note_timing_matches_publisher_part": true
+    },
+    {
+      "path": "donizetti-quartet18-movement4.mid",
+      "source_member": "quart18-score-3.mid",
+      "source_sha256": "89001c286678419fc87dafd345757164536821cedf9fcef6e1debb9b3810977a",
+      "sha256": "94e496254dcb33c56f792c3083874098445255be46411b4a66ee0ff97d905066",
+      "corrections": [
+        {
+          "track": 3,
+          "event": 1,
+          "from": {
+            "type": "program_change",
+            "time": 0,
+            "program": 42,
+            "channel": 2
+          },
+          "to": {
+            "type": "program_change",
+            "time": 0,
+            "channel": 2,
+            "program": 41
+          }
+        },
+        {
+          "track": 3,
+          "event": 2,
+          "from": {
+            "type": "program_change",
+            "time": 0,
+            "program": 42,
+            "channel": 2
+          },
+          "to": {
+            "type": "program_change",
+            "time": 0,
+            "channel": 2,
+            "program": 41
+          }
+        },
+        {
+          "track": 3,
+          "event": 3,
+          "from": {
+            "type": "instrument_name",
+            "name": "cello",
+            "time": 0
+          },
+          "to": {
+            "type": "instrument_name",
+            "name": "viola",
+            "time": 0
+          }
+        }
+      ],
+      "other_events_identical": true,
+      "viola_note_timing_matches_publisher_part": true
+    }
+  ]
+}

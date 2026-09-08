@@ -23,12 +23,13 @@ def test_project_site_is_static_and_self_contained() -> None:
     assert "analytics" not in html.casefold()
 
 
-def test_project_site_marks_hardware_claims_as_pending() -> None:
+def test_project_site_distinguishes_recorded_and_pending_hardware_evidence() -> None:
     html = (SITE / "index.html").read_text(encoding="utf-8")
 
-    assert "Hardware proof pending" in html
-    assert "Physical project validation is still required" in html
-    assert "Pi 5 loaded timing evidence" in html
+    assert "WK-220 evidence recorded" in html
+    assert "120-minute headless" in html
+    assert "acoustic synchronization is not yet measured" in html
+    assert "owner-deferred" in html
 
 
 def test_project_site_links_to_living_repository_docs() -> None:
@@ -66,10 +67,10 @@ def test_pages_workflow_publishes_only_the_static_site_from_main() -> None:
 def test_v2_whitepaper_is_truthful_about_software_vs_hardware_evidence() -> None:
     paper = WHITEPAPER.read_text(encoding="utf-8")
 
-    assert "White Paper v2.0" in paper
+    assert "White Paper v2.1" in paper
     assert "Implemented software" in paper
     assert "Hardware evidence pending" in paper
-    assert "Reference Pi measurements are still pending" in paper
+    assert "passing 120-minute loaded headless" in paper
     assert "does not claim measured latency" in paper
 
 

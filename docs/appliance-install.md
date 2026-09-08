@@ -95,6 +95,13 @@ The installer:
 9. optionally installs the kiosk `.desktop` file for the named desktop user;
 10. changes the system hostname only when `--hostname` was explicitly supplied.
 
+The installer prepares all wheels before stopping an existing service, preserves
+its previous virtual environment and unit files, installs offline, and requires a
+passing smoke check. Failed installation/startup restores that environment and
+restarts a previously running service. Allow temporary disk space for downloads
+and the previous environment. Concurrent installers are refused. This is software
+rollback; continue to make application-data backups.
+
 It is safe to run the installer again for upgrades. It does **not** delete the library,
 history, or an existing environment file.
 

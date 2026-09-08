@@ -8,7 +8,7 @@ OpenOrchestrion now has the complete local-first software path from MIDI ingesti
 
 The software can be installed from a wheel or checkout, boot under systemd with zero MIDI hardware attached, serve its packaged UI in headless or Chromium-kiosk mode, and pass repository contracts from a non-editable installation.
 
-The major remaining engineering evidence is physical rather than architectural: Raspberry Pi timing under realistic appliance load, end-to-end MIDI/audio validation on the selected sound engines, relative MIDI-to-audio latency for two-engine synchronization, and the reference enclosure/BOM.
+The WK-220 checklist and a loaded 120-minute headless Pi software timing run are recorded. Remaining physical evidence covers local kiosk load, measured MIDI-to-audio latency, unavailable CT-X700/second-engine hardware, and enclosure/BOM. See [the current issue dispositions](docs/next-steps.md).
 
 ## Current deployed handoff
 
@@ -26,10 +26,10 @@ timing and compatibility evidence. Source admission does not certify acoustic fi
 [Automatic acquisition](docs/automatic-acquisition.md) is now deployed and scheduled
 daily at 04:30–04:45 America/New_York. Five tested sources feed the existing v2
 quality gate; duplicate history covers all originals and subsequent decisions.
-The first run added **29 performances**, so **5,861 are now available**. It rejected
+The first run added **29 performances**, giving **5,861 available as of September 7**; the live API reports later growth. It rejected
 50 candidates and skipped 7 duplicates. No original archives were deleted.
 The release integrates PR #93 player operations, passes **726 tests**, and has
-**107 deployed runtime files matching source**. Source failures and run results are
+**107 deployed runtime files matching source** at that release. The [maintenance record](docs/repository-maintenance.md) records subsequent fixes and validation. Source failures and run results are
 visible in Playback & devices; the acquisition database survives normal backup.
 
 ## Implemented product stack
@@ -145,7 +145,7 @@ The software is hardware-neutral and routes by capability/profile rather than mo
 
 The project has manufacturer-evidence profiles and procurement candidates from Casio and Yamaha families. The Casio CT-X700 remains the named hardware-proof issue/reference profile, while other used Casio/Yamaha models are being considered for the first practical two-engine build.
 
-**No keyboard is promoted to project-validated hardware until physical evidence exists.** Manufacturer documentation is evidence of documented compatibility, not a substitute for the project's own enumeration, controller, polyphony, reconnect, latency, and long-run tests.
+The connected WK-220 has recorded checklist/headless timing evidence, with its exact scope in [supported hardware](docs/supported-hardware.md). Manufacturer evidence for other devices is not physical project validation. CT-X700 work remains owner-deferred.
 
 ## Current work lanes
 
@@ -162,22 +162,22 @@ See the [issue-based next-work review](docs/next-steps.md) for the recommended o
 - **Issue #11:** complementary Yamaha/second-engine validation follows first-engine proof.
 - **Issue #8:** reference enclosure/BOM follows acquisition of the physical build.
 
-## Next physical proof sequence
+## Remaining physical proof sequence
 
-1. Install the current wheel on the reference Raspberry Pi through the documented systemd path.
-2. Run `openorchestrion-smoke` before attaching MIDI hardware.
-3. Attach the first sound engine and capture Linux MIDI enumeration.
-4. Verify Note On/Off, velocity, sustain CC64, Program Change, Bank Select, GM/percussion, receive range, practical 16/32/48/64-note stress, and expressive piano playback.
-5. Exercise service restart, reconnect, power-cycle, and long-duration playback.
-6. Run the controlled Pi timing protocol with FastAPI, Chromium kiosk where applicable, WebSockets/library activity, and output paths active.
-7. Attach the second sound engine and measure relative MIDI-to-audio latency.
-8. Route two-piano/duet and multichannel material from the one master timeline.
-9. Publish the enclosure/BOM and capture hardware photos/demo video.
-10. Update the v2 publication with measured evidence rather than design-only claims.
+Completed prerequisites: packaged Pi installation, smoke checks, WK-220 enumeration,
+reported controller/playback/reconnect checklist, and loaded headless endurance evidence.
+
+When the required setup becomes available:
+
+1. Capture local Chromium kiosk load and measured MIDI-to-audio latency.
+2. Validate the new keyboard on its own checklist, then measure relative engine latency.
+3. Resume owner-deferred orchestration and physical split/two-piano tests.
+4. Finalize the measured enclosure/BOM and capture hardware photos/demo video.
+5. Update publication claims from those measurements.
 
 ## Publication status
 
-The living OpenOrchestrion v2 Markdown white paper and project site can describe implemented software now. Final publication media remains intentionally incomplete until hardware evidence is available.
+The living OpenOrchestrion v2 Markdown white paper and project-site source describe implemented software and recorded WK-220/headless evidence. GitHub Pages Actions publishing is enabled; the maintenance release records public deployment verification for #10. Final publication media remains intentionally incomplete until hardware evidence is available.
 
 The project site must distinguish three levels of claim:
 

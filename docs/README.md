@@ -1,8 +1,14 @@
+[Getting started](getting-started.md) · [Troubleshooting](troubleshooting.md) · [Reference build/BOM](reference-build.md)
+
 # OpenOrchestrion Documentation
 
-This directory contains the living design and implementation specification.
+This directory contains current contracts, release evidence and future designs.
+Start with the handoff and next-work index; dated release reports retain historical counts and hashes.
 
 ## Start here
+
+- [Current issue queue](next-steps.md) — completed work, owner deferrals and actual blockers.
+- [Repository maintenance record](repository-maintenance.md) — cleanup audit, validation and release identity.
 
 - [Current developer handoff](developer-handoff.md) — shared main baseline, deployment parity, verification commands and outstanding evidence.
 - [September single-keyboard release](single-keyboard-release-2026-09.md) — integration, benchmark repair, installed-wheel identity and Pi evidence.
@@ -15,7 +21,7 @@ This directory contains the living design and implementation specification.
 - [Reference build](reference-build.md) — Pi 5 4 GB, 7-inch appliance display, headless alternative.
 - [Raspberry Pi appliance installation](appliance-install.md) — boot-to-service systemd packaging, kiosk/headless install, updates, logs and recovery.
 - [Cloudflare remote access](cloudflare-remote-access.md) — authenticated `piano.hamm.me` tunnel, exact-email Access policy, verification and recovery.
-- [First-run setup and local configuration](setup-and-configuration.md) — secure Setup screen, local admin command, secrets boundary and readiness semantics.
+- [First-run setup and local configuration](setup-and-configuration.md) — local admin command, secrets boundary and readiness semantics; legacy setup UI is superseded by explicit Playback & devices settings.
 - [Roadmap](../ROADMAP.md) — staged implementation plan.
 
 ## User experience and intelligence
@@ -34,7 +40,10 @@ This directory contains the living design and implementation specification.
 ## MIDI and library
 
 - [MIDI library](midi-library.md)
-- [Autonomous listening-library admission](library-curation.md) — quality screening, reversible archiving, future-import gating, and recovery.
+- [Complete-listening-v2 quality standard](library-quality-standard.md) — current admission evidence and limits.
+- [Quality publication and original archive](library-quality-publication.md) — dated baseline and recovery.
+- [Nightly acquisition](automatic-acquisition.md) — source registry, duplicate history, limits and operation.
+- [Earlier v1 curation](library-curation.md) — historical policy, superseded by v2.
 - [MIDI analysis and ingestion](midi-ingestion.md)
 - [Rebuildable SQLite catalog](catalog.md)
 - [Curating descriptive metadata](metadata-curation.md) — editable fields, atomic writes, optimistic concurrency and catalog reconciliation.

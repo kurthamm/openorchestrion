@@ -2,8 +2,9 @@
 
 ## A local-first networked MIDI music appliance
 
-**White Paper v2.0, software architecture edition**  
-**Status:** Living document. Software behavior described as implemented is present in the repository. Hardware performance and compatibility claims remain explicitly provisional until physical project validation is completed.
+**White Paper v2.1, software and reference-evidence edition â€” September 7, 2026**
+
+**Status:** Living document. Software behavior described as implemented is present in the repository. WK-220 checklist and headless Pi timing evidence are linked to their tested builds. New-keyboard and acoustic synchronization claims remain provisional.
 
 ---
 
@@ -21,7 +22,7 @@ The attached keyboard is treated primarily as a MIDI-addressed sound engine with
 
 The current software is appliance-ready: it can be installed from a wheel, boot under systemd with no MIDI hardware attached, serve a responsive local web application, maintain a content-addressed library with durable sidecars, generate Smart Stations, use hosted or offline intent interpretation, run a server-owned playback state machine, route one master timeline to multiple outputs, perform non-destructive General MIDI rendering, preserve durable listening history, and create verified application-data backups.
 
-The major remaining evidence is physical rather than architectural: Raspberry Pi timing under real appliance load, end-to-end validation on the selected keyboard sound engines, MIDI-to-audio latency measurement, two-engine acoustic synchronization, and the physical enclosure/BOM.
+The current reference Pi/WK-220 has reported end-to-end checklist evidence and a passing 120-minute loaded headless software timing run. A further 10-minute Pi-local Chromium/Xvfb test passed the software timing targets. Remaining evidence includes physical touchscreen usability, measured MIDI-to-audio latency, unavailable new-keyboard validation, acoustic synchronization and enclosure fit/thermal checks. [Release evidence](../single-keyboard-release-2026-09.md) defines the exact measurement scope.
 
 ---
 
@@ -580,7 +581,7 @@ The current project has considered several Casio and Yamaha candidates as inexpe
 
 The repository includes manufacturer-evidence profiles and hardware-proof issues, but the final reference pair is not yet physically validated by this project.
 
-This paper therefore does not claim measured latency, acoustic synchronization, practical sustained polyphony, or reconnect reliability for a specific keyboard model yet.
+This paper therefore does not claim measured latency or acoustic synchronization. WK-220 checklist observations (including voice stress and reconnection) belong to the separately linked tested build; they are not a certification of another model.
 
 Those measurements are publication milestones, not details to invent around the absence of hardware.
 
@@ -640,6 +641,25 @@ Event-by-event MIDI over ordinary Wi-Fi is not the intended synchronization stra
 
 ## 24. Current implementation status
 
+The current browser is music-first and has no AI panel; hosted interpretation remains
+optional backend infrastructure for a later interface. Saved playlists/stations, queue
+editing, repeat/shuffle/continuous modes, seek, sleep/stop-after-song and restart
+persistence are deployed, along with previous/replay, queue undo, per-song preferences
+and system-health reporting.
+
+The complete-listening-v2 audit retained 5,832 of 25,893 original files. The first
+nightly acquisition added 29, producing a **September 7 snapshot of 5,861 available
+performances**. Original exclusions remain archived. These are dated counts; the live
+catalog is authoritative as acquisition continues. New files require completeness,
+instrument and expression evidence plus byte/playback deduplication across both the
+active library and rejection history. See [the quality standard](../library-quality-standard.md)
+and [automatic acquisition](../automatic-acquisition.md).
+
+Normal backups now retain quality/admission and acquisition history along with the
+library and durable player state. Off-site backup and the acquisition timer are
+separate jobs; source failures are reported in the UI. The protected Pi control UI
+and public project-site publication are separate deployment surfaces.
+
 ### Implemented software
 
 - MIDI analyzer and robust importer
@@ -660,11 +680,11 @@ Event-by-event MIDI over ordinary Wi-Fi is not the intended synchronization stra
 - performance-type and intent routing hints
 - non-destructive Original/Piano Only/Override rendering
 - responsive kiosk/household browser UI
-- first-run setup and local-admin configuration
+- explicit Playback & devices settings and privileged local-admin configuration
 - friendly LAN discovery
 - systemd appliance packaging
 - verified backup/restore core and privileged rollback-safe operator workflow
-- CI across Python 3.11/3.12 plus repository/wheel contracts
+- CI across Python 3.11â€“3.13 plus repository/wheel contracts
 
 ### Active work
 
@@ -673,8 +693,8 @@ Event-by-event MIDI over ordinary Wi-Fi is not the intended synchronization stra
 
 ### Hardware evidence pending
 
-- Raspberry Pi 5 loaded timing run
-- first physical keyboard/sound-engine validation
+- physical touchscreen usability and loaded measurements of the final assembled display unit
+- CT-X700 validation, deferred until the new keyboard is available
 - complementary second-engine validation
 - measured relative MIDI-to-audio latency
 - two-engine acoustic synchronization
@@ -701,17 +721,18 @@ That combination is the core idea: **a contemporary household music appliance bu
 
 ## 26. Next evidence milestones
 
-The software is now mature enough that the next important questions should be answered with measurements rather than more architecture prose.
+The packaged installation, WK-220 enumeration/checklist, and loaded headless endurance
+run are recorded. The remaining milestones are:
 
-1. Install the packaged wheel on the reference Raspberry Pi through the documented systemd path.
-2. Run the appliance smoke test with no MIDI hardware and then with the first device attached.
-3. Capture Linux MIDI enumeration evidence.
-4. Validate Note On/Off, velocity, sustain, Program Change, Bank Select, percussion, note range, dense polyphony, long playback, reconnect, and power-cycle behavior.
-5. Run the controlled Pi timing protocol under realistic appliance load.
-6. Attach the complementary second sound engine and measure relative MIDI-to-audio latency.
-7. Run true two-device and duet material from the one master timeline.
-8. Publish the enclosure/BOM and capture photos/video of the reference build.
-9. Regenerate publication PDF/DOCX formats from this living v2 Markdown source with measured results replacing pending labels.
+1. Record physical touchscreen usability and measured MIDI-to-audio timing with the required equipment.
+2. Validate the new keyboard independently when available; resume the owner-deferred two-engine plan only then.
+3. Measure relative latency and physical split/two-piano playback.
+4. Finalize the measured enclosure/BOM and publish photos/video.
+5. Produce final physical-build PDF/DOCX publications from this living source.
+
+The static site source and this Markdown paper are maintained now. GitHub Pages
+Actions publishing is enabled. The maintenance release records deployment verification
+and links to the public project site; it is separate from the protected appliance UI.
 
 ---
 
