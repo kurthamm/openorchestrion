@@ -1,5 +1,11 @@
 # Library playback readiness — 7 September 2026
 
+> Historical release/audit evidence: library counts, service state and build hashes
+> below describe this report's original measurement. For the current release and
+> count baseline, see [project status](../PROJECT_STATUS.md) and
+> [repository maintenance](repository-maintenance.md). Do not restore an older
+> admission manifest or deployed build from this report as if it were current.
+
 The performance panel now answers **What will play** using the same automatic
 voicing or explicit rendering policy as a new queue request. Opening it does not
 change the queue or send MIDI. The source instrument table remains available in

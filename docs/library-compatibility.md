@@ -1,5 +1,11 @@
 # Source sound palettes and WK-220 compatibility
 
+> Historical release/audit evidence: library counts, service state and build hashes
+> below describe this report's original measurement. For the current release and
+> count baseline, see [project status](../PROJECT_STATUS.md) and
+> [repository maintenance](repository-maintenance.md). Do not restore an older
+> admission manifest or deployed build from this report as if it were current.
+
 7 September 2026. See the [quality definition and research](library-quality-standard.md)
 before treating structural evidence as a musical-quality verdict.
 

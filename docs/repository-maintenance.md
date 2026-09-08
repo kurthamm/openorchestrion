@@ -29,8 +29,14 @@ reference build/BOM, white paper and static site distinguish shipped behavior,
 historical measurements and deferred hardware/AI work.
 
 GitHub Pages Actions source was enabled through the authenticated repository
-settings on September 7. Publication verification and release results are recorded
-below once the maintenance change is merged.
+settings on September 7. [PR #95](https://github.com/kurthamm/openorchestrion/pull/95)
+merged as `f2b9c5466d4ae730f5efd7feee773af6b375ef1a`. All five
+[GitHub CI jobs](https://github.com/kurthamm/openorchestrion/actions/runs/34177387478)
+passed, including Python 3.11–3.13. The
+[Pages deployment](https://github.com/kurthamm/openorchestrion/actions/runs/34177483813)
+succeeded and the [public site](https://kurthamm.github.io/openorchestrion/)
+was verified in Chromium. The repository About description and website link were
+updated to match the current product.
 
 ## Development checkout cleanup
 
@@ -69,7 +75,11 @@ Release wheels are retained in `/var/tmp/openorchestrion-maintenance-release/`.
 The two Donizetti additions are public starter files; this maintenance deployment
 does not silently re-import the starter catalog into the owner's personal library.
 
-GitHub CI and public deployment results accompany the merged maintenance PR.
+The Pi primary checkout is clean at merged PR #95, and the installed runtime has
+108 matching source files. Issues #6, #10 and #64 are closed with linked evidence.
+Issues #1, #8, #11 and #84 retain the unavailable/deferred hardware and physical
+validation work; combined real-output and acoustic timing obligations are retained
+explicitly in #1/#84. No physical acceptance result was inferred from virtual MIDI.
 Physical touchscreen usability and acoustic latency cannot be
 certified by virtual display/software timing measurements. New-keyboard and
 two-engine implementation remain explicitly deferred by the owner.

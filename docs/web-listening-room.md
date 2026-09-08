@@ -1,5 +1,11 @@
 # Listening room redesign
 
+> Historical release/audit evidence: library counts, service state and build hashes
+> below describe this report's original measurement. For the current release and
+> count baseline, see [project status](../PROJECT_STATUS.md) and
+> [repository maintenance](repository-maintenance.md). Do not restore an older
+> admission manifest or deployed build from this report as if it were current.
+
 ## Purpose and current experience
 
 The September 2026 redesign replaces the prompt-first interface with a music-first listening room. It addresses the previous empty landing page, mixed filter chips, first-100-results limit, missing favorites destination, unexplained MIDI arrangements and forced setup redirects.
