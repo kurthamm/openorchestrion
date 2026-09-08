@@ -7,10 +7,12 @@ import { h, render } from './dom.js';
 import { anchor, createTicker, positionAt, progressAt, formatClock, formatSeconds } from './position.js';
 import { StateSocket } from './socket.js';
 import { loadRenderingPreference, renderingPayload } from './rendering.js';
+import { mountAcquisition } from './views/acquisition.js';
 import { mountRenderingControls } from './views/rendering.js';
 
 const $ = (id) => document.getElementById(id);
-const names = { discover: 'Discover', library: 'Music library', favorites: 'Favorites', queue: 'Play queue', recent: 'Recently played', settings: 'Playback & devices' };
+let disposeAcquisition;
+const names = { acquire: 'Add music', discover: 'Discover', library: 'Music library', favorites: 'Favorites', queue: 'Play queue', recent: 'Recently played', settings: 'Playback & devices' };
 const filterKeys = ['genre', 'mood', 'era', 'arrangement', 'composer', 'source'];
 const state = { status: null, queue: { items: [] }, playback: {}, collections: [], connection: 'connecting' };
 const assets = new Map();
@@ -50,6 +52,7 @@ function changeFilter(key, value) {
 function route() {
   const [page, query = ''] = location.hash.slice(1).split('?');
   view = names[page] ? page : 'discover'; params = new URLSearchParams(query);
+  disposeAcquisition?.(); disposeAcquisition = null;
   routeVersion++; catalogRequest?.abort();
   document.title = `${names[view]} · OpenOrchestrion`;
   $('breadcrumb').textContent = `Your music / ${names[view]}`;
@@ -63,6 +66,7 @@ function route() {
     $('sort').value = params.get('sort') || 'title';
     void loadLibrary();
   } else if (view === 'queue') { drawQueue(); void refreshQueue(); }
+  else if (view === 'acquire') disposeAcquisition = mountAcquisition($('acquire-panel'), () => { void loadDiscover(); void refreshStatus(); });
   else if (view === 'recent') void loadHistory();
   else if (view === 'settings') { void drawAcquisition(); drawDevices(); mountRenderingControls($('rendering-panel')); void loadOperations(); }
   window.scrollTo({ top: 0 });
@@ -119,6 +123,7 @@ async function loadLibrary() {
     $('result-summary').textContent = `${number(result.total)} performance${result.total === 1 ? '' : 's'}${values.text ? ` matching “${values.text}”` : ''}`;
     if (result.items.length) drawRows($('results'), result.items);
     else empty($('results'), offset ? 'You’ve reached the end.' : view === 'favorites' && !params.size ? 'Keep the ones you love.' : 'No performances found.', offset ? 'Return to the first page of these results.' : 'Try a different search or clear your filters.', () => go(view, offset ? { ...values } : {}), offset ? 'First page' : 'Clear search & filters');
+    if (view === 'library' && result.total === 0 && !params.size) empty($('results'), 'Start your listening library.', 'Find qualifying music from reviewed sources.', () => go('acquire'), 'Add your first music');
     if (view === 'favorites' && result.total === 0 && !params.size) empty($('results'), 'Keep the ones you love.', 'Save a performance with its heart button. Your favorites will appear here.');
     if (result.total || offset) render($('pagination'), button('← Previous', () => changeFilter('offset', String(Math.max(0, offset - 40))), { disabled: offset === 0 }), h('span', { text: `${result.total ? offset + 1 : 0}–${Math.min(offset + result.items.length, result.total)} of ${number(result.total)}` }), button('Next →', () => changeFilter('offset', String(offset + 40)), { disabled: !result.has_more }));
   } catch (error) {
@@ -153,7 +158,7 @@ async function loadDiscover() {
     $('featured-link').href = linkHash('library', values);
     const result = await api.browse({ ...values, limit: 5 });
     if (result.items.length) drawRows($('featured'), result.items);
-    else empty($('featured'), 'Your library is quiet.', 'Imported performances will appear here when the catalog is ready.', null);
+    else empty($('featured'), 'Your library is quiet.', 'Choose a source and let the quality checks find your first performances.', () => go('acquire'), 'Add your first music');
   } catch (error) { failure($('featured'), error, loadDiscover); }
 }
 async function confirmAction(title, message, label) {

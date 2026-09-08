@@ -12,10 +12,13 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from . import __version__
 
 from .ai import MusicConcierge
 from .ai_runtime import create_configured_concierge
 from .api.errors import install_error_handlers
+from .api.acquisition_routes import router as acquisition_router
+from .library.acquisition_job import AcquisitionJobs
 from .api.rendering_routes import router as rendering_router
 from .api.routes import create_selection_executor, router
 from .api.sessions import ConciergeSessions
@@ -38,6 +41,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if not hasattr(app.state, "concierge_sessions"):
         app.state.concierge_sessions = ConciergeSessions(app.state.concierge)
     app.state.selection_executor = create_selection_executor()
+    app.state.acquisition_jobs = AcquisitionJobs(app.state.settings.library_root)
     production_playback = not hasattr(app.state, "playback")
     if production_playback:
         app.state.playback = create_default_playback(app.state.settings)
@@ -51,6 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        await app.state.acquisition_jobs.close()
         await monitor.stop()
         try:
             await app.state.playback.close()
@@ -70,11 +75,12 @@ def create_app(
     application = FastAPI(
         title="OpenOrchestrion",
         description="Networked MIDI music appliance",
-        version="0.1.0-dev",
+        version=__version__,
         lifespan=lifespan,
     )
     install_error_handlers(application)
     application.include_router(router)
+    application.include_router(acquisition_router)
     application.include_router(setup_router)
     application.include_router(rendering_router)
     # Mounted last: the catch-all static mount at "/" must not shadow /api.

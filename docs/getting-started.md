@@ -30,6 +30,12 @@ For a touchscreen, complete the desktop/Chromium steps in
 
 ## Add your first music
 
+In the browser, open **Music library → Add music**. Start with the preselected
+recorded-piano source or choose other available sources, then press **Find qualifying
+music**. The server prepares a genuinely empty library and shows progress and results.
+You can leave the page while it works. See [guided acquisition](guided-acquisition.md).
+The terminal commands below remain available for operators.
+
 For a **new empty library**, initialize the quality policy and run a bounded scan:
 
 ```sh

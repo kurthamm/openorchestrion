@@ -1,0 +1,49 @@
+name: Publish release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/ci.yml
+  publish:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+      - name: Build numbered distribution
+        run: |
+          python -m pip install build==1.2.2.post1
+          python -m build
+          python scripts/prepare-release.py
+      - name: Install and inspect the exact release wheel
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libasound2-dev
+          python -m venv /tmp/release-wheel
+          /tmp/release-wheel/bin/pip install dist/*.whl
+          /tmp/release-wheel/bin/python -c 'from openorchestrion import __version__; from importlib.metadata import version; assert __version__ == version("openorchestrion")'
+          /tmp/release-wheel/bin/openorchestrion-deploy --output-dir /tmp/release-deploy
+          test -x /tmp/release-deploy/install-appliance.sh
+      - name: Publish packages, source bundle, checksums and release identity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          # Existing tags/releases are deliberately never replaced.
+          gh api "repos/$GH_REPO/git/refs" -f "ref=refs/tags/v$VERSION" -f "sha=$GITHUB_SHA"
+          gh release create "v$VERSION" dist/* --verify-tag --title "OpenOrchestrion $VERSION" --notes-file "docs/releases/$VERSION.md"

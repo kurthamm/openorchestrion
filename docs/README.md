@@ -7,6 +7,10 @@ Start with the handoff and next-work index; dated release reports retain histori
 
 ## Start here
 
+- [Versioned releases and upgrades](releases.md) — downloads, checksums and rollback.
+- [Release 0.1.0](releases/0.1.0.md) — single-keyboard release scope and limits.
+- [Guided acquisition](guided-acquisition.md) — first music, progress and source results.
+
 - [Current issue queue](next-steps.md) — completed work, owner deferrals and actual blockers.
 - [Repository maintenance record](repository-maintenance.md) — cleanup audit, validation and release identity.
 

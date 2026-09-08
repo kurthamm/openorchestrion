@@ -1445,3 +1445,6 @@ body[aria-busy=true] .queue-toolbar button,body[aria-busy=true] .track-actions b
     padding-bottom:15px;
   }
 }
+
+/* Guided source discovery keeps source choices readable on narrow screens. */
+#acquire-panel{max-width:860px}#acquire-panel fieldset{border:0;padding:0;margin:1.5rem 0}#acquire-panel legend{font-weight:700;margin-bottom:1rem}.acquisition-source{padding:1rem 0;border-bottom:1px solid #deded5}.acquisition-source label{display:flex;align-items:center;gap:.6rem;min-height:44px;font-weight:600}.acquisition-source input{width:20px;height:20px;flex-shrink:0}.acquisition-source p{margin:.25rem 0 .5rem}.acquisition-source a{display:inline-block;padding:.35rem 0}#acquire-panel details{margin:1rem 0}#acquire-panel [role=status]{margin-top:1.5rem}

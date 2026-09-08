@@ -12,6 +12,10 @@ The WK-220 checklist and a loaded 120-minute headless Pi software timing run are
 
 ## Current deployed handoff
 
+The [0.1.0 release](docs/releases/0.1.0.md) packages the single-keyboard software and
+adds guided source selection, bounded acquisition, progress and retry from the browser.
+See [release installation/upgrades](docs/releases.md) and [guided acquisition](docs/guided-acquisition.md).
+
 The [developer handoff](docs/developer-handoff.md) identifies the shared `main` baseline, exact deployed source, validation evidence and remaining limits. [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the reliability, curated library and listening-room changes on September 7. The [single-keyboard release record](docs/single-keyboard-release-2026-09.md) tracks its CI, installed wheel and Pi timing evidence.
 
 The [complete-listening v2 release](docs/library-quality-publication.md) is deployed:
