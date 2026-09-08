@@ -1,5 +1,11 @@
 # Single-keyboard release — 7 September 2026
 
+> Historical release/audit evidence: library counts, service state and build hashes
+> below describe this report's original measurement. For the current release and
+> count baseline, see [project status](../PROJECT_STATUS.md) and
+> [repository maintenance](repository-maintenance.md). Do not restore an older
+> admission manifest or deployed build from this report as if it were current.
+
 ## Shared implementation and deployment
 
 [PR #85](https://github.com/kurthamm/openorchestrion/pull/85) merged the deployed reliability fixes, curated listening library and listening-room redesign into `main` at `cff40bf5693078133dc7ed5453d00978a5baaaa5`. Main's independent acquisition tools and future two-engine plan were preserved. Duplicate facet endpoint and obsolete frontend wiring conflicts were resolved in favor of the deployed asynchronous API and redesigned shell. Developer context now records the admission policy and deferred AI/new-keyboard work.
