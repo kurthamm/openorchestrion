@@ -20,6 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
+openorchestrion-repair-titles = "openorchestrion.library.title_repair:main"
 openorchestrion-inspect-bundle = "openorchestrion.library.bundle:main"
 openorchestrion-fixtures = "openorchestrion.testing.midi_fixtures:main"
 openorchestrion-analyze = "openorchestrion.midi.analyzer:main"

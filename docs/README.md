@@ -43,6 +43,7 @@ Start with the handoff and next-work index; dated release reports retain histori
 - [Complete-listening-v2 quality standard](library-quality-standard.md) — current admission evidence and limits.
 - [Quality publication and original archive](library-quality-publication.md) — dated baseline and recovery.
 - [Nightly acquisition](automatic-acquisition.md) — source registry, duplicate history, limits and operation.
+- [Title and identity repair](title-metadata-repair.md) — source-name decoding, creator/context separation, embedded evidence and reversible migration.
 - [Earlier v1 curation](library-curation.md) — historical policy, superseded by v2.
 - [MIDI analysis and ingestion](midi-ingestion.md)
 - [Rebuildable SQLite catalog](catalog.md)

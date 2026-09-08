@@ -6,6 +6,7 @@ import re
 import sys
 import collections
 from pathlib import Path
+from openorchestrion.library.title_identity import source_identity
 
 S = Path(sys.argv[1])
 B = S / "staged/bitmidi"
@@ -96,14 +97,14 @@ for r in tags:
     composer = r["composer"]
     artist = r["artist"]
     m = re.search(CLASSICAL.split("|nocturne")[0], entry["name"].lower())
-    if "classical" in genres and not composer and artist:
-        composer, artist = artist, ""
+    # Existing explicit composer metadata is retained; upload prefixes are context.
     out.append(
         dict(
             sha256=r["sha256"],
-            title=r["title"],
+            **{field: source_identity(r.get("source_title") or entry["name"], source="BitMidi").get(field, "")
+               for field in ("title", "source_title", "source_context", "title_status", "metadata_note")},
             composer=composer,
-            artist=artist,
+            artist="",
             era="",
             performance_type="MULTI_INSTRUMENT",
             genres=",".join(genres),

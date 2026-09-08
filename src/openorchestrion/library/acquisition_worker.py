@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 
 from .importer import import_midi
+from .title_identity import source_identity
 from .rights import RightsEvidence
 from .quality import VERSION, inspect, decide
 from .quality_structure import structure, infer
@@ -30,7 +31,8 @@ def assess(directory: Path, candidate: dict) -> dict:
     sidecar = Path(result.metadata_path)
     doc = json.loads(sidecar.read_bytes())
     doc["descriptive_metadata"].update(
-        title=candidate["title"], genres=[candidate["genre"]] if candidate["genre"] else []
+        **source_identity(candidate["title"], source=candidate["label"]),
+        genres=[candidate["genre"]] if candidate["genre"] else []
     )
     sidecar.write_text(json.dumps(doc), encoding="utf-8")
     record = inspect(str(sidecar))

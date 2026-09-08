@@ -20,6 +20,11 @@ Read `docs/developer-handoff.md`, `docs/next-steps.md` and `docs/repository-main
 The original inventory was **25,893** files. The final v2 cull retained **5,832** and archived **20,061**, preserving every original. The first nightly acquisition admitted another **29**, so the personal system library contains **5,861** as of this record. Future admitted acquisitions can increase that count; use the live API for current totals. The public starter catalog is a separate **18-file** redistributable set, not the owner's personal library. Follow `docs/library-quality-publication.md`, `docs/automatic-acquisition.md` and the current admission manifest. Never republish historical v1 admission or archived material over v2.
 
 ## Behaviour notes learned on hardware
+
+- Read `docs/title-metadata-repair.md` for the deployed title repair. Preserve
+  `source_title`, `source_context`, `title_status` and `metadata_note`; use the shared
+  identity normalizer for imported labels. A filename prefix is not a composer or
+  artist credit. The reversible repair plan is private operator data, not a repo asset.
 - Every track starts from GM defaults (`reset_channels`): files without Program Change are piano, not whatever the previous track left.
 - Kernel `Midi Through` is never an output; hot-plug is detected via device presence plus the ALSA sequencer subscription table (`/proc/asound/seq/clients`); the port is opened with python-rtmidi directly (mido's `client_name` makes a *virtual* port).
 - Orchestral score exports (LilyPond) get automatic voicing when a queue request omits `rendering`; explicit `ORIGINAL` disables it.

@@ -14,6 +14,10 @@ class BrowseItem(ListeningModel):
     title: str | None
     composer: str | None
     artist: str | None
+    source_title: str | None = None
+    source_context: str | None = None
+    title_status: str | None = None
+    metadata_note: str | None = None
     performance_type: str | None
     duration_seconds: float
     favorite: bool

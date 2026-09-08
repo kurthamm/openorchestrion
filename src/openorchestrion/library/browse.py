@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .catalog import _connect
+from .title_identity import IDENTITY_FIELDS
 
 
 @lru_cache(maxsize=32768)
@@ -38,7 +39,7 @@ def browse(
     limit: int = 40,
 ) -> dict[str, Any]:
     orders = {
-        "title": "title COLLATE NOCASE",
+        "title": "fold(title)",
         "composer": "composer COLLATE NOCASE, title COLLATE NOCASE",
         "duration": "duration_seconds, title COLLATE NOCASE",
         "newest": "imported_at DESC, title COLLATE NOCASE",
@@ -50,7 +51,8 @@ def browse(
         clauses.append(
             "instr(fold(coalesce(title,'') || ' ' || coalesce(composer,'') || ' ' || coalesce(artist,'') || ' ' || original_filename), ?) > 0"
         )
-        args.append(word)
+        clauses[-1] = "(" + clauses[-1] + " OR EXISTS (SELECT 1 FROM asset_tags t WHERE t.asset_id=a.asset_id AND t.kind IN ('identity_source_title','identity_source_context') AND instr(fold(t.value), ?) > 0))"
+        args.extend([word, word])
     for column, value in [
         ("era", era),
         ("composer", composer),
@@ -73,8 +75,12 @@ def browse(
         conn.create_function("fold", 1, _fold, deterministic=True)
         conn.execute("BEGIN")  # count and page describe the same snapshot
         total = conn.execute("SELECT count(*) FROM assets a" + where, args).fetchone()[0]
+        identity_columns = ",".join(
+            f"(SELECT value FROM asset_tags t WHERE t.asset_id=a.asset_id AND t.kind='identity_{field}' LIMIT 1) AS {field}"
+            for field in IDENTITY_FIELDS
+        )
         rows = conn.execute(
-            "SELECT asset_id,title,composer,artist,performance_type,duration_seconds,favorite,source_label,era FROM assets a"
+            "SELECT asset_id,title,composer,artist,performance_type,duration_seconds,favorite,source_label,era," + identity_columns + " FROM assets a"
             + where
             + " ORDER BY "
             + orders[sort]

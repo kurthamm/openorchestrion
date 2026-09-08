@@ -127,6 +127,10 @@ class LibraryAsset(BaseModel):
     title: str | None = None
     composer: str | None = None
     artist: str | None = None
+    source_title: str | None = None
+    source_context: str | None = None
+    title_status: str | None = None
+    metadata_note: str | None = None
     performance_type: str | None = None
     quality_grade: str | None = None
     familiarity: int | None = None
